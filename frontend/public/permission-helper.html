@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enable Notifications</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f13; color: #f0f0f8;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px; text-align: center;
+    }
+    .card {
+      background: #161620; border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 32px 24px; max-width: 320px; width: 100%;
+    }
+    .icon { font-size: 40px; margin-bottom: 16px; }
+    h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    p { font-size: 14px; color: #8888a8; line-height: 1.5; margin-bottom: 24px; }
+    button {
+      background: #6c63ff; color: white; border: none;
+      border-radius: 12px; padding: 13px 24px;
+      font-size: 15px; font-weight: 500; cursor: pointer; width: 100%;
+      font-family: inherit;
+    }
+    button:hover { background: #8b84ff; }
+    .status { margin-top: 16px; font-size: 13px; color: #8888a8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🔔</div>
+    <h2>Enable Notifications</h2>
+    <p>Allow SecureChat to send you notifications when new messages arrive.</p>
+    <button id="btn" onclick="requestPermission()">Allow Notifications</button>
+    <p class="status" id="status"></p>
+  </div>
+  <script>
+    async function requestPermission() {
+      const btn = document.getElementById('btn');
+      const status = document.getElementById('status');
+      btn.disabled = true;
+      btn.textContent = 'Requesting…';
+
+      try {
+        const result = await Notification.requestPermission();
+        // Post result back to the opener via BroadcastChannel
+        const channel = new BroadcastChannel('push_permission');
+        channel.postMessage(result);
+        channel.close();
+
+        if (result === 'granted') {
+          status.textContent = '✓ Done! You can close this tab.';
+          status.style.color = '#3dd68c';
+        } else {
+          status.textContent = 'Permission denied.';
+        }
+
+        // Auto-close after short delay
+        setTimeout(() => window.close(), 1500);
+      } catch (err) {
+        status.textContent = 'Error: ' + err.message;
+        btn.disabled = false;
+        btn.textContent = 'Try Again';
+      }
+    }
+
+    // If permission already granted/denied, post immediately and close
+    if (Notification.permission !== 'default') {
+      const channel = new BroadcastChannel('push_permission');
+      channel.postMessage(Notification.permission);
+      channel.close();
+      window.close();
+    }
+  </script>
+</body>
+</html>

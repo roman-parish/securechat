@@ -1,0 +1,403 @@
+/**
+ * SecureChat — End-to-End Encrypted Messaging
+ * Copyright (c) 2026 Roman Parish
+ * Licensed under the MIT License — see LICENSE file for details
+ *
+ * https://github.com/roman-parish/securechat
+ */
+import { useState, useRef, useEffect } from 'react';
+import { format } from 'date-fns';
+import { apiFetch } from '../utils/api.js';
+
+const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+
+export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId }) {
+  const [lightbox, setLightbox] = useState(null);
+  const [showActions, setShowActions] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const rowRef = useRef(null);
+  const pickerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  // Close everything on outside tap
+  useEffect(() => {
+    if (!showActions && !showPicker && !showMenu) return;
+    const handler = (e) => {
+      if (rowRef.current?.contains(e.target)) return;
+      setShowActions(false);
+      setShowPicker(false);
+      setShowMenu(false);
+    };
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [showActions, showPicker, showMenu]);
+
+  const handleReact = async (emoji) => {
+    setShowPicker(false);
+    setShowActions(false);
+    try {
+      await apiFetch(`/messages/${msg._id}/react`, {
+        method: 'POST',
+        body: JSON.stringify({ emoji }),
+      });
+    } catch {}
+  };
+
+  const handleBubbleTap = (e) => {
+    if (isDeleted) return;
+    e.stopPropagation();
+    // Toggle action bar — tap again to dismiss
+    setShowActions(s => !s);
+    setShowPicker(false);
+    setShowMenu(false);
+  };
+
+  // Grouped reactions: emoji → { count, mine }
+  const grouped = (msg.reactions || []).reduce((acc, r) => {
+    if (!acc[r.emoji]) acc[r.emoji] = { count: 0, mine: false };
+    acc[r.emoji].count++;
+    if (String(r.userId) === String(currentUserId)) acc[r.emoji].mine = true;
+    return acc;
+  }, {});
+
+  const isDeleted = msg.type === 'deleted';
+  const isDecrypting = !isDeleted && plaintext === undefined;
+  const failed = plaintext === '[Unable to decrypt]' || plaintext === '[Not encrypted for this device]';
+  const canEdit = isOwn && !isDeleted && plaintext && !failed;
+
+  return (
+    <div
+      ref={rowRef}
+      className={`msg-row ${isOwn ? 'own' : ''} ${isConsecutive ? 'consecutive' : ''}`}
+    >
+      {!isOwn && !isConsecutive && (
+        <div className="msg-sender-name">{msg.sender?.displayName || msg.sender?.username}</div>
+      )}
+
+      <div className="msg-group">
+
+        {/* Inline action bar — appears on tap, floats above bubble */}
+        {showActions && !isDeleted && (
+          <div className={`msg-action-bar ${isOwn ? 'own' : ''}`}>
+            <button className="act-btn" onClick={() => { setShowActions(false); setShowPicker(p => !p); }} title="React">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle cx="9" cy="10" r="1" fill="currentColor"/>
+                <circle cx="15" cy="10" r="1" fill="currentColor"/>
+              </svg>
+            </button>
+            <button className="act-btn" onClick={() => { setShowActions(false); onReply?.(); }} title="Reply">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M3 10h13a5 5 0 0 1 0 10H3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7 6L3 10l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {canEdit && (
+              <button className="act-btn" onClick={() => { setShowActions(false); onEdit?.(msg); }} title="Edit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            )}
+            {isOwn && (
+              <button className="act-btn danger" onClick={() => { setShowActions(false); onDelete?.(msg, true); }} title="Delete for everyone">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            )}
+            {!isOwn && (
+              <button className="act-btn danger" onClick={() => { setShowActions(false); onDelete?.(msg, false); }} title="Delete for me">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Reaction picker */}
+        {showPicker && (
+          <div className={`reaction-picker ${isOwn ? 'own' : ''}`} ref={pickerRef}>
+            {REACTIONS.map(emoji => (
+              <button key={emoji} className="picker-btn" onClick={() => handleReact(emoji)}>{emoji}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Bubble */}
+        <div
+          className={`bubble ${isOwn ? 'own' : ''} ${failed ? 'failed' : ''} ${isDeleted ? 'deleted' : ''} ${showActions ? 'active' : ''}`}
+          onClick={handleBubbleTap}
+        >
+          {isDeleted ? (
+            <p className="deleted-text">🗑 Message deleted</p>
+          ) : isDecrypting ? (
+            <div className="decrypting">
+              <span className="decrypt-dots"><span /><span /><span /></span>
+            </div>
+          ) : (
+            <>
+              {msg.replyTo && (
+                <div className="reply-preview-bubble">
+                  <div className="reply-bar-inner" />
+                  <div>
+                    <span className="reply-author">{msg.replyTo.sender?.username || 'Someone'}</span>
+                    <span className="reply-text">↩ Replied message</span>
+                  </div>
+                </div>
+              )}
+              {msg.attachment && (
+                <div className="msg-attachment">
+                  {msg.attachment.mimetype?.startsWith('image/') ? (
+                    <img
+                      src={msg.attachment.url}
+                      alt={msg.attachment.originalName || 'image'}
+                      className="attach-img"
+                      onClick={e => { e.stopPropagation(); setLightbox(msg.attachment.url); }}
+                    />
+                  ) : (
+                    <a href={msg.attachment.url} target="_blank" rel="noopener noreferrer" className="attach-file">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5"/>
+                        <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                      <span>{msg.attachment.originalName || 'Download file'}</span>
+                    </a>
+                  )}
+                </div>
+              )}
+              {plaintext && plaintext !== '📎' && <p className="msg-text">{plaintext}</p>}
+              <div className="msg-meta">
+                {msg.editedAt && <span className="edited-tag">edited</span>}
+                <span className="msg-time">{format(new Date(msg.createdAt), 'h:mm a')}</span>
+                {isOwn && (
+                  <svg width="15" height="10" viewBox="0 0 15 10" fill="none"
+                    style={{ color: msg.readBy?.length > 1 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)' }}>
+                    {msg.readBy?.length > 1 ? (
+                      <>
+                        <path d="M1 5L4 8.5L9.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M5.5 5L8.5 8.5L14 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </>
+                    ) : (
+                      <path d="M1 5L4 8.5L9.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    )}
+                  </svg>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Reactions */}
+        {Object.keys(grouped).length > 0 && (
+          <div className={`reactions ${isOwn ? 'own' : ''}`}>
+            {Object.entries(grouped).map(([emoji, { count, mine }]) => (
+              <button
+                key={emoji}
+                className={`reaction-chip ${mine ? 'mine' : ''}`}
+                onClick={() => handleReact(emoji)}
+              >
+                {emoji}{count > 1 && <span className="reaction-count">{count}</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {lightbox && (
+        <div className="lightbox-overlay" onClick={() => setLightbox(null)}>
+          <button className="lightbox-back" onClick={() => setLightbox(null)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Back
+          </button>
+          <img
+            src={lightbox}
+            className="lightbox-img"
+            onClick={e => e.stopPropagation()}
+          />
+          <a
+            href={lightbox}
+            download
+            className="lightbox-download"
+            onClick={e => e.stopPropagation()}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <polyline points="7 10 12 15 17 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            Save Image
+          </a>
+        </div>
+      )}
+
+      <style>{`
+        .msg-row {
+          display: flex; flex-direction: column;
+          padding: 2px 16px; position: relative;
+        }
+        .msg-row:not(.consecutive) { margin-top: 12px; }
+        .msg-row.own { align-items: flex-end; }
+        .msg-sender-name { font-size: 11px; color: var(--text-3); margin-bottom: 3px; margin-left: 4px; }
+        .msg-group {
+          position: relative; display: flex; flex-direction: column;
+          max-width: min(72%, 480px);
+        }
+        .msg-row.own .msg-group { align-items: flex-end; }
+
+        /* Inline action bar */
+        .msg-action-bar {
+          display: flex; align-items: center; gap: 2px;
+          background: var(--bg-2); border: 1px solid var(--border-strong);
+          border-radius: var(--radius-lg); padding: 4px 6px;
+          box-shadow: var(--shadow);
+          margin-bottom: 6px;
+          align-self: flex-start;
+          animation: slideUp 0.12s ease;
+          z-index: 10;
+        }
+        .msg-action-bar.own { align-self: flex-end; }
+        .act-btn {
+          width: 34px; height: 34px; border-radius: var(--radius-sm);
+          display: flex; align-items: center; justify-content: center;
+          color: var(--text-2); transition: all var(--transition);
+        }
+        .act-btn:hover, .act-btn:active { background: var(--bg-4); color: var(--text-0); }
+        .act-btn.danger { color: var(--red); }
+        .act-btn.danger:hover, .act-btn.danger:active { background: var(--red-dim); }
+
+        /* Reaction picker */
+        .reaction-picker {
+          position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 20;
+          background: var(--bg-2); border: 1px solid var(--border-strong);
+          border-radius: var(--radius-lg); padding: 7px 9px;
+          display: flex; gap: 4px; box-shadow: var(--shadow);
+          animation: slideUp 0.15s ease;
+        }
+        .reaction-picker.own { left: auto; right: 0; }
+        .picker-btn {
+          font-size: 20px; width: 36px; height: 36px;
+          border-radius: var(--radius-sm); transition: all var(--transition);
+          display: flex; align-items: center; justify-content: center;
+        }
+        .picker-btn:hover, .picker-btn:active { background: var(--bg-4); transform: scale(1.2); }
+
+        /* Bubble */
+        .bubble {
+          background: var(--bg-3); border-radius: var(--radius-lg);
+          padding: 9px 13px; max-width: 100%;
+          border: 1px solid var(--border); position: relative; cursor: pointer;
+          transition: filter var(--transition);
+          -webkit-user-select: none; user-select: none;
+        }
+        .bubble.own { background: var(--accent); border-color: transparent; }
+        .bubble.failed { opacity: 0.5; }
+        .bubble.deleted {
+          background: transparent; border: 1px solid var(--border);
+          opacity: 0.6; cursor: default;
+        }
+        .bubble.own.deleted { background: transparent; border-color: rgba(255,255,255,0.2); }
+        .bubble.active { filter: brightness(1.12); }
+        .bubble.own.active { filter: brightness(1.1); }
+        .deleted-text { font-size: 14px; color: var(--text-3); font-style: italic; }
+        .msg-text {
+          font-size: 15px; line-height: 1.5;
+          white-space: pre-wrap; word-break: break-word; color: var(--text-0);
+          -webkit-user-select: text; user-select: text;
+        }
+        .bubble.own .msg-text { color: white; }
+        .msg-meta { display: flex; align-items: center; gap: 4px; justify-content: flex-end; margin-top: 3px; }
+        .msg-time { font-size: 11px; color: rgba(255,255,255,0.45); }
+        .bubble:not(.own) .msg-time { color: var(--text-3); }
+        .edited-tag { font-size: 10px; color: rgba(255,255,255,0.4); font-style: italic; }
+        .bubble:not(.own) .edited-tag { color: var(--text-3); }
+        .decrypting { display: flex; align-items: center; justify-content: center; padding: 4px; }
+        .decrypt-dots { display: flex; gap: 4px; }
+        .decrypt-dots span {
+          width: 6px; height: 6px; background: var(--text-3); border-radius: 50%;
+          animation: pulse 1.2s infinite;
+        }
+        .decrypt-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .decrypt-dots span:nth-child(3) { animation-delay: 0.4s; }
+        .reply-preview-bubble {
+          display: flex; gap: 8px; margin-bottom: 7px;
+          background: rgba(0,0,0,0.15); border-radius: var(--radius-sm); padding: 5px 8px;
+        }
+        .reply-bar-inner { width: 2px; background: rgba(255,255,255,0.35); border-radius: 2px; flex-shrink: 0; }
+        .reply-author { display: block; font-size: 11px; opacity: 0.7; font-weight: 500; }
+        .reply-text { display: block; font-size: 12px; opacity: 0.55; }
+        .reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+        .reactions.own { justify-content: flex-end; }
+        .reaction-chip {
+          background: var(--bg-3); border: 1px solid var(--border-strong);
+          border-radius: var(--radius-full); padding: 3px 8px;
+          font-size: 14px; display: flex; align-items: center; gap: 4px;
+          transition: all var(--transition); cursor: pointer;
+        }
+        .reaction-chip:hover { background: var(--bg-4); border-color: var(--accent); }
+        .reaction-chip.mine { background: var(--accent-dim); border-color: var(--accent); }
+        .reaction-count { font-size: 11px; color: var(--text-2); font-weight: 500; }
+        .reaction-chip.mine .reaction-count { color: var(--accent-light); }
+        .lightbox-overlay {
+          position: fixed; inset: 0; z-index: 200;
+          background: rgba(0,0,0,0.95);
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          overflow: auto;
+          animation: fadeIn 0.15s ease;
+          -webkit-overflow-scrolling: touch;
+        }
+        .lightbox-back {
+          position: absolute; top: max(16px, env(safe-area-inset-top, 16px)); left: 16px;
+          display: flex; align-items: center; gap: 8px;
+          color: white; font-size: 15px; font-weight: 500;
+          background: rgba(255,255,255,0.15); border-radius: var(--radius);
+          padding: 8px 14px; backdrop-filter: blur(10px);
+          transition: background var(--transition);
+        }
+        .lightbox-back:hover { background: rgba(255,255,255,0.25); }
+        .lightbox-img {
+          max-width: min(100vw, 100%);
+          max-height: calc(100dvh - 120px);
+          width: auto; height: auto;
+          object-fit: contain;
+          display: block;
+          /* Show at natural resolution — no upscaling beyond original size */
+          image-rendering: auto;
+        }
+        .lightbox-download {
+          position: absolute; bottom: max(24px, env(safe-area-inset-bottom, 24px)); 
+          display: flex; align-items: center; gap: 8px;
+          color: white; font-size: 14px; font-weight: 500;
+          background: rgba(255,255,255,0.15); border-radius: var(--radius);
+          padding: 10px 20px; backdrop-filter: blur(10px);
+          transition: background var(--transition);
+        }
+        .lightbox-download:hover { background: rgba(255,255,255,0.25); }
+        .msg-attachment { margin-bottom: 6px; }
+        .attach-img {
+          max-width: 180px; max-height: 200px; border-radius: var(--radius);
+          display: block; object-fit: contain; cursor: pointer;
+          background: rgba(0,0,0,0.1);
+          transition: opacity var(--transition);
+        }
+        .attach-img:hover { opacity: 0.85; }
+        .attach-file {
+          display: flex; align-items: center; gap: 6px;
+          padding: 6px 10px; background: rgba(0,0,0,0.15);
+          border-radius: var(--radius-sm); font-size: 13px;
+          color: inherit; text-decoration: none;
+          transition: background var(--transition);
+        }
+        .attach-file:hover { background: rgba(0,0,0,0.25); }
+        .attach-file span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+      `}</style>
+    </div>
+  );
+}

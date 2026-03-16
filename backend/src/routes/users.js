@@ -1,0 +1,90 @@
+/**
+ * SecureChat — End-to-End Encrypted Messaging
+ * Copyright (c) 2026 Roman Parish
+ * Licensed under the MIT License — see LICENSE file for details
+ *
+ * https://github.com/roman-parish/securechat
+ */
+import { Router } from 'express';
+import { authenticate } from '../middleware/auth.js';
+import User from '../models/User.js';
+import { isUserOnline } from '../utils/redis.js';
+
+const router = Router();
+
+// Search users
+router.get('/search', authenticate, async (req, res) => {
+  const { q } = req.query;
+  if (!q || q.length < 2) return res.status(400).json({ error: 'Query too short' });
+
+  try {
+    const users = await User.find({
+      $or: [
+        { username: { $regex: q, $options: 'i' } },
+        { displayName: { $regex: q, $options: 'i' } },
+      ],
+      _id: { $ne: req.user.userId },
+    }).limit(20).select('username displayName avatar publicKey lastSeen');
+
+    // Add online status
+    const usersWithStatus = await Promise.all(users.map(async (user) => {
+      const online = await isUserOnline(user._id);
+      return { ...user.toObject(), isOnline: online };
+    }));
+
+    res.json(usersWithStatus);
+  } catch (err) {
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+// Get user profile
+router.get('/:userId', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId)
+      .select('username displayName avatar bio publicKey lastSeen customStatus');
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const isOnline = await isUserOnline(user._id);
+    res.json({ ...user.toObject(), isOnline });
+  } catch {
+    res.status(500).json({ error: 'Failed to get user' });
+  }
+});
+
+// Update own profile
+router.put('/me/profile', authenticate, async (req, res) => {
+  const { displayName, bio, customStatus } = req.body;
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { displayName, bio, customStatus },
+      { new: true, runValidators: true },
+    );
+    // Broadcast to all connected clients so they update cached participant data
+    req.io.emit('user:updated', {
+      _id: user._id,
+      username: user.username,
+      displayName: user.displayName,
+      avatar: user.avatar,
+      bio: user.bio,
+    });
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Get current user
+router.get('/me/profile', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch {
+    res.status(500).json({ error: 'Failed to get profile' });
+  }
+});
+
+export default router;
