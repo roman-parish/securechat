@@ -8,14 +8,19 @@ A self-hosted, fully encrypted messaging PWA. Messages are encrypted on your dev
 
 <p float="left">
   <img src="docs/screenshots/login.jpeg" width="180" />
+  <img src="docs/screenshots/register.jpeg" width="180" />
   <img src="docs/screenshots/conversations.jpeg" width="180" />
   <img src="docs/screenshots/chat.jpeg" width="180" />
-  <img src="docs/screenshots/image-share.jpeg" width="180" />
 </p>
 
 <p float="left">
-  <img src="docs/screenshots/message-actions.jpeg" width="180" />
-  <img src="docs/screenshots/typing.jpeg" width="180" />
+  <img src="docs/screenshots/user-profile.jpeg" width="180" />
+  <img src="docs/screenshots/settings-profile.jpeg" width="180" />
+  <img src="docs/screenshots/settings-notifications.jpeg" width="180" />
+  <img src="docs/screenshots/settings-appearance.jpeg" width="180" />
+</p>
+
+<p float="left">
   <img src="docs/screenshots/settings-security.jpeg" width="180" />
   <img src="docs/screenshots/admin.jpeg" width="180" />
 </p>
