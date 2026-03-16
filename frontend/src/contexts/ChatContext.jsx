@@ -1,0 +1,191 @@
+/**
+ * SecureChat — End-to-End Encrypted Messaging
+ * Copyright (c) 2026 Roman Parish
+ * Licensed under the MIT License — see LICENSE file for details
+ *
+ * https://github.com/w5rcp-romanparish/securechat
+ */
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { useSocket } from './SocketContext.jsx';
+import { useAuth } from './AuthContext.jsx';
+import { apiFetch } from '../utils/api.js';
+
+const ChatContext = createContext(null);
+
+export function ChatProvider({ children }) {
+  const { socket } = useSocket();
+  const { user: authUser, setUser: setAuthUser } = useAuth();
+  const [conversations, setConversations] = useState([]);
+  const [activeConversationId, setActiveConversationId] = useState(null);
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [onlineListLoaded, setOnlineListLoaded] = useState(false);
+  const [typingMap, setTypingMap] = useState({}); // convId -> [usernames]
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const [loading, setLoading] = useState(true);
+  const activeConvRef = useRef(null);
+
+  useEffect(() => { activeConvRef.current = activeConversationId; }, [activeConversationId]);
+
+  // Tab title unread count
+  useEffect(() => {
+    const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+    document.title = total > 0 ? `(${total}) SecureChat` : 'SecureChat';
+  }, [unreadCounts]);
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const data = await apiFetch('/conversations');
+      setConversations(data);
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadConversations(); }, [loadConversations]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const onUsersOnlineList = ({ userIds }) => {
+      setOnlineUsers(new Set(userIds.map(String)));
+      setOnlineListLoaded(true);
+    };
+
+    const onUserOnline = ({ userId }) =>
+      setOnlineUsers(prev => new Set([...prev, String(userId)]));
+
+    const onUserOffline = ({ userId }) =>
+      setOnlineUsers(prev => { const n = new Set(prev); n.delete(String(userId)); return n; });
+
+    const onConversationNew = (conv) =>
+      setConversations(prev => [conv, ...prev.filter(c => String(c._id) !== String(conv._id))]);
+
+    const onConversationUpdated = (conv) =>
+      setConversations(prev => prev.map(c => String(c._id) === String(conv._id) ? { ...c, ...conv } : c));
+
+    const onConversationRemoved = ({ conversationId }) =>
+      setConversations(prev => prev.filter(c => String(c._id) !== String(conversationId)));
+
+    const onUserUpdated = (updatedUser) => {
+      const uid = String(updatedUser._id);
+      if (authUser && String(authUser._id) === uid) {
+        setAuthUser(prev => ({ ...prev, ...updatedUser }));
+      }
+      setConversations(prev => prev.map(conv => ({
+        ...conv,
+        participants: conv.participants?.map(p =>
+          String(p._id) === uid ? { ...p, ...updatedUser } : p
+        ),
+      })));
+    };
+
+    const onMessageNew = (message) => {
+      const msgConvId = String(message.conversationId);
+      setConversations(prev => {
+        const exists = prev.some(c => String(c._id) === msgConvId);
+        if (!exists) {
+          apiFetch(`/conversations/${msgConvId}`)
+            .then(conv => setConversations(p =>
+              p.some(c => String(c._id) === msgConvId) ? p
+                : [{ ...conv, lastMessage: message, lastActivity: message.createdAt }, ...p]
+            )).catch(() => {});
+          return prev;
+        }
+        return prev.map(conv =>
+          String(conv._id) === msgConvId
+            ? { ...conv, lastMessage: message, lastActivity: message.createdAt }
+            : conv
+        ).sort((a, b) => new Date(b.lastActivity || b.updatedAt) - new Date(a.lastActivity || a.updatedAt));
+      });
+      if (msgConvId !== String(activeConvRef.current)) {
+        setUnreadCounts(prev => ({ ...prev, [msgConvId]: (prev[msgConvId] || 0) + 1 }));
+      }
+    };
+
+    // Typing indicators in sidebar
+    const onTypingStart = ({ conversationId, userId, username }) => {
+      const cid = String(conversationId);
+      setTypingMap(prev => ({
+        ...prev,
+        [cid]: [...(prev[cid] || []).filter(u => u.username !== username), { userId, username }],
+      }));
+    };
+    const onTypingStop = ({ conversationId, userId }) => {
+      const cid = String(conversationId);
+      setTypingMap(prev => ({
+        ...prev,
+        [cid]: (prev[cid] || []).filter(u => String(u.userId) !== String(userId)),
+      }));
+    };
+
+    const onConnect = () => {
+      setOnlineListLoaded(false);
+      // Fallback: if online list doesn't arrive within 5s, mark as loaded anyway
+      // so the UI doesn't get stuck showing "E2E Encrypted" forever
+      setTimeout(() => setOnlineListLoaded(prev => { return true; }), 5000);
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('users:online-list', onUsersOnlineList);
+    socket.on('user:online', onUserOnline);
+    socket.on('user:offline', onUserOffline);
+    socket.on('conversation:new', onConversationNew);
+    socket.on('conversation:updated', onConversationUpdated);
+    socket.on('conversation:removed', onConversationRemoved);
+    socket.on('user:updated', onUserUpdated);
+    socket.on('message:new', onMessageNew);
+    socket.on('typing:start', onTypingStart);
+    socket.on('typing:stop', onTypingStop);
+
+    return () => {
+      socket.off('connect', onConnect);
+    socket.off('users:online-list', onUsersOnlineList);
+    socket.off('user:online', onUserOnline);
+      socket.off('user:offline', onUserOffline);
+      socket.off('conversation:new', onConversationNew);
+      socket.off('conversation:updated', onConversationUpdated);
+      socket.off('conversation:removed', onConversationRemoved);
+      socket.off('user:updated', onUserUpdated);
+      socket.off('message:new', onMessageNew);
+      socket.off('typing:start', onTypingStart);
+      socket.off('typing:stop', onTypingStop);
+    };
+  }, [socket, authUser, setAuthUser]);
+
+  const removeConversation = useCallback(async (id) => {
+    const strId = String(id);
+    try {
+      await apiFetch(`/conversations/${strId}`, { method: 'DELETE' });
+      setConversations(prev => prev.filter(c => String(c._id) !== strId));
+      setUnreadCounts(prev => { const n = { ...prev }; delete n[strId]; return n; });
+    } catch (err) {
+      console.error('Failed to remove conversation:', err);
+    }
+  }, []);
+
+  const setActiveConversation = useCallback((id) => {
+    const strId = id ? String(id) : null;
+    setActiveConversationId(strId);
+    if (strId) setUnreadCounts(prev => ({ ...prev, [strId]: 0 }));
+  }, []);
+
+  const addConversation = useCallback((conv) =>
+    setConversations(prev => [conv, ...prev.filter(c => String(c._id) !== String(conv._id))]),
+  []);
+
+  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+
+  return (
+    <ChatContext.Provider value={{
+      conversations, activeConversationId, setActiveConversation,
+      onlineUsers, onlineListLoaded, typingMap, unreadCounts, totalUnread, loading,
+      loadConversations, addConversation, removeConversation,
+    }}>
+      {children}
+    </ChatContext.Provider>
+  );
+}
+
+export const useChat = () => useContext(ChatContext);

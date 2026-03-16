@@ -1,0 +1,25 @@
+# Environment — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# SSL certs — generated on each server
+nginx/ssl/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Build output
+frontend/dist/
+backend/dist/
+
+# Docker
+*.tar.gz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads (user data — stays on server)
+uploads/
