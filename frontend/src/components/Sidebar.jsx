@@ -163,7 +163,8 @@ function convPreview(conv, currentUser) {
   const sender = conv.lastMessage.sender;
   if (!sender) return 'New message';
   const isMe = String(sender._id) === String(currentUser._id);
-  const name = isMe ? 'You' : (sender.displayName || sender.username);
+  const name = isMe ? 'You' : (sender.displayName || sender.username || 'Someone');
+  if (!conv.lastMessage.encryptedContent && conv.lastMessage.attachment) return `${name}: sent an attachment`;
   return `${name}: New message`;
 }
 
