@@ -4,6 +4,22 @@
 
 A self-hosted, fully encrypted messaging PWA. Messages are encrypted on your device before sending. The server only ever stores ciphertext — nobody but you and your contacts can read your messages.
 
+## Screenshots
+
+<p float="left">
+  <img src="docs/screenshots/login.jpeg" width="180" />
+  <img src="docs/screenshots/conversations.jpeg" width="180" />
+  <img src="docs/screenshots/chat.jpeg" width="180" />
+  <img src="docs/screenshots/image-share.jpeg" width="180" />
+</p>
+
+<p float="left">
+  <img src="docs/screenshots/message-actions.jpeg" width="180" />
+  <img src="docs/screenshots/typing.jpeg" width="180" />
+  <img src="docs/screenshots/settings-security.jpeg" width="180" />
+  <img src="docs/screenshots/admin.jpeg" width="180" />
+</p>
+
 ## Features
 
 - 🔒 **End-to-end encryption** — RSA-OAEP 2048-bit key exchange + AES-256-GCM message encryption
