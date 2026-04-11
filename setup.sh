@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
 
+# Parse arguments
+DOMAIN=""
+for arg in "$@"; do
+    case $arg in
+        --domain=*) DOMAIN="${arg#*=}" ;;
+        --domain) shift; DOMAIN="$1" ;;
+    esac
+done
+
 echo "╔═══════════════════════════════════════╗"
 echo "║     SecureChat Setup & Launcher       ║"
 echo "╚═══════════════════════════════════════╝"
@@ -64,25 +73,52 @@ if [ -z "$VAPID_KEY" ]; then
     fi
 fi
 
-# Generate self-signed TLS certificate (REQUIRED for Web Crypto API)
+# TLS certificate setup
 echo ""
 echo "🔒 Checking TLS certificate..."
 mkdir -p nginx/ssl
 SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
-if [ ! -f nginx/ssl/cert.pem ]; then
-    openssl req -x509 -newkey rsa:2048 \
-        -keyout nginx/ssl/key.pem \
-        -out nginx/ssl/cert.pem \
-        -days 365 -nodes \
-        -subj "/CN=securechat" \
-        -addext "subjectAltName=IP:${SERVER_IP},IP:127.0.0.1,DNS:localhost" 2>/dev/null
-    echo "✅ Self-signed TLS cert generated for IP: ${SERVER_IP}"
-else
-    echo "✅ TLS cert already exists"
+
+if [ -n "$DOMAIN" ]; then
+    # Let's Encrypt cert for a real domain
+    echo "🌐 Setting up Let's Encrypt certificate for ${DOMAIN}..."
+    if ! command -v certbot >/dev/null 2>&1; then
+        apt-get install -y certbot -qq >/dev/null 2>&1
+    fi
+    # Get cert (nginx must be stopped to free port 80)
+    certbot certonly --standalone --non-interactive --agree-tos \
+        -m "admin@${DOMAIN}" -d "$DOMAIN" 2>/dev/null \
+        || { echo "⚠️  Let's Encrypt failed — falling back to self-signed cert"; DOMAIN=""; }
+
+    if [ -n "$DOMAIN" ]; then
+        # Point nginx to LE certs and set server_name
+        sed -i "s|server_name _;|server_name ${DOMAIN};|" nginx/nginx.conf
+        sed -i "s|ssl_certificate .*|ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;|" nginx/nginx.conf
+        sed -i "s|ssl_certificate_key .*|ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;|" nginx/nginx.conf
+        echo "✅ Let's Encrypt certificate configured for ${DOMAIN}"
+        # Set up auto-renewal hook to restart nginx container
+        echo "0 0,12 * * * root certbot renew --quiet --deploy-hook 'docker compose -f /root/securechat/docker-compose.yml restart nginx'" > /etc/cron.d/certbot-securechat
+    fi
 fi
 
-# Update CLIENT_URL to https
-sed -i "s|^CLIENT_URL=.*|CLIENT_URL=https://${SERVER_IP}|" .env
+if [ -z "$DOMAIN" ]; then
+    # Self-signed fallback
+    if [ ! -f nginx/ssl/cert.pem ]; then
+        openssl req -x509 -newkey rsa:2048 \
+            -keyout nginx/ssl/key.pem \
+            -out nginx/ssl/cert.pem \
+            -days 365 -nodes \
+            -subj "/CN=securechat" \
+            -addext "subjectAltName=IP:${SERVER_IP},IP:127.0.0.1,DNS:localhost" 2>/dev/null
+        echo "✅ Self-signed TLS cert generated for IP: ${SERVER_IP}"
+    else
+        echo "✅ TLS cert already exists"
+    fi
+fi
+
+# Update CLIENT_URL
+ACCESS_HOST="${DOMAIN:-${SERVER_IP}}"
+sed -i "s|^CLIENT_URL=.*|CLIENT_URL=https://${ACCESS_HOST}|" .env
 
 echo ""
 echo "🔨 Building and starting SecureChat..."
@@ -107,11 +143,15 @@ echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║  ✅  SecureChat is running!                                  ║"
 echo "║                                                              ║"
-printf  "║  🔐  https://%-47s║\n" "${SERVER_IP}"
+printf  "║  🔐  https://%-47s║\n" "${ACCESS_HOST}"
 echo "║                                                              ║"
+if [ -z "$DOMAIN" ]; then
 echo "║  ⚠️   Browser shows a cert warning (self-signed).            ║"
 echo "║      Click 'Advanced' → 'Proceed to site' to continue.      ║"
+echo "║      Tip: re-run with --domain=yourdomain.com for a real     ║"
+echo "║      TLS certificate via Let's Encrypt.                      ║"
 echo "║                                                              ║"
+fi
 echo "║  Commands:                                                   ║"
 echo "║    docker compose logs -f    (view logs)                     ║"
 echo "║    docker compose down       (stop)                          ║"
