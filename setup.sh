@@ -29,6 +29,18 @@ if [ ! -f .env ]; then
     echo ""
 fi
 
+# Install Node.js 20 if npx is not available (needed for VAPID key generation)
+if ! command -v npx >/dev/null 2>&1 || [ "$(node --version 2>/dev/null | cut -d'.' -f1 | tr -d 'v')" -lt 16 ] 2>/dev/null; then
+    echo "📦 Installing Node.js 20 for VAPID key generation..."
+    if command -v apt-get >/dev/null 2>&1; then
+        apt-get remove -y libnode-dev libnode72 >/dev/null 2>&1 || true
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
+        apt-get install -y nodejs >/dev/null 2>&1 && echo "✅ Node.js $(node --version) installed"
+    else
+        echo "⚠️  Could not auto-install Node.js — VAPID keys will be skipped"
+    fi
+fi
+
 # Generate VAPID keys if not set
 VAPID_KEY=$(grep "^VAPID_PUBLIC_KEY=" .env | cut -d'=' -f2)
 if [ -z "$VAPID_KEY" ]; then
