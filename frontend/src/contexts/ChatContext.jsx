@@ -154,6 +154,10 @@ export function ChatProvider({ children }) {
     };
   }, [socket, authUser, setAuthUser]);
 
+  const updateConversation = useCallback((id, updater) => {
+    setConversations(prev => prev.map(c => String(c._id) === String(id) ? updater(c) : c));
+  }, []);
+
   const removeConversation = useCallback(async (id) => {
     const strId = String(id);
     try {
@@ -181,7 +185,7 @@ export function ChatProvider({ children }) {
     <ChatContext.Provider value={{
       conversations, activeConversationId, setActiveConversation,
       onlineUsers, onlineListLoaded, typingMap, unreadCounts, totalUnread, loading,
-      loadConversations, addConversation, removeConversation,
+      loadConversations, addConversation, removeConversation, updateConversation,
     }}>
       {children}
     </ChatContext.Provider>

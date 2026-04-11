@@ -184,6 +184,41 @@ router.delete('/:conversationId/participants/:userId', authenticate, async (req,
   }
 });
 
+// Mute conversation
+router.post('/:conversationId/mute', authenticate, async (req, res) => {
+  const { until } = req.body; // optional ISO date string; omit for indefinite
+  try {
+    const conversation = await Conversation.findOne({
+      _id: req.params.conversationId,
+      participants: req.user.userId,
+    });
+    if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+
+    // Remove any existing mute entry for this user then add fresh one
+    await Conversation.findByIdAndUpdate(req.params.conversationId, {
+      $pull: { mutedBy: { userId: req.user.userId } },
+    });
+    await Conversation.findByIdAndUpdate(req.params.conversationId, {
+      $push: { mutedBy: { userId: req.user.userId, until: until ? new Date(until) : null } },
+    });
+    res.json({ success: true, muted: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to mute conversation' });
+  }
+});
+
+// Unmute conversation
+router.delete('/:conversationId/mute', authenticate, async (req, res) => {
+  try {
+    await Conversation.findByIdAndUpdate(req.params.conversationId, {
+      $pull: { mutedBy: { userId: req.user.userId } },
+    });
+    res.json({ success: true, muted: false });
+  } catch {
+    res.status(500).json({ error: 'Failed to unmute conversation' });
+  }
+});
+
 // Hide conversation from list (for this user only — messages stay for others)
 router.delete('/:conversationId', authenticate, async (req, res) => {
   try {

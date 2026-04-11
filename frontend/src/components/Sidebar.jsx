@@ -22,6 +22,24 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
   const [search, setSearch] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const { updateConversation } = useChat();
+
+  const handleMuteToggle = useCallback(async (convId, currentlyMuted) => {
+    try {
+      await apiFetch(`/conversations/${convId}/mute`, {
+        method: currentlyMuted ? 'DELETE' : 'POST',
+      });
+      // Optimistically update local conversation mutedBy state
+      updateConversation(convId, conv => ({
+        ...conv,
+        mutedBy: currentlyMuted
+          ? (conv.mutedBy || []).filter(m => String(m.userId) !== String(user._id))
+          : [...(conv.mutedBy || []), { userId: user._id, until: null }],
+      }));
+    } catch (err) {
+      console.error('Mute toggle failed:', err);
+    }
+  }, [user._id, updateConversation]);
 
   const filtered = conversations.filter(conv => {
     const name = getConvName(conv, user);
@@ -96,6 +114,7 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
                 typingUsers={typingMap[String(conv._id)] || []}
                 onClick={() => onSelectConversation(conv._id)}
                 onRemove={() => removeConversation(conv._id)}
+                onMuteToggle={handleMuteToggle}
               />
             ))
         }
@@ -168,10 +187,13 @@ function convPreview(conv, currentUser) {
   return `${name}: New message`;
 }
 
-function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove }) {
+function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onMuteToggle }) {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const menuRef = useRef(null);
+
+  const mutedEntry = conv.mutedBy?.find(m => String(m.userId) === String(user._id));
+  const isMuted = !!(mutedEntry && (!mutedEntry.until || new Date(mutedEntry.until) > new Date()));
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -217,6 +239,13 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
       <div className="conv-content">
         <div className="conv-top">
           <span className={`conv-name ${hasUnread ? 'unread' : ''}`}>{name}</span>
+          {isMuted && !showMoreBtn && (
+            <svg className="mute-icon" width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path d="M11 5L6 9H2v6h4l5 4V5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+              <line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          )}
           {!showMoreBtn && (
             <span className="conv-time">{convTimestamp(conv.lastActivity || conv.updatedAt)}</span>
           )}
@@ -254,6 +283,16 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
       {/* Options menu */}
       {showMenu && (
         <div className="conv-menu" ref={menuRef} onClick={e => e.stopPropagation()}>
+          <button className="menu-btn-normal" onClick={() => { setShowMenu(false); onMuteToggle(conv._id, isMuted); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              {isMuted ? (
+                <><path d="M11 5L6 9H2v6h4l5 4V5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>
+              ) : (
+                <><path d="M11 5L6 9H2v6h4l5 4V5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>
+              )}
+            </svg>
+            {isMuted ? 'Unmute' : 'Mute'}
+          </button>
           <button onClick={() => { setShowMenu(false); onRemove(); }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -336,6 +375,7 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
           box-shadow: var(--shadow); z-index: 50; min-width: 180px;
           animation: slideUp 0.1s ease;
         }
+        .mute-icon { color: var(--text-3); flex-shrink: 0; margin-left: 4px; }
         .conv-menu button {
           display: flex; align-items: center; gap: 8px;
           width: 100%; padding: 8px 10px; border-radius: var(--radius-sm);
@@ -343,6 +383,8 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
           transition: background var(--transition);
         }
         .conv-menu button:hover { background: var(--red-dim); }
+        .conv-menu .menu-btn-normal { color: var(--text-1); }
+        .conv-menu .menu-btn-normal:hover { background: var(--bg-3); }
       `}</style>
     </div>
   );

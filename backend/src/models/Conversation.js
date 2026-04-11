@@ -55,6 +55,10 @@ const conversationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     encryptedKey: String, // AES key encrypted with user's public key
   }],
+  mutedBy: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    until: { type: Date, default: null }, // null = muted indefinitely
+  }],
 }, {
   timestamps: true,
 });

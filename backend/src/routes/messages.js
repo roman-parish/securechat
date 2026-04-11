@@ -110,7 +110,9 @@ router.post('/:conversationId', authenticate, async (req, res) => {
           shouldPush = allBackgrounded || !inConvRoom;
         }
       }
-      if (shouldPush) {
+      const mutedEntry = conversation.mutedBy?.find(m => String(m.userId) === String(p._id));
+      const isMuted = mutedEntry && (!mutedEntry.until || new Date(mutedEntry.until) > new Date());
+      if (shouldPush && !isMuted) {
         await sendPushToUser(p._id, {
           type: 'new_message',
           title: conversation.type === 'group' ? conversation.name : sender.displayName || sender.username,
