@@ -34,6 +34,10 @@ export default function ChatWindow({ conversationId, onBack }) {
   const [editingMsg, setEditingMsg] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [serverSearchResults, setServerSearchResults] = useState([]);
+  const [serverSearchLoading, setServerSearchLoading] = useState(false);
+  const [jumpHighlight, setJumpHighlight] = useState(null);
+  const searchTimerRef = useRef(null);
   const [atBottom, setAtBottom] = useState(true);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -120,6 +124,59 @@ export default function ChatWindow({ conversationId, onBack }) {
       setLoadingMore(false);
     }
   }, [loadingMore, hasMore, messages, conversationId, decryptOne]);
+
+  // Debounced server search for attachment filenames and sender names
+  useEffect(() => {
+    clearTimeout(searchTimerRef.current);
+    if (!searchQuery || !conversationId) {
+      setServerSearchResults([]);
+      return;
+    }
+    searchTimerRef.current = setTimeout(async () => {
+      setServerSearchLoading(true);
+      try {
+        const results = await apiFetch(`/messages/${conversationId}/search?q=${encodeURIComponent(searchQuery)}`);
+        setServerSearchResults(results || []);
+      } catch {
+        setServerSearchResults([]);
+      } finally {
+        setServerSearchLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(searchTimerRef.current);
+  }, [searchQuery, conversationId]);
+
+  // Load messages around a timestamp and scroll to a specific message
+  const jumpToMessage = useCallback(async (targetId, timestamp) => {
+    // Check if already in loaded messages
+    const alreadyLoaded = messages.find(m => String(m._id) === String(targetId));
+    if (alreadyLoaded) {
+      setJumpHighlight(String(targetId));
+      setTimeout(() => {
+        document.getElementById(`msg-${targetId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+      setTimeout(() => setJumpHighlight(null), 2000);
+      return;
+    }
+    // Load messages up to just after the target timestamp
+    const afterTs = new Date(new Date(timestamp).getTime() + 1000).toISOString();
+    try {
+      const batch = await apiFetch(`/messages/${conversationId}?limit=50&before=${encodeURIComponent(afterTs)}`);
+      if (!batch?.length) return;
+      batch.forEach(m => decryptOne(m));
+      setMessages(batch);
+      setHasMore(true); // may have older messages
+      setJumpHighlight(String(targetId));
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          document.getElementById(`msg-${targetId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      });
+      setTimeout(() => setJumpHighlight(null), 2000);
+    } catch {
+      // ignore
+    }
+  }, [messages, conversationId, decryptOne]);
 
   // Socket events
   useEffect(() => {
@@ -426,21 +483,50 @@ export default function ChatWindow({ conversationId, onBack }) {
 
       {/* Search bar */}
       {searchOpen && (
-        <div className="search-bar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="7" stroke="var(--text-3)" strokeWidth="1.5"/>
-            <path d="M16.5 16.5l4 4" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <input
-            autoFocus
-            placeholder="Search messages..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-          {searchResults && (
-            <span className="search-count">{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</span>
+        <>
+          <div className="search-bar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <circle cx="11" cy="11" r="7" stroke="var(--text-3)" strokeWidth="1.5"/>
+              <path d="M16.5 16.5l4 4" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <input
+              autoFocus
+              placeholder="Search messages..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+            {serverSearchLoading && <span className="spinner" style={{ width: 12, height: 12, flexShrink: 0 }} />}
+            {!serverSearchLoading && searchResults && (
+              <span className="search-count">{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</span>
+            )}
+          </div>
+          {serverSearchResults.length > 0 && (
+            <div className="search-server-results">
+              <div className="search-server-label">Jump to in history</div>
+              {serverSearchResults.map(r => {
+                const senderName = r.sender?.displayName || r.sender?.username || 'Unknown';
+                const label = r.attachment?.filename
+                  ? r.attachment.filename
+                  : `${r.type} from ${senderName}`;
+                const dateStr = format(new Date(r.createdAt), 'MMM d, yyyy');
+                return (
+                  <button
+                    key={r._id}
+                    className="search-server-item"
+                    onClick={() => jumpToMessage(r._id, r.createdAt)}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5"/>
+                      <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="1.5"/>
+                    </svg>
+                    <span className="search-server-name">{label}</span>
+                    <span className="search-server-meta">{senderName} · {dateStr}</span>
+                  </button>
+                );
+              })}
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Messages */}
@@ -475,18 +561,24 @@ export default function ChatWindow({ conversationId, onBack }) {
                   const consecutive = prev &&
                     String(prev.sender._id) === String(msg.sender._id) &&
                     new Date(msg.createdAt) - new Date(prev.createdAt) < 5 * 60 * 1000;
+                  const isHighlighted = jumpHighlight === String(msg._id);
                   return (
-                    <MessageBubble
+                    <div
                       key={msg._id}
-                      msg={msg}
-                      plaintext={decrypted[msg._id]}
-                      isOwn={String(msg.sender._id) === myId}
-                      isConsecutive={consecutive}
-                      onReply={() => { setReplyTo(msg); setEditingMsg(null); textareaRef.current?.focus(); }}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      currentUserId={myId}
-                    />
+                      id={`msg-${msg._id}`}
+                      className={isHighlighted ? 'msg-jump-highlight' : undefined}
+                    >
+                      <MessageBubble
+                        msg={msg}
+                        plaintext={decrypted[msg._id]}
+                        isOwn={String(msg.sender._id) === myId}
+                        isConsecutive={consecutive}
+                        onReply={() => { setReplyTo(msg); setEditingMsg(null); textareaRef.current?.focus(); }}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        currentUserId={myId}
+                      />
+                    </div>
                   );
                 })}
               </div>
@@ -742,6 +834,30 @@ export default function ChatWindow({ conversationId, onBack }) {
         .search-bar input { flex: 1; font-size: 14px; color: var(--text-0); }
         .search-bar input::placeholder { color: var(--text-3); }
         .search-count { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+        .search-server-results {
+          background: var(--bg-2); border-bottom: 1px solid var(--border);
+          max-height: 180px; overflow-y: auto; flex-shrink: 0;
+        }
+        .search-server-label {
+          padding: 4px 14px; font-size: 10px; font-weight: 600;
+          text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3);
+        }
+        .search-server-item {
+          display: flex; align-items: center; gap: 8px;
+          padding: 6px 14px; width: 100%; text-align: left;
+          color: var(--text-1); transition: background var(--transition);
+        }
+        .search-server-item:hover { background: var(--bg-3); }
+        .search-server-name {
+          flex: 1; font-size: 13px; white-space: nowrap;
+          overflow: hidden; text-overflow: ellipsis;
+        }
+        .search-server-meta { font-size: 11px; color: var(--text-3); white-space: nowrap; flex-shrink: 0; }
+        @keyframes jump-flash {
+          0%,100% { background: transparent; }
+          30% { background: rgba(108,99,255,0.18); }
+        }
+        .msg-jump-highlight { animation: jump-flash 2s ease; border-radius: 6px; }
         .messages-area {
           flex: 1; overflow-y: auto; padding: 8px 0;
           display: flex; flex-direction: column;

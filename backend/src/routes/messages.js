@@ -223,6 +223,55 @@ router.delete('/:messageId', authenticate, async (req, res) => {
   }
 });
 
+// Search messages by metadata (attachment filename, type, sender name)
+// Content is E2E-encrypted so only metadata can be queried server-side.
+router.get('/:conversationId/search', authenticate, async (req, res) => {
+  const { q = '', type } = req.query;
+  if (!q && !type) return res.json([]);
+
+  try {
+    const conversation = await Conversation.findOne({
+      _id: req.params.conversationId,
+      participants: req.user.userId,
+    }).populate('participants', '_id');
+    if (!conversation) return res.status(403).json({ error: 'Access denied' });
+
+    const query = {
+      conversationId: req.params.conversationId,
+      deletedFor: { $ne: req.user.userId },
+      type: { $ne: 'deleted' },
+    };
+
+    if (type) query.type = type;
+
+    // Build OR conditions for the search term
+    if (q) {
+      const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      // Find matching sender IDs upfront (to avoid $lookup in this simple setup)
+      const matchingSenders = await User.find({
+        $or: [{ username: re }, { displayName: re }],
+      }).select('_id');
+      const senderIds = matchingSenders.map(u => u._id);
+
+      query.$or = [
+        { 'attachment.filename': re },
+        ...(senderIds.length ? [{ sender: { $in: senderIds } }] : []),
+      ];
+    }
+
+    const results = await Message.find(query)
+      .select('_id createdAt type attachment sender')
+      .populate('sender', 'username displayName avatar')
+      .sort({ createdAt: -1 })
+      .limit(30);
+
+    res.json(results);
+  } catch (err) {
+    console.error('[search]', err);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
 // Toggle reaction (add or remove)
 router.post('/:messageId/react', authenticate, async (req, res) => {
   const { emoji } = req.body;
