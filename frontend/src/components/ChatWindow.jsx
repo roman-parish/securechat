@@ -25,6 +25,7 @@ export default function ChatWindow({ conversationId, onBack }) {
   const [decrypted, setDecrypted] = useState({});
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -286,7 +287,10 @@ export default function ChatWindow({ conversationId, onBack }) {
           const form = new FormData();
           form.append('file', pendingAttachment.file);
           uploadedAttachment = await apiUpload('/uploads', form);
-        } catch { /* attachment upload failed, send text only */ }
+        } catch {
+          setSendError('Attachment failed to upload — sending text only.');
+          setTimeout(() => setSendError(''), 4000);
+        }
       }
       const msgContent = content || '';
       const payload = await buildEncryptedPayload(msgContent || (pendingAttachment ? '📎' : ''), conv.participants, userIdRef.current);
@@ -302,6 +306,8 @@ export default function ChatWindow({ conversationId, onBack }) {
       setAtBottom(true);
     } catch (err) {
       setText(content);
+      setSendError(err.message || 'Failed to send message.');
+      setTimeout(() => setSendError(''), 5000);
       console.error('Send failed:', err);
     } finally {
       setSending(false);
@@ -552,6 +558,11 @@ export default function ChatWindow({ conversationId, onBack }) {
         </div>
       )}
 
+      {/* Send error banner */}
+      {sendError && (
+        <div className="send-error-bar">{sendError}</div>
+      )}
+
       {/* Input */}
       <form className="chat-input-bar" onSubmit={sendMessage}>
         <div className="input-wrapper">
@@ -759,6 +770,11 @@ export default function ChatWindow({ conversationId, onBack }) {
           animation: fadeIn 0.15s ease;
         }
         .scroll-to-bottom:hover { background: var(--bg-4); }
+        .send-error-bar {
+          padding: 8px 14px; font-size: 13px;
+          color: #ff6b6b; background: rgba(255,107,107,0.1);
+          border-top: 1px solid rgba(255,107,107,0.2);
+        }
         .context-bar {
           display: flex; align-items: center; gap: 10px;
           padding: 8px 14px; flex-shrink: 0;

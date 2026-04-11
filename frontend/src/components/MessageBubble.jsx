@@ -64,7 +64,7 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
   const isDeleted = msg.type === 'deleted';
   const isDecrypting = !isDeleted && plaintext === undefined;
   const failed = plaintext === '[Unable to decrypt]' || plaintext === '[Not encrypted for this device]';
-  const canEdit = isOwn && !isDeleted && plaintext && !failed;
+  const canEdit = isOwn && !isDeleted && plaintext && !failed && (Date.now() - new Date(msg.createdAt).getTime() < 15 * 60 * 1000);
 
   return (
     <div

@@ -120,7 +120,10 @@ router.post('/:conversationId/participants', authenticate, async (req, res) => {
 
     if (!conversation) return res.status(403).json({ error: 'Not authorized' });
 
-    conversation.participants.push(...userIds);
+    const existing = new Set(conversation.participants.map(String));
+    const newIds = userIds.filter(id => !existing.has(String(id)));
+    if (newIds.length === 0) return res.status(400).json({ error: 'All users are already in this group' });
+    conversation.participants.push(...newIds);
     await conversation.save();
     res.json(conversation);
   } catch {
@@ -162,6 +165,9 @@ router.delete('/:conversationId/participants/:userId', authenticate, async (req,
       admins: req.user.userId,
     });
     if (!conv) return res.status(403).json({ error: 'Not authorized' });
+    const isAdmin = conv.admins.map(String).includes(req.params.userId);
+    const isLastAdmin = isAdmin && conv.admins.length === 1;
+    if (isLastAdmin) return res.status(400).json({ error: 'Cannot remove the only admin — promote another member first' });
     await Conversation.findByIdAndUpdate(req.params.conversationId, {
       $pull: { participants: req.params.userId, admins: req.params.userId },
     });
