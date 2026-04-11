@@ -133,7 +133,17 @@ export default function ChatWindow({ conversationId, onBack }) {
         decryptOne(msg);
         return [...prev, msg];
       });
+      // Acknowledge delivery immediately
+      socket.emit('message:delivered', { messageId: msg._id });
       apiFetch(`/messages/${conversationId}/read`, { method: 'POST' }).catch(() => {});
+    };
+
+    const onMessageDelivered = ({ messageId, userId }) => {
+      setMessages(prev => prev.map(m =>
+        String(m._id) === String(messageId) && !m.deliveredTo?.find(d => String(d.userId) === String(userId))
+          ? { ...m, deliveredTo: [...(m.deliveredTo || []), { userId }] }
+          : m
+      ));
     };
 
     const onTypingStart = ({ userId: tid, username, conversationId: cid }) => {
@@ -188,6 +198,7 @@ export default function ChatWindow({ conversationId, onBack }) {
     socket.on('messages:read', onMessagesRead);
     socket.on('message:edited', onMessageEdited);
     socket.on('message:deleted', onMessageDeleted);
+    socket.on('message:delivered', onMessageDelivered);
 
     return () => {
       socket.emit('conversation:leave', conversationId);
@@ -198,6 +209,7 @@ export default function ChatWindow({ conversationId, onBack }) {
       socket.off('messages:read', onMessagesRead);
       socket.off('message:edited', onMessageEdited);
       socket.off('message:deleted', onMessageDeleted);
+      socket.off('message:delivered', onMessageDelivered);
     };
   }, [socket, conversationId, decryptOne, setMsg]);
 

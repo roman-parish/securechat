@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken';
 import webpush from 'web-push';
 import { setUserOnline, setUserOffline, isUserOnline, getOnlineUsers } from './redis.js';
 import User from '../models/User.js';
+import Message from '../models/Message.js';
 import PushSubscription from '../models/PushSubscription.js';
 
 let vapidConfigured = false;
@@ -98,6 +99,26 @@ export function setupSocketIO(io) {
         messageId,
         userId: socket.userId,
       });
+    });
+
+    socket.on('message:delivered', async ({ messageId }) => {
+      try {
+        const message = await Message.findById(messageId).select('sender deliveredTo conversationId');
+        if (!message) return;
+        // Only mark delivered if not already in the array
+        const alreadyDelivered = message.deliveredTo?.some(d => String(d.userId) === socket.userId);
+        if (alreadyDelivered) return;
+        await Message.findByIdAndUpdate(messageId, {
+          $push: { deliveredTo: { userId: socket.userId, deliveredAt: new Date() } },
+        });
+        // Notify the sender so their tick updates
+        io.to(`user:${message.sender}`).emit('message:delivered', {
+          messageId,
+          userId: socket.userId,
+        });
+      } catch (err) {
+        console.error('[socket] message:delivered error:', err.message);
+      }
     });
 
     socket.on('disconnect', async () => {

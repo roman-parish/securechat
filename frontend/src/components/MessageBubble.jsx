@@ -174,19 +174,27 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
               <div className="msg-meta">
                 {msg.editedAt && <span className="edited-tag">edited</span>}
                 <span className="msg-time">{format(new Date(msg.createdAt), 'h:mm a')}</span>
-                {isOwn && (
-                  <svg width="15" height="10" viewBox="0 0 15 10" fill="none"
-                    style={{ color: msg.readBy?.length > 1 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)' }}>
-                    {msg.readBy?.length > 1 ? (
-                      <>
+                {isOwn && (() => {
+                  const isRead = msg.readBy?.length > 1;
+                  const isDelivered = msg.deliveredTo?.length > 0;
+                  const color = isRead
+                    ? 'rgba(255,255,255,0.95)'
+                    : isDelivered
+                      ? 'rgba(255,255,255,0.55)'
+                      : 'rgba(255,255,255,0.35)';
+                  return (
+                    <svg width="15" height="10" viewBox="0 0 15 10" fill="none" style={{ color }}>
+                      {(isRead || isDelivered) ? (
+                        <>
+                          <path d="M1 5L4 8.5L9.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M5.5 5L8.5 8.5L14 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </>
+                      ) : (
                         <path d="M1 5L4 8.5L9.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M5.5 5L8.5 8.5L14 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </>
-                    ) : (
-                      <path d="M1 5L4 8.5L9.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    )}
-                  </svg>
-                )}
+                      )}
+                    </svg>
+                  );
+                })()}
               </div>
             </>
           )}

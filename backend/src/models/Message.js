@@ -61,6 +61,10 @@ const messageSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   }],
+  deliveredTo: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    deliveredAt: { type: Date, default: Date.now },
+  }],
   editedAt: {
     type: Date,
     default: null,
