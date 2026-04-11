@@ -9,6 +9,9 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
+import Message from '../models/Message.js';
+import Conversation from '../models/Conversation.js';
+import PushSubscription from '../models/PushSubscription.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -151,6 +154,53 @@ router.post('/logout', authenticate, async (req, res) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+// Delete account
+router.delete('/account', authenticate, async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'Password required to delete account' });
+
+  try {
+    const user = await User.findById(req.user.userId).select('+password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const valid = await user.comparePassword(password);
+    if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+
+    const userId = req.user.userId;
+
+    // Anonymize messages — keep conversations intact for other participants
+    await Message.updateMany(
+      { sender: userId },
+      { $set: { 'sender': null, deletedForEveryone: true, contentType: 'deleted' } }
+    );
+
+    // Remove user from all conversations; delete conversations that become empty
+    const conversations = await Conversation.find({ participants: userId });
+    for (const conv of conversations) {
+      const remaining = conv.participants.filter(p => String(p) !== userId);
+      if (remaining.length === 0) {
+        await Conversation.deleteOne({ _id: conv._id });
+        await Message.deleteMany({ conversationId: conv._id });
+      } else {
+        await Conversation.findByIdAndUpdate(conv._id, {
+          $pull: { participants: userId, admins: userId },
+        });
+      }
+    }
+
+    // Delete push subscriptions
+    await PushSubscription.deleteMany({ userId });
+
+    // Delete the user
+    await User.deleteOne({ _id: userId });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[delete-account]', err);
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 });
 

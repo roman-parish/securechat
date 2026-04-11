@@ -24,6 +24,10 @@ export default function ProfileModal({ onClose }) {
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
   const [pwMsg, setPwMsg] = useState('');
   const [pwSaving, setPwSaving] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteMsg, setDeleteMsg] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
 
   // Check if there's an actual push subscription on mount
@@ -61,6 +65,22 @@ export default function ProfileModal({ onClose }) {
       setMsg('Error: ' + err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) { setDeleteMsg('Password is required'); return; }
+    setDeleting(true);
+    setDeleteMsg('');
+    try {
+      await apiFetch('/auth/account', {
+        method: 'DELETE',
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      await logout();
+    } catch (err) {
+      setDeleteMsg(err.message || 'Failed to delete account');
+      setDeleting(false);
     }
   };
 
@@ -458,6 +478,19 @@ export default function ProfileModal({ onClose }) {
                   <p>Log in from any device with your password to restore your keys automatically.</p>
                 </div>
               </div>
+
+              <div className="danger-zone">
+                <p className="danger-zone-label">Danger Zone</p>
+                <div className="setting-row danger-row">
+                  <div className="setting-text">
+                    <p className="setting-label">Delete Account</p>
+                    <p className="setting-desc">Permanently delete your account and all data</p>
+                  </div>
+                  <button className="danger-btn" onClick={() => { setShowDeleteAccount(true); setDeleteMsg(''); setDeletePassword(''); }}>
+                    Delete
+                  </button>
+                </div>
+              </div>
             </>
           )}
 
@@ -507,6 +540,41 @@ export default function ProfileModal({ onClose }) {
                   <button className="cancel-btn" onClick={() => setShowChangePassword(false)}>Cancel</button>
                   <button className="primary-btn" onClick={handleChangePassword} disabled={pwSaving}>
                     {pwSaving ? 'Updating…' : 'Update Password'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Account Modal */}
+        {showDeleteAccount && (
+          <div className="cp-overlay" onClick={() => setShowDeleteAccount(false)}>
+            <div className="cp-modal" onClick={e => e.stopPropagation()}>
+              <div className="cp-header">
+                <h3>Delete Account</h3>
+                <button className="close-btn" onClick={() => setShowDeleteAccount(false)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+              <p className="cp-note danger-note">This will permanently delete your account, remove you from all conversations, and cannot be undone.</p>
+              <div className="change-password-form">
+                <div className="field">
+                  <label>Confirm your password</label>
+                  <input
+                    type="password" placeholder="Enter your password"
+                    value={deletePassword}
+                    onChange={e => setDeletePassword(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                {deleteMsg && <p className="pw-msg error">{deleteMsg}</p>}
+                <div className="cp-actions">
+                  <button className="cancel-btn" onClick={() => setShowDeleteAccount(false)}>Cancel</button>
+                  <button className="danger-btn" onClick={handleDeleteAccount} disabled={deleting}>
+                    {deleting ? 'Deleting…' : 'Delete My Account'}
                   </button>
                 </div>
               </div>
@@ -663,6 +731,13 @@ export default function ProfileModal({ onClose }) {
         .pw-msg { font-size: 13px; }
         .pw-msg.success { color: var(--green); }
         .pw-msg.error { color: var(--red); }
+        .danger-zone { margin-top: 8px; }
+        .danger-zone-label { font-size: 11px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+        .danger-row { border: 1px solid rgba(255,80,80,0.2); border-radius: var(--radius); background: rgba(255,80,80,0.04); }
+        .danger-btn { background: transparent; border: 1px solid var(--red); color: var(--red); border-radius: var(--radius); padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .danger-btn:hover { background: rgba(255,80,80,0.1); }
+        .danger-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .danger-note { color: var(--red) !important; }
         .primary-btn {
           background: var(--accent); color: white; border-radius: 12px;
           padding: 12px; font-size: 15px; font-weight: 500; transition: all 150ms;
