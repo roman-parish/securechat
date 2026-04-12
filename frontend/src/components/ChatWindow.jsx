@@ -19,8 +19,8 @@ import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
 function formatLastSeen(lastSeen) {
   if (!lastSeen) return 'Offline';
   const d = new Date(lastSeen);
-  if (isToday(d)) return `Last seen today at ${format(d, 'HH:mm')}`;
-  if (isYesterday(d)) return `Last seen yesterday at ${format(d, 'HH:mm')}`;
+  if (isToday(d)) return `Last seen today at ${format(d, 'h:mm a')}`;
+  if (isYesterday(d)) return `Last seen yesterday at ${format(d, 'h:mm a')}`;
   return `Last seen ${formatDistanceToNow(d, { addSuffix: true })}`;
 }
 
