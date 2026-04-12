@@ -201,6 +201,28 @@ function SplashScreen() {
   );
 }
 
+function reportError(payload) {
+  try {
+    navigator.sendBeacon('/api/errors', new Blob(
+      [JSON.stringify({ ...payload, userAgent: navigator.userAgent })],
+      { type: 'application/json' }
+    ));
+  } catch {
+    // reporting must never throw
+  }
+}
+
+// Global handlers for errors outside the React tree
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (e) => {
+    reportError({ type: 'uncaught', message: e.message, stack: e.error?.stack, url: e.filename, line: e.lineno, col: e.colno });
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    const msg = e.reason instanceof Error ? e.reason.message : String(e.reason);
+    reportError({ type: 'unhandledrejection', message: msg, stack: e.reason?.stack });
+  });
+}
+
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -208,6 +230,15 @@ class ErrorBoundary extends Component {
   }
   static getDerivedStateFromError(err) {
     return { error: err };
+  }
+  componentDidCatch(err, info) {
+    reportError({
+      type: 'react-error',
+      message: err.message,
+      stack: err.stack,
+      componentStack: info?.componentStack,
+      url: window.location.href,
+    });
   }
   render() {
     if (this.state.error) {

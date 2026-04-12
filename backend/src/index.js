@@ -45,6 +45,7 @@ import messageRoutes from './routes/messages.js';
 import pushRoutes from './routes/push.js';
 import uploadRoutes from './routes/uploads.js';
 import adminRoutes from './routes/admin.js';
+import errorRoutes from './routes/errors.js';
 
 const app = express();
 
@@ -112,6 +113,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/errors', errorRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
