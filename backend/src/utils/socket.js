@@ -124,6 +124,16 @@ export function setupSocketIO(io) {
 
     socket.on('disconnect', async () => {
       logger.info({ userId: socket.userId, username: socket.username }, 'Socket disconnected');
+
+      // Clear any active typing indicators so they don't stick after disconnect
+      const typingRooms = [...socket.rooms].filter(r => r.startsWith('conversation:'));
+      for (const room of typingRooms) {
+        socket.to(room).emit('typing:stop', {
+          userId: socket.userId,
+          conversationId: room.replace('conversation:', ''),
+        });
+      }
+
       await setUserOffline(socket.userId);
       await User.findByIdAndUpdate(socket.userId, { lastSeen: new Date() });
       socket.broadcast.emit('user:offline', { userId: socket.userId, lastSeen: new Date() });
