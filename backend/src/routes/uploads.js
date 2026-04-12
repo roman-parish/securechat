@@ -14,8 +14,10 @@ import fs from 'fs';
 
 const router = Router();
 
+const UPLOAD_DIR = process.env.UPLOAD_DIR || '/app/uploads';
+
 const storage = multer.diskStorage({
-  destination: '/app/uploads',
+  destination: UPLOAD_DIR,
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `${uuidv4()}${ext}`);

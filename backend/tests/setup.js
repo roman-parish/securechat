@@ -28,6 +28,7 @@ process.env.JWT_SECRET = 'test-jwt-secret-32-chars-minimum!!';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-32-chars-min!';
 process.env.CLIENT_URL = 'http://localhost:3000';
 process.env.MONGO_URI = 'will-be-replaced-by-memory-server';
+process.env.UPLOAD_DIR = '/tmp/securechat-test-uploads';
 
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create();
