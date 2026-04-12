@@ -13,6 +13,7 @@ import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import PushSubscription from '../models/PushSubscription.js';
 import { authenticate } from '../middleware/auth.js';
+import logger from '../utils/logger.js';
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.post('/register', [
 
     res.status(201).json({ user, accessToken, refreshToken });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Registration failed');
     res.status(500).json({ error: 'Registration failed' });
   }
 });
@@ -90,7 +91,7 @@ router.post('/login', [
       } : null,
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Login failed');
     res.status(500).json({ error: 'Login failed' });
   }
 });
@@ -122,16 +123,25 @@ router.put('/public-key', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
-// Refresh token
+// Refresh token — with reuse detection
+// If a valid JWT arrives that is no longer in the stored array, it was already
+// rotated — this indicates a stolen token. Clear all sessions immediately.
 router.post('/refresh', async (req, res) => {
   const { refreshToken } = req.body;
   if (!refreshToken) return res.status(401).json({ error: 'Refresh token required' });
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const user = await User.findById(decoded.userId).select('+refreshTokens');
-    if (!user || !user.refreshTokens.includes(refreshToken)) {
+    if (!user) return res.status(401).json({ error: 'Invalid refresh token' });
+
+    if (!user.refreshTokens.includes(refreshToken)) {
+      // Valid signature but token already rotated — possible theft, revoke all sessions
+      logger.warn({ userId: decoded.userId }, 'Refresh token reuse detected — revoking all sessions');
+      user.refreshTokens = [];
+      await user.save();
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
+
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
     user.refreshTokens = user.refreshTokens.filter(t => t !== refreshToken);
     user.refreshTokens.push(newRefreshToken);
@@ -199,12 +209,10 @@ router.delete('/account', authenticate, async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('[delete-account]', err);
+    logger.error({ err }, 'Account deletion failed');
     res.status(500).json({ error: 'Failed to delete account' });
   }
 });
-
-export default router;
 
 // Change password
 router.post('/change-password', authenticate, async (req, res) => {
@@ -229,6 +237,9 @@ router.post('/change-password', authenticate, async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
+    logger.error({ err }, 'Password change failed');
     res.status(500).json({ error: 'Failed to change password' });
   }
 });
+
+export default router;
