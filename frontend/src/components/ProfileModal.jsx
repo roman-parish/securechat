@@ -731,9 +731,9 @@ export default function ProfileModal({ onClose }) {
         .pw-msg { font-size: 13px; }
         .pw-msg.success { color: var(--green); }
         .pw-msg.error { color: var(--red); }
-        .danger-zone { margin-top: 8px; }
-        .danger-zone-label { font-size: 11px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-        .danger-row { border: 1px solid rgba(255,80,80,0.2); border-radius: var(--radius); background: rgba(255,80,80,0.04); }
+        .danger-zone { }
+        .danger-zone-label { font-size: 11px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+        .danger-row { border: 1px solid rgba(255,80,80,0.2); border-radius: var(--radius); background: rgba(255,80,80,0.04); padding: 14px; }
         .danger-btn { background: transparent; border: 1px solid var(--red); color: var(--red); border-radius: var(--radius); padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
         .danger-btn:hover { background: rgba(255,80,80,0.1); }
         .danger-btn:disabled { opacity: 0.5; cursor: not-allowed; }
