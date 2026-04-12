@@ -17,6 +17,8 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
   const [showPicker, setShowPicker] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [swipeX, setSwipeX] = useState(0);
+  const swipeStart = useRef(null);
   const rowRef = useRef(null);
   const pickerRef = useRef(null);
   const menuRef = useRef(null);
@@ -54,6 +56,33 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
     });
   };
 
+  const SWIPE_THRESHOLD = 60;
+
+  const handleTouchStart = (e) => {
+    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    setSwipeX(0);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!swipeStart.current) return;
+    const dx = e.touches[0].clientX - swipeStart.current.x;
+    const dy = e.touches[0].clientY - swipeStart.current.y;
+    // Only track horizontal swipes — ignore if mostly vertical (scrolling)
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    if (dx > 0) {
+      e.preventDefault();
+      setSwipeX(Math.min(dx, SWIPE_THRESHOLD + 10));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (swipeX >= SWIPE_THRESHOLD) {
+      onReply?.();
+    }
+    setSwipeX(0);
+    swipeStart.current = null;
+  };
+
   const handleBubbleTap = (e) => {
     if (isDeleted) return;
     e.stopPropagation();
@@ -80,12 +109,23 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
     <div
       ref={rowRef}
       className={`msg-row ${isOwn ? 'own' : ''} ${isConsecutive ? 'consecutive' : ''}`}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {!isOwn && !isConsecutive && (
         <div className="msg-sender-name">{msg.sender?.displayName || msg.sender?.username}</div>
       )}
 
-      <div className="msg-group">
+      {swipeX > 10 && (
+        <div className="swipe-reply-icon" style={{ opacity: Math.min(swipeX / SWIPE_THRESHOLD, 1) }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M3 10h13a5 5 0 0 1 0 10H3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M7 6L3 10l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+      )}
+      <div className="msg-group" style={swipeX > 0 ? { transform: `translateX(${swipeX}px)`, transition: 'none' } : { transition: 'transform 0.2s ease' }}>
 
         {/* Inline action bar — appears on tap, floats above bubble */}
         {showActions && !isDeleted && (
@@ -271,6 +311,10 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
       {copied && <div className="copied-toast">Copied!</div>}
 
       <style>{`
+        .swipe-reply-icon {
+          position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+          color: var(--accent); pointer-events: none; z-index: 5;
+        }
         .copied-toast {
           position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
           background: var(--bg-4); color: var(--text-0); font-size: 11px; font-weight: 500;
