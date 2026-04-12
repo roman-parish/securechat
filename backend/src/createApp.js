@@ -42,7 +42,22 @@ export function createApp(ioRef = mockIo) {
 
   app.set('trust proxy', 1);
 
-  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "blob:", "data:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        workerSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+      },
+    },
+  }));
   app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
