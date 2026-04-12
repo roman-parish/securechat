@@ -59,6 +59,12 @@ services:
       - securechat-net
     volumes:
       - uploads_data:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   frontend:
     build:
@@ -86,8 +92,10 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - uploads_data:/var/uploads:ro
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
     networks:
       - securechat-net
 
