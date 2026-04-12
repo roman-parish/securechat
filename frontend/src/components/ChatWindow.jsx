@@ -461,7 +461,11 @@ export default function ChatWindow({ conversationId, onBack }) {
           <span className="chat-name">{convName}</span>
           <span className="chat-status">
             {conv?.type === 'group'
-              ? `${conv.participants?.length} members`
+              ? (() => {
+                  const total = conv.participants?.length ?? 0;
+                  const online = conv.participants?.filter(p => onlineUsers.has(String(p._id))).length ?? 0;
+                  return online > 0 ? `${total} members, ${online} online` : `${total} members`;
+                })()
               : isOtherOnline
                 ? <span style={{ color: 'var(--green)' }}>● Online</span>
                 : onlineListLoaded
