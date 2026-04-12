@@ -20,7 +20,7 @@ router.get('/', authenticate, async (req, res) => {
       participants: req.user.userId,
       hiddenFor: { $ne: req.user.userId },
     })
-      .populate('participants', 'username displayName avatar publicKey lastSeen bio')
+      .populate('participants', 'username displayName avatar publicKey lastSeen bio customStatus')
       .populate('lastMessage')
       .sort({ lastActivity: -1 });
 
@@ -43,7 +43,7 @@ router.post('/direct', authenticate, async (req, res) => {
     let conversation = await Conversation.findOne({
       type: 'direct',
       participants: { $all: [req.user.userId, userId], $size: 2 },
-    }).populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    }).populate('participants', 'username displayName avatar publicKey lastSeen bio customStatus');
 
     if (conversation) {
       return res.json(conversation);
@@ -54,7 +54,7 @@ router.post('/direct', authenticate, async (req, res) => {
       participants: [req.user.userId, userId],
     });
     await conversation.save();
-    await conversation.populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    await conversation.populate('participants', 'username displayName avatar publicKey lastSeen bio customStatus');
 
     res.status(201).json(conversation);
   } catch (err) {
@@ -80,7 +80,7 @@ router.post('/group', authenticate, async (req, res) => {
       admins: [req.user.userId],
     });
     await conversation.save();
-    await conversation.populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    await conversation.populate('participants', 'username displayName avatar publicKey lastSeen bio customStatus');
 
     // Notify all participants
     allParticipants.forEach(pid => {
@@ -126,7 +126,7 @@ router.get('/:conversationId', authenticate, async (req, res) => {
     const conversation = await Conversation.findOne({
       _id: req.params.conversationId,
       participants: req.user.userId,
-    }).populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    }).populate('participants', 'username displayName avatar publicKey lastSeen bio customStatus');
 
     if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
     res.json(conversation);
@@ -172,7 +172,7 @@ router.put('/:conversationId', authenticate, async (req, res) => {
       req.params.conversationId,
       { ...(name && { name }), ...(description !== undefined && { description }) },
       { new: true }
-    ).populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    ).populate('participants', 'username displayName avatar publicKey lastSeen bio customStatus');
     req.io.to(`conversation:${conv._id}`).emit('conversation:updated', updated);
     for (const p of updated.participants) {
       req.io.to(`user:${p._id}`).emit('conversation:updated', updated);
@@ -288,7 +288,7 @@ router.post('/:conversationId/invitations/:invitationId/accept', authenticate, a
     }, { arrayFilters: [{ 'inv._id': inv._id }] });
 
     const updated = await Conversation.findById(req.params.conversationId)
-      .populate('participants', 'username displayName avatar publicKey lastSeen bio');
+      .populate('participants', 'username displayName avatar publicKey lastSeen bio customStatus');
 
     // Tell existing room members someone joined
     req.io.to(`conversation:${conv._id}`).emit('conversation:participant-joined', {

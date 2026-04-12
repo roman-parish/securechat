@@ -760,6 +760,7 @@ export default function ChatWindow({ conversationId, onBack }) {
             </div>
             <h3 className="profile-display-name">{otherUser.displayName || otherUser.username}</h3>
             <p className="profile-username">@{otherUser.username}</p>
+            {otherUser.customStatus && <p className="profile-custom-status">💬 {otherUser.customStatus}</p>}
             {otherUser.bio && <p className="profile-bio">{otherUser.bio}</p>}
             <div className="profile-status-row">
               {isOtherOnline
@@ -815,6 +816,9 @@ export default function ChatWindow({ conversationId, onBack }) {
         .profile-online-dot.online { background: var(--green); }
         .profile-display-name { font-size: 18px; font-weight: 600; color: var(--text-0); }
         .profile-username { font-size: 13px; color: var(--text-3); }
+        .profile-custom-status {
+          font-size: 13px; color: var(--accent); text-align: center; max-width: 240px;
+        }
         .profile-bio {
           font-size: 13px; color: var(--text-2); text-align: center;
           line-height: 1.5; max-width: 240px;
