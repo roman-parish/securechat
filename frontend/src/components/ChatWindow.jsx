@@ -688,9 +688,28 @@ export default function ChatWindow({ conversationId, onBack }) {
           onChange={e => {
             const file = e.target.files?.[0];
             if (!file) return;
+            e.target.value = '';
+            const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
+            const ALLOWED_TYPES = [
+              'image/', 'audio/', 'video/',
+              'application/pdf', 'text/plain',
+              'application/msword',
+              'application/vnd.openxmlformats-officedocument',
+              'application/zip', 'application/x-zip',
+            ];
+            if (file.size > MAX_BYTES) {
+              setSendError(`File too large — maximum size is 20 MB (this file is ${(file.size / 1024 / 1024).toFixed(1)} MB)`);
+              setTimeout(() => setSendError(''), 4000);
+              return;
+            }
+            const allowed = ALLOWED_TYPES.some(t => file.type.startsWith(t));
+            if (!allowed) {
+              setSendError(`File type not supported: ${file.type || 'unknown'}`);
+              setTimeout(() => setSendError(''), 4000);
+              return;
+            }
             const isImg = file.type.startsWith('image/');
             setAttachment({ file, previewUrl: isImg ? URL.createObjectURL(file) : null, type: isImg ? 'image' : 'file' });
-            e.target.value = '';
           }}
         />
         {!editingMsg && (
