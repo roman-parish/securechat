@@ -66,8 +66,18 @@ export function ChatProvider({ children }) {
     const onUserOnline = ({ userId }) =>
       setOnlineUsers(prev => new Set([...prev, String(userId)]));
 
-    const onUserOffline = ({ userId }) =>
+    const onUserOffline = ({ userId, lastSeen }) => {
       setOnlineUsers(prev => { const n = new Set(prev); n.delete(String(userId)); return n; });
+      // Persist lastSeen on conversation participants so the UI can show "last seen X ago"
+      if (lastSeen) {
+        setConversations(prev => prev.map(conv => ({
+          ...conv,
+          participants: conv.participants?.map(p =>
+            String(p._id) === String(userId) ? { ...p, lastSeen } : p
+          ),
+        })));
+      }
+    };
 
     const onConversationNew = (conv) =>
       setConversations(prev => [conv, ...prev.filter(c => String(c._id) !== String(conv._id))]);
