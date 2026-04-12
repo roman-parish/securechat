@@ -12,6 +12,17 @@ import { isUserOnline } from '../utils/redis.js';
 
 const router = Router();
 
+// Current user
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch {
+    res.status(500).json({ error: 'Failed to get user' });
+  }
+});
+
 // Search users
 router.get('/search', authenticate, async (req, res) => {
   const { q } = req.query;

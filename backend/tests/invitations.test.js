@@ -67,7 +67,7 @@ describe('Group invitations', () => {
     const res = await agentC.get('/api/conversations/invitations');
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
-    expect(res.body[0].conversation._id).toBe(group._id);
+    expect(String(res.body[0].conversationId)).toBe(String(group._id));
   });
 
   it('accepting an invitation adds user to the group', async () => {
@@ -80,7 +80,7 @@ describe('Group invitations', () => {
 
     // Get invitation id
     const listRes = await agentC.get('/api/conversations/invitations');
-    const invId = listRes.body[0].invitationId;
+    const invId = listRes.body[0]._id;
 
     const acceptRes = await agentC.post(`/api/conversations/${group._id}/invitations/${invId}/accept`);
     expect(acceptRes.status).toBe(200);
@@ -101,7 +101,7 @@ describe('Group invitations', () => {
     await admin.post(`/api/conversations/${group._id}/invite`).send({ userId: userC._id });
 
     const listRes = await agentC.get('/api/conversations/invitations');
-    const invId = listRes.body[0].invitationId;
+    const invId = listRes.body[0]._id;
 
     const declineRes = await agentC.post(`/api/conversations/${group._id}/invitations/${invId}/decline`);
     expect(declineRes.status).toBe(200);

@@ -15,7 +15,8 @@ async function sendMessage(agent, conversationId, overrides = {}) {
     sender: overrides.senderId,
     content: overrides.content || 'hello',
     contentType: overrides.contentType || 'text',
-    iv: 'iv',
+    encryptedContent: 'dGVzdA==',
+    iv: 'dGVzdA==',
     encryptedKeys: [],
     attachment: overrides.attachment,
   });
@@ -109,7 +110,8 @@ describe('Message search', () => {
         sender: userA._id,
         content: 'x',
         contentType: 'file',
-        iv: 'iv',
+        encryptedContent: 'dGVzdA==',
+        iv: 'dGVzdA==',
         encryptedKeys: [],
         attachment: { filename: `file-${i}.pdf`, size: 100, mimeType: 'application/pdf' },
       }))

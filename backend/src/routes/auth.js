@@ -6,6 +6,7 @@
  * https://github.com/roman-parish/securechat
  */
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
@@ -18,9 +19,9 @@ import logger from '../utils/logger.js';
 const router = Router();
 
 function generateTokens(user) {
-  const payload = { userId: user._id.toString(), username: user.username, displayName: user.displayName || user.username };
-  const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: '30d' });
+  const base = { userId: user._id.toString(), username: user.username, displayName: user.displayName || user.username };
+  const accessToken = jwt.sign({ ...base, jti: randomUUID() }, process.env.JWT_SECRET, { expiresIn: '15m' });
+  const refreshToken = jwt.sign({ ...base, jti: randomUUID() }, process.env.JWT_REFRESH_SECRET, { expiresIn: '30d' });
   return { accessToken, refreshToken };
 }
 
