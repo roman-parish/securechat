@@ -14,6 +14,8 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 
 import webpush from 'web-push';
+import { createAdapter } from '@socket.io/redis-adapter';
+import Redis from 'ioredis';
 import { connectDB } from './utils/db.js';
 import { connectRedis, redisClient } from './utils/redis.js';
 import { setupSocketIO } from './utils/socket.js';
@@ -121,6 +123,15 @@ app.use((err, _req, res, _next) => {
     error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
   });
 });
+
+// Redis pub/sub adapter — enables Socket.IO to work across multiple backend instances
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const pubClient = new Redis(REDIS_URL);
+const subClient = pubClient.duplicate();
+pubClient.on('error', err => console.error('[redis-adapter] pub error:', err));
+subClient.on('error', err => console.error('[redis-adapter] sub error:', err));
+io.adapter(createAdapter(pubClient, subClient));
+console.log('✅ Socket.IO Redis adapter configured');
 
 // Setup Socket.IO handlers
 setupSocketIO(io);

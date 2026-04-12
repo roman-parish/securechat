@@ -72,11 +72,11 @@ export function setupSocketIO(io) {
 
     // Track whether the app is visible — clients emit these on visibilitychange
     socket.on('app:background', () => {
-      socket.appBackgrounded = true;
+      socket.data.appBackgrounded = true;
     });
 
     socket.on('app:foreground', () => {
-      socket.appBackgrounded = false;
+      socket.data.appBackgrounded = false;
     });
 
     socket.on('typing:start', ({ conversationId }) => {
@@ -137,7 +137,7 @@ export function setupSocketIO(io) {
 export async function isUserBackgrounded(io, userId) {
   const sockets = await io.in(`user:${userId}`).fetchSockets();
   if (!sockets.length) return false; // not connected at all
-  return sockets.every(s => s.appBackgrounded === true);
+  return sockets.every(s => s.data.appBackgrounded === true);
 }
 
 /**

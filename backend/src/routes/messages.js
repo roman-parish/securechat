@@ -104,7 +104,7 @@ router.post('/:conversationId', authenticate, async (req, res) => {
         if (userSockets.length === 0) {
           shouldPush = true; // redis thinks online but socket is gone
         } else {
-          const allBackgrounded = userSockets.every(s => s.appBackgrounded === true);
+          const allBackgrounded = userSockets.every(s => s.data.appBackgrounded === true);
           const inConvRoom = await req.io.in(`conversation:${conversation._id}`).fetchSockets()
             .then(sockets => sockets.some(s => s.userId === p._id.toString()));
           shouldPush = allBackgrounded || !inConvRoom;
