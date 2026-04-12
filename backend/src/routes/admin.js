@@ -20,17 +20,45 @@ router.use(authenticate, requireAdmin);
 // GET /api/admin/stats
 router.get('/stats', async (req, res) => {
   try {
-    const [totalUsers, totalMessages, totalConversations] = await Promise.all([
+    const now = new Date();
+    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    const [totalUsers, totalMessages, totalConversations, activeToday, newUsersThisWeek, storageResult, messagesPerDay] = await Promise.all([
       User.countDocuments(),
-      // Only count non-deleted messages
       Message.countDocuments({ type: { $ne: 'deleted' } }),
       Conversation.countDocuments(),
+      User.countDocuments({ lastSeen: { $gte: oneDayAgo } }),
+      User.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+      // Sum of all attachment sizes in bytes
+      Message.aggregate([
+        { $match: { 'attachment.size': { $exists: true } } },
+        { $group: { _id: null, total: { $sum: '$attachment.size' } } },
+      ]),
+      // Message count per day for last 7 days
+      Message.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo }, type: { $ne: 'deleted' } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
     ]);
 
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const activeToday = await User.countDocuments({ lastSeen: { $gte: oneDayAgo } });
+    const storageBytes = storageResult[0]?.total || 0;
 
-    res.json({ totalUsers, totalMessages, totalConversations, activeToday });
+    res.json({
+      totalUsers,
+      totalMessages,
+      totalConversations,
+      activeToday,
+      newUsersThisWeek,
+      storageBytes,
+      messagesPerDay,
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch stats' });
   }

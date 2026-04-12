@@ -11,6 +11,14 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import Avatar from './Avatar.jsx';
 import { formatDistanceToNow } from 'date-fns';
 
+function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
 export default function AdminPage({ onBack }) {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
@@ -118,24 +126,55 @@ export default function AdminPage({ onBack }) {
       <div className="admin-content">
         {/* Stats */}
         {stats && (
-          <div className="stats-row">
-            <div className="stat-card">
-              <span className="stat-value">{stats.totalUsers}</span>
-              <span className="stat-label">Total Users</span>
+          <>
+            <div className="stats-row">
+              <div className="stat-card">
+                <span className="stat-value">{stats.totalUsers}</span>
+                <span className="stat-label">Total Users</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-value">{stats.totalMessages}</span>
+                <span className="stat-label">Messages</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-value">{stats.totalConversations}</span>
+                <span className="stat-label">Conversations</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-value">{stats.activeToday}</span>
+                <span className="stat-label">Active Today</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-value">{stats.newUsersThisWeek}</span>
+                <span className="stat-label">New This Week</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-value">{formatBytes(stats.storageBytes)}</span>
+                <span className="stat-label">Storage Used</span>
+              </div>
             </div>
-            <div className="stat-card">
-              <span className="stat-value">{stats.totalMessages}</span>
-              <span className="stat-label">Messages</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{stats.totalConversations}</span>
-              <span className="stat-label">Conversations</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{stats.activeToday}</span>
-              <span className="stat-label">Active Today</span>
-            </div>
-          </div>
+
+            {/* Messages per day chart */}
+            {stats.messagesPerDay?.length > 0 && (
+              <div className="chart-card">
+                <div className="chart-title">Messages — Last 7 Days</div>
+                <div className="bar-chart">
+                  {(() => {
+                    const max = Math.max(...stats.messagesPerDay.map(d => d.count), 1);
+                    return stats.messagesPerDay.map(d => (
+                      <div key={d._id} className="bar-col">
+                        <span className="bar-count">{d.count}</span>
+                        <div className="bar-track">
+                          <div className="bar-fill" style={{ height: `${Math.round((d.count / max) * 100)}%` }} />
+                        </div>
+                        <span className="bar-label">{d._id.slice(5)}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Search */}
@@ -302,9 +341,36 @@ export default function AdminPage({ onBack }) {
           display: flex; flex-direction: column; gap: 20px;
         }
         .stats-row {
-          display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+          display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
         }
+        @media (max-width: 900px) { .stats-row { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 600px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        .chart-card {
+          background: var(--bg-2); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 16px 20px;
+        }
+        .chart-title {
+          font-size: 12px; font-weight: 600; color: var(--text-3);
+          text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px;
+        }
+        .bar-chart {
+          display: flex; align-items: flex-end; gap: 8px; height: 100px;
+        }
+        .bar-col {
+          flex: 1; display: flex; flex-direction: column;
+          align-items: center; gap: 4px; height: 100%;
+        }
+        .bar-count { font-size: 11px; color: var(--text-3); min-height: 14px; }
+        .bar-track {
+          flex: 1; width: 100%; background: var(--bg-3);
+          border-radius: 3px 3px 0 0; position: relative; overflow: hidden;
+          display: flex; align-items: flex-end;
+        }
+        .bar-fill {
+          width: 100%; background: var(--accent); border-radius: 3px 3px 0 0;
+          transition: height 0.3s ease; min-height: 2px;
+        }
+        .bar-label { font-size: 10px; color: var(--text-3); white-space: nowrap; }
         .stat-card {
           background: var(--bg-2); border: 1px solid var(--border);
           border-radius: var(--radius); padding: 16px;
