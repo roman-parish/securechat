@@ -27,7 +27,8 @@ function formatLastSeen(lastSeen) {
 export default function ChatWindow({ conversationId, onBack }) {
   const { user } = useAuth();
   const { socket } = useSocket();
-  const { onlineUsers, onlineListLoaded } = useChat();
+  const { onlineUsers, onlineListLoaded, unreadCounts } = useChat();
+  const [initialUnread, setInitialUnread] = useState(0);
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [decrypted, setDecrypted] = useState({});
@@ -94,6 +95,8 @@ export default function ChatWindow({ conversationId, onBack }) {
     setHasMore(true);
     setSearchOpen(false);
     setSearchQuery('');
+    // Capture unread count before it gets cleared by the read receipt
+    setInitialUnread(unreadCounts[conversationId] || 0);
 
     Promise.all([
       apiFetch(`/conversations/${conversationId}`),
@@ -109,7 +112,7 @@ export default function ChatWindow({ conversationId, onBack }) {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [conversationId, decryptOne]);
+  }, [conversationId, decryptOne, unreadCounts]);
 
   // Load older messages (pagination)
   const loadMore = useCallback(async () => {
@@ -578,7 +581,9 @@ export default function ChatWindow({ conversationId, onBack }) {
         ref={messagesAreaRef}
         onScroll={e => {
           const el = e.currentTarget;
-          setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+          const bottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+          setAtBottom(bottom);
+          if (bottom) setInitialUnread(0);
           // Load more when near top
           if (el.scrollTop < 100 && !loadingMore && hasMore && !searchQuery) loadMore();
         }}
@@ -638,12 +643,18 @@ export default function ChatWindow({ conversationId, onBack }) {
         )}
       </div>
 
-      {/* Scroll to bottom */}
+      {/* Scroll to bottom / jump to unread */}
       {!atBottom && (
         <button className="scroll-to-bottom" onClick={() => {
-          scrollToBottom(true);
-          setAtBottom(true);
+          if (initialUnread > 0 && messages.length >= initialUnread) {
+            const firstUnread = messages[messages.length - initialUnread];
+            jumpToMessage(firstUnread._id, firstUnread.createdAt);
+            setInitialUnread(0);
+          } else {
+            scrollToBottom(true);
+          }
         }}>
+          {initialUnread > 0 && <span className="unread-jump-badge">{initialUnread} new</span>}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -968,13 +979,17 @@ export default function ChatWindow({ conversationId, onBack }) {
         .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
         .scroll-to-bottom {
           position: absolute; bottom: 90px; right: 16px; z-index: 10;
-          width: 36px; height: 36px; border-radius: 50%;
+          min-width: 36px; height: 36px; border-radius: 18px;
           background: var(--bg-2); border: 1px solid var(--border-strong);
           color: var(--text-1); display: flex; align-items: center; justify-content: center;
+          gap: 6px; padding: 0 10px;
           box-shadow: var(--shadow); transition: all var(--transition);
           animation: fadeIn 0.15s ease;
         }
         .scroll-to-bottom:hover { background: var(--bg-4); }
+        .unread-jump-badge {
+          font-size: 11px; font-weight: 600; color: var(--accent); white-space: nowrap;
+        }
         .send-error-bar {
           padding: 8px 14px; font-size: 13px;
           color: #ff6b6b; background: rgba(255,107,107,0.1);
