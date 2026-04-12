@@ -16,6 +16,7 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
   const [showActions, setShowActions] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
   const rowRef = useRef(null);
   const pickerRef = useRef(null);
   const menuRef = useRef(null);
@@ -42,6 +43,15 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
         body: JSON.stringify({ emoji }),
       });
     } catch {}
+  };
+
+  const handleCopy = () => {
+    if (!plaintext) return;
+    navigator.clipboard.writeText(plaintext).then(() => {
+      setCopied(true);
+      setShowActions(false);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   const handleBubbleTap = (e) => {
@@ -94,6 +104,14 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
                 <path d="M7 6L3 10l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
+            {plaintext && !isDeleted && (
+              <button className="act-btn" onClick={handleCopy} title="Copy">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.5"/>
+                </svg>
+              </button>
+            )}
             <button className="act-btn" onClick={() => { setShowActions(false); onPin?.(msg); }} title="Pin message">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2l3 6 6 1-4.5 4 1 6L12 16l-5.5 3 1-6L3 9l6-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -250,7 +268,16 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
         </div>
       )}
 
+      {copied && <div className="copied-toast">Copied!</div>}
+
       <style>{`
+        .copied-toast {
+          position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+          background: var(--bg-4); color: var(--text-0); font-size: 11px; font-weight: 500;
+          padding: 4px 10px; border-radius: 10px; pointer-events: none;
+          animation: fadeIn 0.1s ease;
+          white-space: nowrap; z-index: 20;
+        }
         .msg-row {
           display: flex; flex-direction: column;
           padding: 2px 16px; position: relative;
