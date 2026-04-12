@@ -70,6 +70,14 @@ export function createApp(ioRef = mockIo) {
   app.use('/api/push', pushRoutes);
   app.use('/api/uploads', uploadRoutes);
   app.use('/api/admin', adminRoutes);
+  // Tight limit on error reporting — no auth, so cap at 20 reports per IP per 15 min
+  app.use('/api/errors', rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: process.env.NODE_ENV === 'test' ? 10000 : 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many error reports' },
+  }));
   app.use('/api/errors', errorRoutes);
 
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
