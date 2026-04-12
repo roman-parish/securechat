@@ -429,7 +429,7 @@ export default function ChatWindow({ conversationId, onBack }) {
     try {
       const conv = await apiFetch(`/conversations/${targetConv._id}`);
       const payload = await buildEncryptedPayload(plaintext, conv.participants, myId);
-      await apiFetch(`/messages/${targetConv._id}`, { method: 'POST', body: JSON.stringify(payload) });
+      await apiFetch(`/messages/${targetConv._id}`, { method: 'POST', body: JSON.stringify({ ...payload, forwarded: true }) });
       const name = targetConv.type === 'group'
         ? targetConv.name
         : targetConv.participants?.find(p => String(p._id) !== myId)?.displayName || 'chat';

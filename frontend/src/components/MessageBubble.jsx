@@ -204,6 +204,9 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
           className={`bubble ${isOwn ? 'own' : ''} ${failed ? 'failed' : ''} ${isDeleted ? 'deleted' : ''} ${showActions ? 'active' : ''}`}
           onClick={handleBubbleTap}
         >
+          {msg.forwarded && !isDeleted && (
+            <p className="forwarded-label">↪ Forwarded</p>
+          )}
           {isDeleted ? (
             <p className="deleted-text">🗑 Message deleted</p>
           ) : isDecrypting ? (
@@ -409,6 +412,8 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
         .bubble:not(.own) .msg-time { color: var(--text-3); }
         .edited-tag { font-size: 10px; color: rgba(255,255,255,0.4); font-style: italic; }
         .bubble:not(.own) .edited-tag { color: var(--text-3); }
+        .forwarded-label { font-size: 11px; color: rgba(255,255,255,0.5); font-style: italic; margin-bottom: 4px; }
+        .bubble:not(.own) .forwarded-label { color: var(--text-3); }
         .decrypting { display: flex; align-items: center; justify-content: center; padding: 4px; }
         .decrypt-dots { display: flex; gap: 4px; }
         .decrypt-dots span {
