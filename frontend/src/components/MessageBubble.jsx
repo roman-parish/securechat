@@ -11,7 +11,7 @@ import { apiFetch } from '../utils/api.js';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
-export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, onPin, currentUserId }) {
+export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, onPin, onForward, currentUserId }) {
   const [lightbox, setLightbox] = useState(null);
   const [showActions, setShowActions] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -149,6 +149,14 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.5"/>
+                </svg>
+              </button>
+            )}
+            {plaintext && !isDeleted && (
+              <button className="act-btn" onClick={() => { setShowActions(false); onForward?.(msg); }} title="Forward">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M13 9l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M7 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2M17 13H7V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
             )}

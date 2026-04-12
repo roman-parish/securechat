@@ -27,8 +27,12 @@ function formatLastSeen(lastSeen) {
 export default function ChatWindow({ conversationId, onBack }) {
   const { user } = useAuth();
   const { socket } = useSocket();
-  const { onlineUsers, onlineListLoaded, unreadCounts } = useChat();
+  const { onlineUsers, onlineListLoaded, unreadCounts, conversations: allConversations } = useChat();
   const [initialUnread, setInitialUnread] = useState(0);
+  const [forwardMsg, setForwardMsg] = useState(null);
+  const [forwardSearch, setForwardSearch] = useState('');
+  const [forwarding, setForwarding] = useState(false);
+  const [forwardToast, setForwardToast] = useState('');
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [decrypted, setDecrypted] = useState({});
@@ -417,6 +421,30 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   };
 
+  const handleForward = async (targetConv) => {
+    if (!forwardMsg || forwarding) return;
+    const plaintext = decrypted[forwardMsg._id];
+    if (!plaintext) return;
+    setForwarding(true);
+    try {
+      const conv = await apiFetch(`/conversations/${targetConv._id}`);
+      const payload = await buildEncryptedPayload(plaintext, conv.participants, myId);
+      await apiFetch(`/messages/${targetConv._id}`, { method: 'POST', body: JSON.stringify(payload) });
+      const name = targetConv.type === 'group'
+        ? targetConv.name
+        : targetConv.participants?.find(p => String(p._id) !== myId)?.displayName || 'chat';
+      setForwardToast(`Forwarded to ${name}`);
+      setTimeout(() => setForwardToast(''), 3000);
+      setForwardMsg(null);
+      setForwardSearch('');
+    } catch {
+      setForwardToast('Failed to forward');
+      setTimeout(() => setForwardToast(''), 3000);
+    } finally {
+      setForwarding(false);
+    }
+  };
+
   const handlePin = async (msg) => {
     const pinned = conversation?.pinnedMessage;
     const alreadyPinned = pinned && String(pinned.messageId) === String(msg._id);
@@ -625,6 +653,7 @@ export default function ChatWindow({ conversationId, onBack }) {
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         onPin={handlePin}
+                        onForward={(msg) => { setForwardMsg(msg); setForwardSearch(''); }}
                         currentUserId={myId}
                       />
                     </div>
@@ -659,6 +688,56 @@ export default function ChatWindow({ conversationId, onBack }) {
             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
+      )}
+
+      {/* Forward toast */}
+      {forwardToast && <div className="forward-toast">{forwardToast}</div>}
+
+      {/* Forward modal */}
+      {forwardMsg && (
+        <div className="forward-overlay" onClick={() => setForwardMsg(null)}>
+          <div className="forward-modal" onClick={e => e.stopPropagation()}>
+            <div className="forward-header">
+              <span>Forward to…</span>
+              <button className="forward-close" onClick={() => setForwardMsg(null)}>✕</button>
+            </div>
+            <input
+              className="forward-search"
+              autoFocus
+              placeholder="Search conversations…"
+              value={forwardSearch}
+              onChange={e => setForwardSearch(e.target.value)}
+            />
+            <div className="forward-list">
+              {allConversations
+                .filter(c => String(c._id) !== conversationId)
+                .filter(c => {
+                  const name = c.type === 'group'
+                    ? c.name
+                    : c.participants?.find(p => String(p._id) !== myId)?.displayName || '';
+                  return name.toLowerCase().includes(forwardSearch.toLowerCase());
+                })
+                .map(c => {
+                  const name = c.type === 'group'
+                    ? c.name
+                    : c.participants?.find(p => String(p._id) !== myId)?.displayName
+                      || c.participants?.find(p => String(p._id) !== myId)?.username
+                      || 'Unknown';
+                  return (
+                    <button
+                      key={c._id}
+                      className="forward-item"
+                      disabled={forwarding}
+                      onClick={() => handleForward(c)}
+                    >
+                      <span className="forward-item-name">{name}</span>
+                      {c.type === 'group' && <span className="forward-item-type">Group</span>}
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Attachment preview */}
@@ -904,6 +983,40 @@ export default function ChatWindow({ conversationId, onBack }) {
           color: var(--text-2); transition: all var(--transition); flex-shrink: 0;
         }
         .header-btn:hover { background: var(--bg-3); color: var(--text-0); }
+        .forward-toast {
+          position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+          background: var(--bg-4); color: var(--text-0); font-size: 13px; font-weight: 500;
+          padding: 8px 16px; border-radius: 20px; pointer-events: none; z-index: 50;
+          animation: fadeIn 0.15s ease; white-space: nowrap;
+        }
+        .forward-overlay {
+          position: absolute; inset: 0; background: rgba(0,0,0,0.5); z-index: 40;
+          display: flex; align-items: flex-end;
+        }
+        .forward-modal {
+          width: 100%; background: var(--bg-2); border-radius: 16px 16px 0 0;
+          padding: 16px 0 32px; max-height: 60vh; display: flex; flex-direction: column;
+        }
+        .forward-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0 16px 12px; font-size: 15px; font-weight: 600; color: var(--text-0);
+        }
+        .forward-close { background: none; border: none; color: var(--text-3); font-size: 16px; cursor: pointer; }
+        .forward-search {
+          margin: 0 16px 10px; padding: 9px 12px; border-radius: 10px;
+          background: var(--bg-3); border: 1px solid var(--border);
+          color: var(--text-0); font-size: 14px;
+        }
+        .forward-list { overflow-y: auto; flex: 1; }
+        .forward-item {
+          width: 100%; display: flex; align-items: center; justify-content: space-between;
+          padding: 12px 16px; background: none; border: none; color: var(--text-0);
+          font-size: 14px; text-align: left; cursor: pointer;
+        }
+        .forward-item:hover { background: var(--bg-3); }
+        .forward-item:disabled { opacity: 0.5; cursor: not-allowed; }
+        .forward-item-name { font-weight: 500; }
+        .forward-item-type { font-size: 11px; color: var(--text-3); }
         .pinned-banner {
           display: flex; align-items: center; gap: 8px;
           padding: 7px 14px; background: var(--bg-2);
