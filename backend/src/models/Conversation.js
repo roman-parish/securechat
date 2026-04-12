@@ -59,6 +59,12 @@ const conversationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     until: { type: Date, default: null }, // null = muted indefinitely
   }],
+  invitations: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    status: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now },
+  }],
 }, {
   timestamps: true,
 });

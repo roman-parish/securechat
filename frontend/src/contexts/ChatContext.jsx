@@ -22,6 +22,7 @@ export function ChatProvider({ children }) {
   const [typingMap, setTypingMap] = useState({}); // convId -> [usernames]
   const [unreadCounts, setUnreadCounts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [invitations, setInvitations] = useState([]);
   const activeConvRef = useRef(null);
 
   useEffect(() => { activeConvRef.current = activeConversationId; }, [activeConversationId]);
@@ -43,7 +44,16 @@ export function ChatProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => { loadConversations(); }, [loadConversations]);
+  const loadInvitations = useCallback(async () => {
+    try {
+      const data = await apiFetch('/conversations/invitations');
+      setInvitations(data || []);
+    } catch {
+      // non-critical — ignore
+    }
+  }, []);
+
+  useEffect(() => { loadConversations(); loadInvitations(); }, [loadConversations, loadInvitations]);
 
   useEffect(() => {
     if (!socket) return;
@@ -120,6 +130,10 @@ export function ChatProvider({ children }) {
       }));
     };
 
+    const onInvitationNew = (inv) => {
+      setInvitations(prev => [...prev.filter(i => String(i._id) !== String(inv._id)), inv]);
+    };
+
     const onConnect = () => {
       setOnlineListLoaded(false);
       // Fallback: if online list doesn't arrive within 5s, mark as loaded anyway
@@ -128,6 +142,7 @@ export function ChatProvider({ children }) {
     };
 
     socket.on('connect', onConnect);
+    socket.on('invitation:new', onInvitationNew);
     socket.on('users:online-list', onUsersOnlineList);
     socket.on('user:online', onUserOnline);
     socket.on('user:offline', onUserOffline);
@@ -141,7 +156,8 @@ export function ChatProvider({ children }) {
 
     return () => {
       socket.off('connect', onConnect);
-    socket.off('users:online-list', onUsersOnlineList);
+      socket.off('invitation:new', onInvitationNew);
+      socket.off('users:online-list', onUsersOnlineList);
     socket.off('user:online', onUserOnline);
       socket.off('user:offline', onUserOffline);
       socket.off('conversation:new', onConversationNew);
@@ -179,6 +195,10 @@ export function ChatProvider({ children }) {
     setConversations(prev => [conv, ...prev.filter(c => String(c._id) !== String(conv._id))]),
   []);
 
+  const removeInvitation = useCallback((invId) =>
+    setInvitations(prev => prev.filter(i => String(i._id) !== String(invId))),
+  []);
+
   const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
 
   return (
@@ -186,6 +206,7 @@ export function ChatProvider({ children }) {
       conversations, activeConversationId, setActiveConversation,
       onlineUsers, onlineListLoaded, typingMap, unreadCounts, totalUnread, loading,
       loadConversations, addConversation, removeConversation, updateConversation,
+      invitations, removeInvitation,
     }}>
       {children}
     </ChatContext.Provider>

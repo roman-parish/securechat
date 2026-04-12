@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 
 export default function Sidebar({ onSelectConversation, activeConversationId: activeConvIdProp, onRemoveActive, onOpenAdmin }) {
   const { user, logout } = useAuth();
-  const { conversations, activeConversationId, onlineUsers, unreadCounts, loading, removeConversation, typingMap } = useChat();
+  const { conversations, activeConversationId, onlineUsers, unreadCounts, loading, removeConversation, typingMap, invitations, removeInvitation } = useChat();
   const { connected } = useSocket();
   const [search, setSearch] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -92,6 +92,29 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
           />
         </div>
       </div>
+
+      {invitations.length > 0 && (
+        <InvitationPanel
+          invitations={invitations}
+          onAccept={async (inv) => {
+            try {
+              const conv = await apiFetch(`/conversations/${inv.conversationId}/invitations/${inv._id}/accept`, { method: 'POST' });
+              removeInvitation(inv._id);
+              onSelectConversation(conv._id);
+            } catch (err) {
+              console.error('Accept failed:', err);
+            }
+          }}
+          onDecline={async (inv) => {
+            try {
+              await apiFetch(`/conversations/${inv.conversationId}/invitations/${inv._id}/decline`, { method: 'POST' });
+              removeInvitation(inv._id);
+            } catch (err) {
+              console.error('Decline failed:', err);
+            }
+          }}
+        />
+      )}
 
       <div className="conv-list">
         {loading
@@ -399,6 +422,88 @@ function SkeletonItem() {
         <div style={{ height: 14, width: '60%', background: 'var(--bg-3)', borderRadius: 4, marginBottom: 8, animation: 'pulse 1.5s infinite' }} />
         <div style={{ height: 12, width: '80%', background: 'var(--bg-3)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} />
       </div>
+    </div>
+  );
+}
+
+function InvitationPanel({ invitations, onAccept, onDecline }) {
+  const [busy, setBusy] = useState({});
+
+  const handle = async (inv, action) => {
+    setBusy(prev => ({ ...prev, [inv._id]: true }));
+    try { await action(inv); } finally {
+      setBusy(prev => ({ ...prev, [inv._id]: false }));
+    }
+  };
+
+  return (
+    <div className="inv-panel">
+      <div className="inv-panel-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.5"/>
+          <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="1.5"/>
+        </svg>
+        Group Invitations · {invitations.length}
+      </div>
+      {invitations.map(inv => (
+        <div key={inv._id} className="inv-item">
+          <div className="inv-info">
+            <span className="inv-group">{inv.conversationName}</span>
+            <span className="inv-from">Invited by {inv.invitedBy?.displayName || inv.invitedBy?.username}</span>
+          </div>
+          <div className="inv-actions">
+            <button
+              className="inv-accept"
+              disabled={busy[inv._id]}
+              onClick={() => handle(inv, onAccept)}
+            >
+              {busy[inv._id] ? '…' : 'Join'}
+            </button>
+            <button
+              className="inv-decline"
+              disabled={busy[inv._id]}
+              onClick={() => handle(inv, onDecline)}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      ))}
+      <style>{`
+        .inv-panel {
+          border-bottom: 1px solid var(--border);
+          background: var(--bg-2); padding: 8px;
+        }
+        .inv-panel-label {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 10px; font-weight: 600; text-transform: uppercase;
+          letter-spacing: 0.05em; color: var(--accent);
+          padding: 2px 4px 6px;
+        }
+        .inv-item {
+          display: flex; align-items: center; gap: 8px;
+          padding: 6px 4px; border-radius: var(--radius-sm);
+        }
+        .inv-info { flex: 1; min-width: 0; }
+        .inv-group { display: block; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .inv-from { display: block; font-size: 11px; color: var(--text-3); }
+        .inv-actions { display: flex; gap: 4px; flex-shrink: 0; }
+        .inv-accept {
+          padding: 4px 10px; font-size: 12px; font-weight: 500;
+          background: var(--accent); color: white; border-radius: var(--radius-sm);
+          transition: all var(--transition);
+        }
+        .inv-accept:hover:not(:disabled) { filter: brightness(1.15); }
+        .inv-accept:disabled { opacity: 0.5; }
+        .inv-decline {
+          width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+          font-size: 12px; color: var(--text-3); border-radius: var(--radius-sm);
+          transition: all var(--transition);
+        }
+        .inv-decline:hover:not(:disabled) { background: var(--red-dim); color: var(--red); }
+        .inv-decline:disabled { opacity: 0.5; }
+      `}</style>
     </div>
   );
 }

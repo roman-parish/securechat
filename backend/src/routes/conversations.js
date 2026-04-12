@@ -93,6 +93,33 @@ router.post('/group', authenticate, async (req, res) => {
   }
 });
 
+// Get pending group invitations for current user
+router.get('/invitations', authenticate, async (req, res) => {
+  try {
+    const convs = await Conversation.find({
+      invitations: { $elemMatch: { userId: req.user.userId, status: 'pending' } },
+    });
+    const result = [];
+    for (const conv of convs) {
+      const inv = conv.invitations.find(
+        i => String(i.userId) === req.user.userId && i.status === 'pending'
+      );
+      if (!inv) continue;
+      const invitedBy = await User.findById(inv.invitedBy).select('username displayName avatar');
+      result.push({
+        _id: inv._id,
+        conversationId: conv._id,
+        conversationName: conv.name,
+        invitedBy,
+        createdAt: inv.createdAt,
+      });
+    }
+    res.json(result);
+  } catch {
+    res.status(500).json({ error: 'Failed to get invitations' });
+  }
+});
+
 // Get conversation by ID
 router.get('/:conversationId', authenticate, async (req, res) => {
   try {
@@ -181,6 +208,121 @@ router.delete('/:conversationId/participants/:userId', authenticate, async (req,
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed to remove participant' });
+  }
+});
+
+// List pending invitations for a group — admins only
+router.get('/:conversationId/invitations', authenticate, async (req, res) => {
+  try {
+    const conv = await Conversation.findOne({
+      _id: req.params.conversationId,
+      type: 'group',
+      admins: req.user.userId,
+    });
+    if (!conv) return res.status(403).json({ error: 'Not authorized' });
+
+    const pending = conv.invitations.filter(i => i.status === 'pending');
+    const result = await Promise.all(pending.map(async inv => {
+      const invitee = await User.findById(inv.userId).select('username displayName avatar');
+      const invitedBy = await User.findById(inv.invitedBy).select('username displayName');
+      return { _id: inv._id, invitee, invitedBy, createdAt: inv.createdAt };
+    }));
+    res.json(result);
+  } catch {
+    res.status(500).json({ error: 'Failed to get group invitations' });
+  }
+});
+
+// Invite a user to a group — admins only
+router.post('/:conversationId/invite', authenticate, async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: 'userId required' });
+  try {
+    const conv = await Conversation.findOne({
+      _id: req.params.conversationId,
+      type: 'group',
+      admins: req.user.userId,
+    });
+    if (!conv) return res.status(403).json({ error: 'Not authorized' });
+
+    if (conv.participants.map(String).includes(String(userId))) {
+      return res.status(400).json({ error: 'User is already in this group' });
+    }
+    const alreadyInvited = conv.invitations?.some(
+      i => String(i.userId) === String(userId) && i.status === 'pending'
+    );
+    if (alreadyInvited) return res.status(400).json({ error: 'User already has a pending invitation' });
+
+    await Conversation.findByIdAndUpdate(req.params.conversationId, {
+      $push: { invitations: { userId, invitedBy: req.user.userId } },
+    });
+
+    const invitedBy = await User.findById(req.user.userId).select('username displayName');
+    req.io.to(`user:${userId}`).emit('invitation:new', {
+      conversationId: conv._id,
+      conversationName: conv.name,
+      invitedBy,
+    });
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to send invitation' });
+  }
+});
+
+// Accept a group invitation
+router.post('/:conversationId/invitations/:invitationId/accept', authenticate, async (req, res) => {
+  try {
+    const conv = await Conversation.findOne({ _id: req.params.conversationId });
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+
+    const inv = conv.invitations.id(req.params.invitationId);
+    if (!inv || String(inv.userId) !== req.user.userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    if (inv.status !== 'pending') return res.status(400).json({ error: 'Invitation already responded to' });
+
+    await Conversation.findByIdAndUpdate(req.params.conversationId, {
+      $set: { 'invitations.$[inv].status': 'accepted' },
+      $addToSet: { participants: req.user.userId },
+    }, { arrayFilters: [{ 'inv._id': inv._id }] });
+
+    const updated = await Conversation.findById(req.params.conversationId)
+      .populate('participants', 'username displayName avatar publicKey lastSeen bio');
+
+    // Tell existing room members someone joined
+    req.io.to(`conversation:${conv._id}`).emit('conversation:participant-joined', {
+      conversationId: String(conv._id),
+      userId: req.user.userId,
+    });
+    // Send the full conversation to the new participant
+    req.io.to(`user:${req.user.userId}`).emit('conversation:new', updated);
+
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to accept invitation' });
+  }
+});
+
+// Decline a group invitation
+router.post('/:conversationId/invitations/:invitationId/decline', authenticate, async (req, res) => {
+  try {
+    const conv = await Conversation.findOne({ _id: req.params.conversationId });
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+
+    const inv = conv.invitations.id(req.params.invitationId);
+    if (!inv || String(inv.userId) !== req.user.userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    await Conversation.findByIdAndUpdate(req.params.conversationId, {
+      $set: { 'invitations.$[inv].status': 'declined' },
+    }, { arrayFilters: [{ 'inv._id': inv._id }] });
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to decline invitation' });
   }
 });
 

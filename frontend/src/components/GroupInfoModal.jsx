@@ -5,7 +5,7 @@
  *
  * https://github.com/roman-parish/securechat
  */
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { apiFetch } from '../utils/api.js';
 import Avatar from './Avatar.jsx';
@@ -15,6 +15,50 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated }) {
   const [name, setName] = useState(conversation.name || '');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [inviteSearch, setInviteSearch] = useState('');
+  const [inviteResults, setInviteResults] = useState([]);
+  const [inviteSearching, setInviteSearching] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState([]);
+
+  const handleInviteSearch = useCallback(async (q) => {
+    setInviteSearch(q);
+    if (q.length < 2) { setInviteResults([]); return; }
+    setInviteSearching(true);
+    try {
+      const data = await apiFetch(`/users/search?q=${encodeURIComponent(q)}`);
+      // Filter out existing participants
+      const participantIds = new Set(conversation.participants?.map(p => String(p._id)));
+      setInviteResults((data || []).filter(u => !participantIds.has(String(u._id))));
+    } catch {} finally {
+      setInviteSearching(false);
+    }
+  }, [conversation.participants]);
+
+  const handleInvite = async (userId) => {
+    try {
+      await apiFetch(`/conversations/${conversation._id}/invite`, {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+      });
+      setMsg('Invitation sent!');
+      setInviteSearch('');
+      setInviteResults([]);
+      loadPendingInvites();
+      setTimeout(() => setMsg(''), 2000);
+    } catch (err) {
+      setMsg(err.message || 'Failed to send invitation');
+      setTimeout(() => setMsg(''), 3000);
+    }
+  };
+
+  const loadPendingInvites = useCallback(async () => {
+    try {
+      const data = await apiFetch(`/conversations/${conversation._id}/invitations`);
+      setPendingInvites(data || []);
+    } catch {}
+  }, [conversation._id]);
+
+  useEffect(() => { loadPendingInvites(); }, [loadPendingInvites]);
 
   const myId = String(user._id);
   const isAdmin = conversation.admins?.some(a => String(a) === myId || String(a._id) === myId);
@@ -104,6 +148,52 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated }) {
               );
             })}
           </div>
+
+          {/* Invite section — admins only */}
+          {isAdmin && (
+            <>
+              <label className="field-label" style={{ marginTop: 20 }}>Invite member</label>
+              <input
+                className="text-input"
+                placeholder="Search users…"
+                value={inviteSearch}
+                onChange={e => handleInviteSearch(e.target.value)}
+              />
+              {inviteSearching && <p className="msg-text" style={{ color: 'var(--text-3)' }}>Searching…</p>}
+              {inviteResults.length > 0 && (
+                <div className="invite-results">
+                  {inviteResults.map(u => (
+                    <div key={u._id} className="invite-result-row">
+                      <Avatar user={u} size={30} />
+                      <div className="member-info">
+                        <span className="member-name">{u.displayName || u.username}</span>
+                        <span className="member-sub">@{u.username}</span>
+                      </div>
+                      <button className="invite-btn" onClick={() => handleInvite(u._id)}>Invite</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {msg && <p className="msg-text" style={{ color: msg.includes('sent') ? 'var(--green)' : 'var(--red)' }}>{msg}</p>}
+
+              {pendingInvites.length > 0 && (
+                <>
+                  <label className="field-label" style={{ marginTop: 16 }}>Pending invitations · {pendingInvites.length}</label>
+                  <div className="member-list">
+                    {pendingInvites.map(inv => (
+                      <div key={inv._id} className="member-row">
+                        <Avatar user={inv.invitee} size={36} />
+                        <div className="member-info">
+                          <span className="member-name">{inv.invitee?.displayName || inv.invitee?.username}</span>
+                          <span className="member-sub">@{inv.invitee?.username} · invited by {inv.invitedBy?.displayName || inv.invitedBy?.username}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -165,6 +255,22 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated }) {
           background: var(--red-dim); transition: all var(--transition);
         }
         .remove-btn:hover { filter: brightness(1.2); }
+        .invite-results {
+          margin-top: 6px; border: 1px solid var(--border);
+          border-radius: var(--radius); overflow: hidden;
+        }
+        .invite-result-row {
+          display: flex; align-items: center; gap: 10px;
+          padding: 8px 10px; transition: background var(--transition);
+        }
+        .invite-result-row:hover { background: var(--bg-3); }
+        .invite-btn {
+          padding: 4px 12px; border-radius: var(--radius-sm);
+          font-size: 12px; font-weight: 500;
+          background: var(--accent-dim); color: var(--accent);
+          transition: all var(--transition); flex-shrink: 0;
+        }
+        .invite-btn:hover { background: var(--accent); color: white; }
       `}</style>
     </div>
   );
