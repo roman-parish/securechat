@@ -361,6 +361,56 @@ router.delete('/:conversationId/mute', authenticate, async (req, res) => {
   }
 });
 
+// Pin a message
+router.post('/:conversationId/pin', authenticate, async (req, res) => {
+  const { messageId } = req.body;
+  if (!messageId) return res.status(400).json({ error: 'messageId required' });
+  try {
+    const conv = await Conversation.findOne({
+      _id: req.params.conversationId,
+      participants: req.user.userId,
+    });
+    if (!conv) return res.status(403).json({ error: 'Not authorized' });
+
+    const updated = await Conversation.findByIdAndUpdate(
+      req.params.conversationId,
+      { pinnedMessage: { messageId, pinnedBy: req.user.userId, pinnedAt: new Date() } },
+      { new: true }
+    ).populate('participants', 'username displayName avatar publicKey lastSeen bio customStatus');
+
+    req.io.to(`conversation:${conv._id}`).emit('conversation:pinned', {
+      conversationId: String(conv._id),
+      messageId,
+      pinnedBy: req.user.userId,
+    });
+    res.json(updated);
+  } catch {
+    res.status(500).json({ error: 'Failed to pin message' });
+  }
+});
+
+// Unpin message
+router.delete('/:conversationId/pin', authenticate, async (req, res) => {
+  try {
+    const conv = await Conversation.findOne({
+      _id: req.params.conversationId,
+      participants: req.user.userId,
+    });
+    if (!conv) return res.status(403).json({ error: 'Not authorized' });
+
+    await Conversation.findByIdAndUpdate(req.params.conversationId, {
+      $unset: { pinnedMessage: '' },
+    });
+
+    req.io.to(`conversation:${conv._id}`).emit('conversation:unpinned', {
+      conversationId: String(conv._id),
+    });
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to unpin message' });
+  }
+});
+
 // Hide conversation from list (for this user only — messages stay for others)
 router.delete('/:conversationId', authenticate, async (req, res) => {
   try {

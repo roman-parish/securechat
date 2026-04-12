@@ -65,6 +65,11 @@ const conversationSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending' },
     createdAt: { type: Date, default: Date.now },
   }],
+  pinnedMessage: {
+    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
+    pinnedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    pinnedAt: { type: Date, default: null },
+  },
 }, {
   timestamps: true,
 });
