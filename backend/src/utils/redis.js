@@ -6,6 +6,7 @@
  * https://github.com/roman-parish/securechat
  */
 import Redis from 'ioredis';
+import logger from './logger.js';
 
 let redisClient;
 
@@ -16,8 +17,8 @@ export async function connectRedis() {
     lazyConnect: true,
   });
 
-  redisClient.on('connect', () => console.log('✅ Redis connected'));
-  redisClient.on('error', (err) => console.error('Redis error:', err));
+  redisClient.on('connect', () => logger.info('Redis connected'));
+  redisClient.on('error', (err) => logger.error({ err }, 'Redis error'));
 
   await redisClient.connect();
   return redisClient;

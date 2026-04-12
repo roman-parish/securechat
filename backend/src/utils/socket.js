@@ -6,6 +6,7 @@
  * https://github.com/roman-parish/securechat
  */
 import jwt from 'jsonwebtoken';
+import logger from './logger.js';
 import webpush from 'web-push';
 import { setUserOnline, setUserOffline, isUserOnline, getOnlineUsers } from './redis.js';
 import User from '../models/User.js';
@@ -43,7 +44,7 @@ export function setupSocketIO(io) {
   });
 
   io.on('connection', async (socket) => {
-    console.log(`[socket] Connected: ${socket.username} (${socket.userId})`);
+    logger.info({ userId: socket.userId, username: socket.username }, 'Socket connected');
 
     await setUserOnline(socket.userId, socket.id);
     socket.join(`user:${socket.userId}`);
@@ -55,9 +56,9 @@ export function setupSocketIO(io) {
       const onlineMap = await getOnlineUsers();
       const onlineIds = Object.keys(onlineMap || {});
       socket.emit('users:online-list', { userIds: onlineIds });
-      console.log(`[socket] Sent online list (${onlineIds.length} users) to ${socket.username}`);
+      logger.debug({ count: onlineIds.length, username: socket.username }, 'Sent online list');
     } catch (err) {
-      console.error('[socket] Failed to send online list:', err.message);
+      logger.error({ err }, 'Failed to send online list');
       // Send empty list so client knows the list was attempted
       socket.emit('users:online-list', { userIds: [] });
     }
@@ -117,12 +118,12 @@ export function setupSocketIO(io) {
           userId: socket.userId,
         });
       } catch (err) {
-        console.error('[socket] message:delivered error:', err.message);
+        logger.error({ err }, 'message:delivered error');
       }
     });
 
     socket.on('disconnect', async () => {
-      console.log(`[socket] Disconnected: ${socket.username}`);
+      logger.info({ userId: socket.userId, username: socket.username }, 'Socket disconnected');
       await setUserOffline(socket.userId);
       await User.findByIdAndUpdate(socket.userId, { lastSeen: new Date() });
       socket.broadcast.emit('user:offline', { userId: socket.userId, lastSeen: new Date() });
@@ -150,32 +151,27 @@ export async function sendPushToUser(userId, payload) {
     const subscriptions = await PushSubscription.find({ userId });
     if (!subscriptions.length) return;
 
-    console.log(`[push] Sending to ${subscriptions.length} device(s) for user ${userId}`);
+    logger.info({ userId, count: subscriptions.length }, 'Sending push notifications');
 
     const payloadStr = JSON.stringify(payload);
 
     await Promise.allSettled(
       subscriptions.map(async (sub) => {
+        const endpoint = sub.subscription.endpoint.slice(0, 60);
         try {
-          const endpoint = sub.subscription.endpoint.slice(0, 60);
-          console.log(`[push] Attempting send to: ${endpoint}...`);
           await webpush.sendNotification(sub.subscription, payloadStr);
-          console.log(`[push] ✅ Successfully sent to: ${endpoint}...`);
+          logger.debug({ endpoint }, 'Push sent');
         } catch (err) {
-          console.error(`[push] ❌ sendNotification failed:`);
-          console.error(`[push]    statusCode: ${err.statusCode}`);
-          console.error(`[push]    body: ${err.body}`);
-          console.error(`[push]    message: ${err.message}`);
-          console.error(`[push]    endpoint: ${sub.subscription.endpoint.slice(0, 60)}...`);
+          logger.error({ endpoint, statusCode: err.statusCode, body: err.body }, 'Push failed');
           // Remove dead subscriptions (410 = Gone, 404 = Not Found)
           if (err.statusCode === 410 || err.statusCode === 404) {
             await PushSubscription.deleteOne({ _id: sub._id });
-            console.log('[push] Removed expired subscription');
+            logger.info({ endpoint }, 'Removed expired push subscription');
           }
         }
       })
     );
   } catch (err) {
-    console.error('[push] sendPushToUser error:', err);
+    logger.error({ err }, 'sendPushToUser error');
   }
 }

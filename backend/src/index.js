@@ -10,8 +10,13 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
+import pinoHttp from 'pino-http';
 import rateLimit from 'express-rate-limit';
+import logger from './utils/logger.js';
+import { validateEnv } from './utils/validateEnv.js';
+
+// Validate required env vars before anything else
+validateEnv(logger);
 
 import webpush from 'web-push';
 import { createAdapter } from '@socket.io/redis-adapter';
@@ -28,9 +33,9 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY,
   );
-  console.log('✅ VAPID push notifications configured');
+  logger.info('VAPID push notifications configured');
 } else {
-  console.warn('⚠️  VAPID keys not set — push notifications disabled');
+  logger.warn('VAPID keys not set — push notifications disabled');
 }
 
 import authRoutes from './routes/auth.js';
@@ -70,7 +75,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(morgan('combined'));
+app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url === '/api/health' } }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -128,10 +133,10 @@ app.use((err, _req, res, _next) => {
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const pubClient = new Redis(REDIS_URL);
 const subClient = pubClient.duplicate();
-pubClient.on('error', err => console.error('[redis-adapter] pub error:', err));
-subClient.on('error', err => console.error('[redis-adapter] sub error:', err));
+pubClient.on('error', err => logger.error({ err }, 'Redis adapter pub error'));
+subClient.on('error', err => logger.error({ err }, 'Redis adapter sub error'));
 io.adapter(createAdapter(pubClient, subClient));
-console.log('✅ Socket.IO Redis adapter configured');
+logger.info('Socket.IO Redis adapter configured');
 
 // Setup Socket.IO handlers
 setupSocketIO(io);
@@ -143,14 +148,14 @@ async function start() {
     await connectDB();
     await connectRedis();
     httpServer.listen(PORT, () => {
-      console.log(`🚀 SecureChat backend running on port ${PORT}`);
+      logger.info({ port: PORT }, 'SecureChat backend running');
     });
   } catch (err) {
-    console.error('Failed to start server:', err);
+    logger.fatal({ err }, 'Failed to start server');
     process.exit(1);
   }
 }
 
 start();
 
-export { io };
+export { io, logger };
