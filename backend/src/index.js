@@ -36,7 +36,27 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost';
 
-const httpServer = createServer();
+// Use a ref so createApp() can run before the Socket.IO Server is instantiated.
+// Socket.IO requires createServer(app) — not createServer() + on('request') —
+// otherwise Express and Socket.IO both handle the same request and crash.
+const ioRef = { current: null };
+const app = createApp(ioRef);
+
+// Pino HTTP request logging (added before httpServer, runs for all requests)
+app.use(pinoHttp({ logger, autoLogging: { ignore: req => req.url === '/api/health' } }));
+
+// Tighter rate limit for auth endpoints
+app.use('/api/auth', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many authentication attempts, please try again later.' },
+}));
+
+// createServer(app) is the correct Socket.IO integration pattern —
+// engine.io wraps the request listener and delegates non-socket requests back to Express
+const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   path: '/ws',
@@ -44,6 +64,9 @@ const io = new Server(httpServer, {
   pingTimeout: 60000,
   pingInterval: 25000,
 });
+
+// Now wire the real io into the ref so req.io resolves correctly
+ioRef.current = io;
 
 // Redis pub/sub adapter for multi-instance support
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -53,20 +76,6 @@ pubClient.on('error', err => logger.error({ err }, 'Redis adapter pub error'));
 subClient.on('error', err => logger.error({ err }, 'Redis adapter sub error'));
 io.adapter(createAdapter(pubClient, subClient));
 logger.info('Socket.IO Redis adapter configured');
-
-const app = createApp(io);
-
-// Pino HTTP logging + tighter auth rate limit (production only)
-app.use(pinoHttp({ logger, autoLogging: { ignore: req => req.url === '/api/health' } }));
-app.use('/api/auth', rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many authentication attempts, please try again later.' },
-}));
-
-httpServer.on('request', app);
 
 setupSocketIO(io);
 

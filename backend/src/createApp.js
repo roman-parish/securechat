@@ -26,7 +26,18 @@ export const mockIo = {
   emit: () => {},
 };
 
-export function createApp(io = mockIo) {
+/**
+ * Creates the Express app.
+ *
+ * `ioRef` can be:
+ *   - a plain mock object (used in tests): req.io = ioRef
+ *   - a ref object { current: io } (used in production): req.io = ioRef.current
+ *
+ * The ref pattern lets index.js call createApp() before the Socket.IO Server
+ * is instantiated, then set ioRef.current = io afterwards — all before any
+ * requests arrive, so middleware order stays correct.
+ */
+export function createApp(ioRef = mockIo) {
   const app = express();
 
   app.set('trust proxy', 1);
@@ -45,9 +56,10 @@ export function createApp(io = mockIo) {
   });
   app.use('/api/', limiter);
 
-  // Inject io into requests
+  // Inject io into requests — resolves the ref lazily so index.js can set
+  // ioRef.current after creating the Socket.IO server
   app.use((req, _res, next) => {
-    req.io = io;
+    req.io = ioRef.current !== undefined ? ioRef.current : ioRef;
     next();
   });
 
