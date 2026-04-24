@@ -734,6 +734,7 @@ export default function ChatWindow({ conversationId, onBack }) {
                       <MessageBubble
                         msg={msg}
                         plaintext={decrypted[msg._id]}
+                        replyPlaintext={msg.replyTo ? decrypted[String(msg.replyTo._id)] : null}
                         isOwn={String(msg.sender._id) === myId}
                         isConsecutive={consecutive}
                         onReply={() => { setReplyTo(msg); setEditingMsg(null); textareaRef.current?.focus(); }}

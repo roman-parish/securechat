@@ -148,7 +148,16 @@ function AudioPlayer({ url, isOwn }) {
   );
 }
 
-export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId }) {
+function replyPreviewText(replyTo, plaintext) {
+  const mt = replyTo.attachment?.mimetype || '';
+  if (mt.startsWith('audio/')) return '🎤 Voice message';
+  if (mt.startsWith('image/')) return '🖼 Image';
+  if (mt) return '📎 Attachment';
+  if (plaintext) return plaintext.length > 60 ? plaintext.slice(0, 60) + '…' : plaintext;
+  return 'Message';
+}
+
+export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId }) {
   const [lightbox, setLightbox] = useState(null);
   const [showActions, setShowActions] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -340,8 +349,8 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
                 <div className="reply-preview-bubble">
                   <div className="reply-bar-inner" />
                   <div>
-                    <span className="reply-author">{msg.replyTo.sender?.username || 'Someone'}</span>
-                    <span className="reply-text">↩ Replied message</span>
+                    <span className="reply-author">{msg.replyTo.sender?.displayName || msg.replyTo.sender?.username || 'Someone'}</span>
+                    <span className="reply-text">{replyPreviewText(msg.replyTo, replyPlaintext)}</span>
                   </div>
                 </div>
               )}

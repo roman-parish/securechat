@@ -51,7 +51,7 @@ router.get('/:conversationId', authenticate, async (req, res) => {
 
     const messages = await Message.find(query)
       .populate('sender', 'username displayName avatar')
-      .populate('replyTo', 'sender encryptedContent encryptedKeys iv type')
+      .populate('replyTo', 'sender encryptedContent encryptedKeys iv type attachment')
       .sort({ createdAt: -1 })
       .limit(Math.min(parseInt(limit), 100));
 
