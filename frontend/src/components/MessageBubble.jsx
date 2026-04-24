@@ -11,6 +11,59 @@ import { apiFetch } from '../utils/api.js';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
+function AttachmentView({ attachment, isOwn, onLightbox }) {
+  const src = useAuthBlob(attachment.url);
+  if (attachment.mimetype?.startsWith('image/')) {
+    return (
+      <div className="msg-attachment">
+        {src
+          ? <img src={src} alt={attachment.originalName || 'image'} className="attach-img"
+              onClick={e => { e.stopPropagation(); onLightbox(src); }} />
+          : <div className="attach-img-placeholder" />
+        }
+      </div>
+    );
+  }
+  if (attachment.mimetype?.startsWith('audio/')) {
+    return (
+      <div className="msg-attachment">
+        {src ? <AudioPlayer url={src} isOwn={isOwn} /> : <div className="attach-audio-placeholder" />}
+      </div>
+    );
+  }
+  return (
+    <div className="msg-attachment">
+      <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="attach-file">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <span>{attachment.originalName || 'Download file'}</span>
+      </a>
+    </div>
+  );
+}
+
+function useAuthBlob(url) {
+  const [src, setSrc] = useState(null);
+  useEffect(() => {
+    if (!url) return;
+    if (!url.startsWith('/api/uploads/secure/')) { setSrc(url); return; }
+    let objectUrl;
+    const token = localStorage.getItem('accessToken');
+    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => {
+        if (!blob) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      })
+      .catch(() => {});
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [url]);
+  return src;
+}
+
 function AudioPlayer({ url, isOwn }) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -280,26 +333,7 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
                 </div>
               )}
               {msg.attachment && (
-                <div className="msg-attachment">
-                  {msg.attachment.mimetype?.startsWith('image/') ? (
-                    <img
-                      src={msg.attachment.url}
-                      alt={msg.attachment.originalName || 'image'}
-                      className="attach-img"
-                      onClick={e => { e.stopPropagation(); setLightbox(msg.attachment.url); }}
-                    />
-                  ) : msg.attachment.mimetype?.startsWith('audio/') ? (
-                    <AudioPlayer url={msg.attachment.url} isOwn={isOwn} />
-                  ) : (
-                    <a href={msg.attachment.url} target="_blank" rel="noopener noreferrer" className="attach-file">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5"/>
-                        <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
-                      <span>{msg.attachment.originalName || 'Download file'}</span>
-                    </a>
-                  )}
-                </div>
+                <AttachmentView attachment={msg.attachment} isOwn={isOwn} onLightbox={setLightbox} />
               )}
               {plaintext && plaintext !== '📎' && plaintext !== '🎤' && <p className="msg-text">{plaintext}</p>}
               <div className="msg-meta">
@@ -540,6 +574,14 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
           transition: opacity var(--transition);
         }
         .attach-img:hover { opacity: 0.85; }
+        .attach-img-placeholder {
+          width: 140px; height: 100px; border-radius: var(--radius);
+          background: rgba(0,0,0,0.15); animation: pulse 1.5s infinite;
+        }
+        .attach-audio-placeholder {
+          width: 180px; height: 32px; border-radius: var(--radius);
+          background: rgba(0,0,0,0.15); animation: pulse 1.5s infinite;
+        }
         .attach-file {
           display: flex; align-items: center; gap: 6px;
           padding: 6px 10px; background: rgba(0,0,0,0.15);

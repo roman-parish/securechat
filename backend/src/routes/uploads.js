@@ -31,7 +31,7 @@ const upload = multer({
     const allowed = [
       'image/jpeg', 'image/png', 'image/gif', 'image/webp',
       'application/pdf', 'text/plain',
-      'audio/webm', 'audio/ogg', 'audio/mpeg',
+      'audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp4',
       'video/webm', 'video/mp4',
     ];
     if (allowed.includes(file.mimetype)) {
@@ -40,6 +40,14 @@ const upload = multer({
       cb(new Error('File type not allowed'));
     }
   },
+});
+
+// Serve message attachment — requires valid session
+router.get('/secure/:filename', authenticate, (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const filePath = path.join(UPLOAD_DIR, filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Not found' });
+  res.sendFile(filePath);
 });
 
 // Upload file (encrypted at client side before upload)
@@ -51,7 +59,7 @@ router.post('/', authenticate, upload.single('file'), async (req, res) => {
     originalName: req.file.originalname,
     mimetype: req.file.mimetype,
     size: req.file.size,
-    url: `/uploads/${req.file.filename}`,
+    url: `/api/uploads/secure/${req.file.filename}`,
   });
 });
 
