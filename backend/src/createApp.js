@@ -47,11 +47,11 @@ export function createApp(ioRef = mockIo) {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         imgSrc: ["'self'", "blob:", "data:"],
         mediaSrc: ["'self'", "blob:"],
         connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
         workerSrc: ["'self'"],
         frameAncestors: ["'none'"],
         baseUri: ["'self'"],
