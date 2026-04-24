@@ -896,29 +896,32 @@ export default function ChatWindow({ conversationId, onBack }) {
             </svg>
           </button>
         )}
-        {!editingMsg && !text.trim() && !attachment && (
-          <button type="button" className="mic-btn" onClick={startRecording} title="Voice message">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <rect x="9" y="2" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </button>
-        )}
-        <button type="submit" className={`send-btn ${editingMsg ? 'edit-mode' : ''}`} disabled={(!text.trim() && !attachment) || sending}>
-          {sending
-            ? <span className="spinner" style={{ width: 16, height: 16 }} />
-            : editingMsg
-              ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              : <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-          }
-        </button>
+        {!editingMsg && !text.trim() && !attachment
+          ? <button type="button" className="send-btn mic-send" onClick={startRecording} title="Voice message">
+              {sending
+                ? <span className="spinner" style={{ width: 16, height: 16 }} />
+                : <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <rect x="9" y="2" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+              }
+            </button>
+          : <button type="submit" className={`send-btn ${editingMsg ? 'edit-mode' : ''}`} disabled={(!text.trim() && !attachment) || sending}>
+              {sending
+                ? <span className="spinner" style={{ width: 16, height: 16 }} />
+                : editingMsg
+                  ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  : <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+              }
+            </button>
+        }
       </form>
       )}
 
@@ -1162,13 +1165,8 @@ export default function ChatWindow({ conversationId, onBack }) {
           transition: all var(--transition);
         }
         .attach-btn:hover { color: var(--text-0); background: var(--bg-3); }
-        .mic-btn {
-          width: 38px; height: 38px; flex-shrink: 0;
-          display: flex; align-items: center; justify-content: center;
-          color: var(--text-2); border-radius: var(--radius-sm);
-          transition: all var(--transition);
-        }
-        .mic-btn:hover { color: var(--accent); background: rgba(108,99,255,0.1); }
+        .send-btn.mic-send { background: var(--bg-3); color: var(--text-2); border: 1px solid var(--border); }
+        .send-btn.mic-send:hover { background: var(--bg-4); color: var(--accent); }
         .recording-bar {
           display: flex; align-items: center; gap: 10px;
           padding: 10px 14px;

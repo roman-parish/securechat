@@ -293,7 +293,7 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
                   )}
                 </div>
               )}
-              {plaintext && plaintext !== '📎' && <p className="msg-text">{plaintext}</p>}
+              {plaintext && plaintext !== '📎' && plaintext !== '🎤' && <p className="msg-text">{plaintext}</p>}
               <div className="msg-meta">
                 {msg.editedAt && <span className="edited-tag">edited</span>}
                 <span className="msg-time">{format(new Date(msg.createdAt), 'h:mm a')}</span>
