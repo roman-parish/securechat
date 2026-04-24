@@ -200,14 +200,14 @@ function convTimestamp(dateStr) {
   return format(d, 'dd/MM/yy');
 }
 
-function convPreview(conv, currentUser) {
+function convPreview(conv, currentUser, unread) {
   if (!conv.lastMessage) return 'Start a conversation';
   const sender = conv.lastMessage.sender;
-  if (!sender) return 'New message';
+  if (!sender) return unread > 0 ? 'New message' : 'Message';
   const isMe = String(sender._id) === String(currentUser._id);
   const name = isMe ? 'You' : (sender.displayName || sender.username || 'Someone');
   if (!conv.lastMessage.encryptedContent && conv.lastMessage.attachment) return `${name}: sent an attachment`;
-  return `${name}: New message`;
+  return unread > 0 ? `${name}: New message` : `${name}: Message`;
 }
 
 function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onMuteToggle }) {
@@ -281,7 +281,7 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
             </span>
           ) : (
             <span className={`conv-preview ${hasUnread ? 'unread' : ''}`}>
-              {convPreview(conv, user)}
+              {convPreview(conv, user, unread)}
             </span>
           )}
           {hasUnread && !showMoreBtn && (
