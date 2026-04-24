@@ -18,16 +18,17 @@ function AudioPlayer({ url, isOwn }) {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
 
-  const toggle = useCallback(() => {
+  const toggle = useCallback((e) => {
+    e.stopPropagation();
     const audio = audioRef.current;
     if (!audio) return;
-    if (playing) {
+    if (!audio.paused) {
       audio.pause();
     } else {
       const p = audio.play();
       if (p !== undefined) p.catch(() => {});
     }
-  }, [playing]);
+  }, []);
 
   const handleTimeUpdate = () => {
     const audio = audioRef.current;
@@ -44,6 +45,7 @@ function AudioPlayer({ url, isOwn }) {
   const handleEnded = () => { setPlaying(false); setProgress(0); setCurrentTime(0); };
 
   const seek = (e) => {
+    e.stopPropagation();
     const audio = audioRef.current;
     if (!audio || !audio.duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
