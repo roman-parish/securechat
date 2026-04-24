@@ -202,12 +202,8 @@ function convTimestamp(dateStr) {
 
 function convPreview(conv, currentUser, unread) {
   if (!conv.lastMessage) return 'Start a conversation';
-  const sender = conv.lastMessage.sender;
-  if (!sender) return unread > 0 ? 'New message' : 'Message';
-  const isMe = String(sender._id) === String(currentUser._id);
-  const name = isMe ? 'You' : (sender.displayName || sender.username || 'Someone');
-  if (!conv.lastMessage.encryptedContent && conv.lastMessage.attachment) return `${name}: sent an attachment`;
-  return unread > 0 ? `${name}: New message` : `${name}: Message`;
+  if (unread > 0) return unread === 1 ? 'New message' : `${unread} new messages`;
+  return '';
 }
 
 function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onMuteToggle }) {
