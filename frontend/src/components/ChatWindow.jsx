@@ -95,6 +95,7 @@ export default function ChatWindow({ conversationId, onBack }) {
     setHasMore(true);
     setSearchOpen(false);
     setSearchQuery('');
+    initialLoadDone.current = false;
     // Capture unread count before it gets cleared by the read receipt
     setInitialUnread(unreadCounts[conversationId] || 0);
 
@@ -281,11 +282,15 @@ export default function ChatWindow({ conversationId, onBack }) {
     };
   }, [socket, conversationId, decryptOne, setMsg]);
 
-  // Scroll to bottom helper — uses scrollTop directly for iOS reliability
+  // Scroll to bottom helper — direct scrollTop assignment for cross-browser reliability
   const scrollToBottom = (smooth = false) => {
     const area = messagesAreaRef.current;
     if (!area) return;
-    area.scrollTo({ top: area.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    if (smooth) {
+      area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
+    } else {
+      area.scrollTop = area.scrollHeight;
+    }
   };
 
   // Scroll to bottom when initial load completes
@@ -293,9 +298,11 @@ export default function ChatWindow({ conversationId, onBack }) {
   useEffect(() => {
     if (!loading && !initialLoadDone.current) {
       initialLoadDone.current = true;
-      // Two attempts — one immediate, one after fonts/images settle
+      // Multiple attempts to handle decryption and image rendering settling
       scrollToBottom(false);
-      setTimeout(() => scrollToBottom(false), 100);
+      requestAnimationFrame(() => scrollToBottom(false));
+      setTimeout(() => scrollToBottom(false), 150);
+      setTimeout(() => scrollToBottom(false), 400);
       setAtBottom(true);
     }
   }, [loading]);
