@@ -28,6 +28,8 @@ export default function ChatWindow({ conversationId, onBack }) {
   const { user } = useAuth();
   const { socket } = useSocket();
   const { onlineUsers, onlineListLoaded, unreadCounts, conversations: allConversations } = useChat();
+  const unreadCountsRef = useRef(unreadCounts);
+  useEffect(() => { unreadCountsRef.current = unreadCounts; }, [unreadCounts]);
   const [initialUnread, setInitialUnread] = useState(0);
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -103,7 +105,7 @@ export default function ChatWindow({ conversationId, onBack }) {
     setSearchQuery('');
     initialLoadDone.current = false;
     // Capture unread count before it gets cleared by the read receipt
-    setInitialUnread(unreadCounts[conversationId] || 0);
+    setInitialUnread(unreadCountsRef.current[conversationId] || 0);
 
     Promise.all([
       apiFetch(`/conversations/${conversationId}`),
@@ -134,7 +136,7 @@ export default function ChatWindow({ conversationId, onBack }) {
         }
       }
     };
-  }, [conversationId, decryptOne, unreadCounts]);
+  }, [conversationId, decryptOne]);
 
   // Load older messages (pagination)
   const loadMore = useCallback(async () => {
