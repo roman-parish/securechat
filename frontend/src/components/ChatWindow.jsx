@@ -48,6 +48,7 @@ export default function ChatWindow({ conversationId, onBack }) {
   const [jumpHighlight, setJumpHighlight] = useState(null);
   const searchTimerRef = useRef(null);
   const [atBottom, setAtBottom] = useState(true);
+  const atBottomRef = useRef(true);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [attachment, setAttachment] = useState(null); // { file, previewUrl, type }
@@ -112,7 +113,22 @@ export default function ChatWindow({ conversationId, onBack }) {
     }).catch(console.error)
       .finally(() => { if (!cancelled) setLoading(false); });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      // Save scroll position if user was reading old messages
+      if (!atBottomRef.current && conversationId) {
+        const area = messagesAreaRef.current;
+        const els = area?.querySelectorAll('[id^="msg-"]');
+        if (els?.length) {
+          for (const el of els) {
+            if (el.offsetTop >= area.scrollTop) {
+              localStorage.setItem(`sc:readPos:${conversationId}`, el.id.replace('msg-', ''));
+              break;
+            }
+          }
+        }
+      }
+    };
   }, [conversationId, decryptOne, unreadCounts]);
 
   // Load older messages (pagination)
@@ -293,19 +309,37 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   };
 
-  // Scroll to bottom when initial load completes
+  // Scroll to bottom (or saved position) when initial load completes
   const initialLoadDone = useRef(false);
   useEffect(() => {
     if (!loading && !initialLoadDone.current) {
       initialLoadDone.current = true;
-      // Multiple attempts to handle decryption and image rendering settling
-      scrollToBottom(false);
-      requestAnimationFrame(() => scrollToBottom(false));
-      setTimeout(() => scrollToBottom(false), 150);
-      setTimeout(() => scrollToBottom(false), 400);
-      setAtBottom(true);
+      const savedId = conversationId ? localStorage.getItem(`sc:readPos:${conversationId}`) : null;
+      if (savedId) {
+        // Restore saved scroll position
+        const tryScroll = () => {
+          const el = document.getElementById(`msg-${savedId}`);
+          if (el) {
+            el.scrollIntoView({ block: 'center' });
+          } else {
+            // Message not in current batch — fetch and jump
+            const msg = messages.find(m => String(m._id) === savedId);
+            if (msg) jumpToMessage(savedId, msg.createdAt);
+          }
+        };
+        requestAnimationFrame(tryScroll);
+        setTimeout(tryScroll, 150);
+      } else {
+        // No saved position — go to bottom
+        scrollToBottom(false);
+        requestAnimationFrame(() => scrollToBottom(false));
+        setTimeout(() => scrollToBottom(false), 150);
+        setTimeout(() => scrollToBottom(false), 400);
+        setAtBottom(true);
+        atBottomRef.current = true;
+      }
     }
-  }, [loading]);
+  }, [loading, conversationId, messages, jumpToMessage]);
 
   // Auto-scroll when new messages arrive and user is at bottom
   useEffect(() => {
@@ -560,7 +594,11 @@ export default function ChatWindow({ conversationId, onBack }) {
           const el = e.currentTarget;
           const bottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
           setAtBottom(bottom);
-          if (bottom) setInitialUnread(0);
+          atBottomRef.current = bottom;
+          if (bottom) {
+            setInitialUnread(0);
+            localStorage.removeItem(`sc:readPos:${conversationId}`);
+          }
           // Load more when near top
           if (el.scrollTop < 100 && !loadingMore && hasMore && !searchQuery) loadMore();
         }}
