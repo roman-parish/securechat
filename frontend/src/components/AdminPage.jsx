@@ -400,7 +400,7 @@ export default function AdminPage({ onBack }) {
         .status-badge {
           display: inline-flex; align-items: center;
           padding: 3px 8px; border-radius: var(--radius-full);
-          font-size: 11px; font-weight: 600;
+          font-size: 11px; font-weight: 600; width: fit-content;
         }
         .status-badge.active { background: rgba(61,214,140,0.1); color: var(--green); }
         .status-badge.banned { background: var(--red-dim); color: var(--red); }
