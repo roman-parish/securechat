@@ -11,11 +11,25 @@ let accessToken = localStorage.getItem('accessToken');
 let refreshToken = localStorage.getItem('refreshToken');
 let refreshPromise = null;
 
+function decodeJti(token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1])).jti || null;
+  } catch { return null; }
+}
+
+export function getSessionJti() {
+  return localStorage.getItem('sessionJti');
+}
+
 export function setTokens(access, refresh) {
   accessToken = access;
   refreshToken = refresh;
   localStorage.setItem('accessToken', access);
   localStorage.setItem('refreshToken', refresh);
+  if (refresh) {
+    const jti = decodeJti(refresh);
+    if (jti) localStorage.setItem('sessionJti', jti);
+  }
 }
 
 export function clearTokens() {
@@ -24,6 +38,7 @@ export function clearTokens() {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('userId');
+  localStorage.removeItem('sessionJti');
 }
 
 export function getAccessToken() {

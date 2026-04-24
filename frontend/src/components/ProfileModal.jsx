@@ -7,7 +7,7 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { apiFetch, apiUpload } from '../utils/api.js';
+import { apiFetch, apiUpload, getSessionJti } from '../utils/api.js';
 import { subscribeToPush, unsubscribeFromPush, isPushSupported, isStandalone, isPrivateMode } from '../utils/push.js';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import Avatar from './Avatar.jsx';
@@ -29,6 +29,9 @@ export default function ProfileModal({ onClose }) {
   const [deleteMsg, setDeleteMsg] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
+  const [sessions, setSessions] = useState(null);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [revokingJti, setRevokingJti] = useState(null);
 
   // Check if there's an actual push subscription on mount
   useEffect(() => {
@@ -121,6 +124,28 @@ export default function ProfileModal({ onClose }) {
       setUser(prev => ({ ...prev, avatar: data.avatar }));
     } catch {
       setMsg('Avatar upload failed');
+    }
+  };
+
+  // Load sessions when security tab is opened
+  useEffect(() => {
+    if (tab !== 'security' || sessions !== null) return;
+    setSessionsLoading(true);
+    apiFetch('/auth/sessions')
+      .then(setSessions)
+      .catch(() => setSessions([]))
+      .finally(() => setSessionsLoading(false));
+  }, [tab, sessions]);
+
+  const handleRevokeSession = async (jti) => {
+    setRevokingJti(jti);
+    try {
+      await apiFetch(`/auth/sessions/${jti}`, { method: 'DELETE' });
+      setSessions(prev => prev.filter(s => s.jti !== jti));
+    } catch {
+      // ignore
+    } finally {
+      setRevokingJti(null);
     }
   };
 
@@ -427,6 +452,50 @@ export default function ProfileModal({ onClose }) {
                 <button className="secondary-btn" onClick={() => { setShowChangePassword(true); setPwMsg(''); setPasswords({ current: '', newPass: '', confirm: '' }); }}>
                   🔑 Change
                 </button>
+              </div>
+
+              <div className="sessions-section">
+                <p className="sessions-label">Active Sessions</p>
+                {sessionsLoading ? (
+                  <div className="sessions-loading">Loading…</div>
+                ) : sessions?.length === 0 ? (
+                  <div className="sessions-loading">No sessions found</div>
+                ) : (
+                  sessions?.map(s => {
+                    const isCurrent = s.jti === getSessionJti();
+                    const ua = s.userAgent || '';
+                    const device = /iphone|ipad/i.test(ua) ? '📱 iPhone/iPad'
+                      : /android/i.test(ua) ? '📱 Android'
+                      : /macintosh|mac os/i.test(ua) ? '💻 Mac'
+                      : /windows/i.test(ua) ? '🖥️ Windows'
+                      : /linux/i.test(ua) ? '🖥️ Linux'
+                      : '🌐 Unknown device';
+                    const browser = /firefox/i.test(ua) ? 'Firefox'
+                      : /edg\//i.test(ua) ? 'Edge'
+                      : /chrome/i.test(ua) ? 'Chrome'
+                      : /safari/i.test(ua) ? 'Safari'
+                      : 'Browser';
+                    const lastUsed = s.lastUsed ? new Date(s.lastUsed).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+                    return (
+                      <div key={s.jti} className={`session-row ${isCurrent ? 'current' : ''}`}>
+                        <div className="session-info">
+                          <span className="session-device">{device} · {browser}</span>
+                          {s.ip && <span className="session-meta">{s.ip} · Last active {lastUsed}</span>}
+                          {isCurrent && <span className="session-current-badge">This device</span>}
+                        </div>
+                        {!isCurrent && (
+                          <button
+                            className="session-revoke-btn"
+                            onClick={() => handleRevokeSession(s.jti)}
+                            disabled={revokingJti === s.jti}
+                          >
+                            {revokingJti === s.jti ? '…' : 'Revoke'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
               <div className="security-banner">
@@ -878,6 +947,41 @@ export default function ProfileModal({ onClose }) {
           transition: all var(--transition); flex-shrink: 0;
         }
         .theme-toggle:hover { background: var(--bg-4); color: var(--text-0); }
+        .sessions-section {
+          background: var(--bg-3); border: 1px solid var(--border);
+          border-radius: 12px; overflow: hidden;
+        }
+        .sessions-label {
+          font-size: 11px; font-weight: 600; color: var(--text-3);
+          text-transform: uppercase; letter-spacing: 0.05em;
+          padding: 10px 14px 8px; border-bottom: 1px solid var(--border);
+        }
+        .sessions-loading {
+          padding: 14px; font-size: 13px; color: var(--text-3); text-align: center;
+        }
+        .session-row {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 11px 14px; gap: 12px;
+          border-bottom: 1px solid var(--border);
+        }
+        .session-row:last-child { border-bottom: none; }
+        .session-row.current { background: rgba(108,99,255,0.05); }
+        .session-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+        .session-device { font-size: 13px; color: var(--text-0); font-weight: 500; }
+        .session-meta { font-size: 11px; color: var(--text-3); }
+        .session-current-badge {
+          display: inline-block; font-size: 10px; font-weight: 600;
+          color: var(--accent); background: var(--accent-dim);
+          padding: 1px 7px; border-radius: 10px; width: fit-content;
+        }
+        .session-revoke-btn {
+          font-size: 12px; color: var(--red); padding: 4px 10px;
+          border: 1px solid rgba(255,80,80,0.3); border-radius: 8px;
+          background: transparent; cursor: pointer; flex-shrink: 0;
+          transition: all 150ms;
+        }
+        .session-revoke-btn:hover { background: rgba(255,80,80,0.1); }
+        .session-revoke-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .logout-btn {
           display: flex; align-items: center; gap: 8px;
           color: var(--red); font-size: 14px; font-weight: 500;

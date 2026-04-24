@@ -21,8 +21,9 @@ const router = Router();
 function generateTokens(user) {
   const base = { userId: user._id.toString(), username: user.username, displayName: user.displayName || user.username };
   const accessToken = jwt.sign({ ...base, jti: randomUUID() }, process.env.JWT_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ ...base, jti: randomUUID() }, process.env.JWT_REFRESH_SECRET, { expiresIn: '30d' });
-  return { accessToken, refreshToken };
+  const refreshJti = randomUUID();
+  const refreshToken = jwt.sign({ ...base, jti: refreshJti }, process.env.JWT_REFRESH_SECRET, { expiresIn: '30d' });
+  return { accessToken, refreshToken, refreshJti };
 }
 
 // Register — step 1: create account, get user ID back
@@ -42,8 +43,8 @@ router.post('/register', [
     const user = new User({ username, email, password, displayName: username });
     await user.save();
 
-    const { accessToken, refreshToken } = generateTokens(user);
-    user.refreshTokens.push(refreshToken);
+    const { accessToken, refreshToken, refreshJti } = generateTokens(user);
+    user.refreshTokens.push({ jti: refreshJti, userAgent: req.headers['user-agent'], ip: req.ip, createdAt: new Date(), lastUsed: new Date() });
     await user.save();
 
     res.status(201).json({ user, accessToken, refreshToken });
@@ -74,8 +75,8 @@ router.post('/login', [
       return res.status(403).json({ error: 'Your account has been suspended. Contact an administrator.' });
     }
 
-    const { accessToken, refreshToken } = generateTokens(user);
-    user.refreshTokens.push(refreshToken);
+    const { accessToken, refreshToken, refreshJti } = generateTokens(user);
+    user.refreshTokens.push({ jti: refreshJti, userAgent: req.headers['user-agent'], ip: req.ip, createdAt: new Date(), lastUsed: new Date() });
     if (user.refreshTokens.length > 5) user.refreshTokens = user.refreshTokens.slice(-5);
     await user.save();
 
@@ -135,17 +136,18 @@ router.post('/refresh', async (req, res) => {
     const user = await User.findById(decoded.userId).select('+refreshTokens');
     if (!user) return res.status(401).json({ error: 'Invalid refresh token' });
 
-    if (!user.refreshTokens.includes(refreshToken)) {
-      // Valid signature but token already rotated — possible theft, revoke all sessions
+    const session = user.refreshTokens.find(s => s.jti === decoded.jti);
+    if (!session) {
+      // Valid signature but jti not in sessions — token already rotated, possible theft
       logger.warn({ userId: decoded.userId }, 'Refresh token reuse detected — revoking all sessions');
       user.refreshTokens = [];
       await user.save();
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
-    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
-    user.refreshTokens = user.refreshTokens.filter(t => t !== refreshToken);
-    user.refreshTokens.push(newRefreshToken);
+    const { accessToken, refreshToken: newRefreshToken, refreshJti: newJti } = generateTokens(user);
+    user.refreshTokens = user.refreshTokens.filter(s => s.jti !== decoded.jti);
+    user.refreshTokens.push({ jti: newJti, userAgent: session.userAgent, ip: session.ip, createdAt: session.createdAt, lastUsed: new Date() });
     await user.save();
     res.json({ accessToken, refreshToken: newRefreshToken });
   } catch {
@@ -159,7 +161,8 @@ router.post('/logout', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('+refreshTokens');
     if (user && refreshToken) {
-      user.refreshTokens = user.refreshTokens.filter(t => t !== refreshToken);
+      const decoded = jwt.decode(refreshToken);
+      user.refreshTokens = user.refreshTokens.filter(s => s.jti !== decoded?.jti);
       await user.save();
     }
     res.json({ success: true });
@@ -212,6 +215,33 @@ router.delete('/account', authenticate, async (req, res) => {
   } catch (err) {
     logger.error({ err }, 'Account deletion failed');
     res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// List active sessions
+router.get('/sessions', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('+refreshTokens');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const sessions = (user.refreshTokens || [])
+      .filter(s => s.jti) // skip any legacy string entries
+      .map(s => ({ jti: s.jti, createdAt: s.createdAt, lastUsed: s.lastUsed, userAgent: s.userAgent, ip: s.ip }));
+    res.json(sessions);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch sessions' });
+  }
+});
+
+// Revoke a specific session
+router.delete('/sessions/:jti', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('+refreshTokens');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.refreshTokens = user.refreshTokens.filter(s => s.jti !== req.params.jti);
+    await user.save();
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to revoke session' });
   }
 });
 

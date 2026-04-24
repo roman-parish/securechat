@@ -6,12 +6,22 @@
  * https://github.com/roman-parish/securechat
  */
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.js';
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import { isUserOnline } from '../utils/redis.js';
 import { sendPushToUser, isUserBackgrounded } from '../utils/socket.js';
 import User from '../models/User.js';
+
+const sendLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: process.env.NODE_ENV === 'test' ? 10000 : 60,
+  keyGenerator: (req) => req.user?.userId || req.ip,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many messages — slow down' }),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const router = Router();
 
@@ -52,7 +62,7 @@ router.get('/:conversationId', authenticate, async (req, res) => {
 });
 
 // Send a message
-router.post('/:conversationId', authenticate, async (req, res) => {
+router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
   const { encryptedContent, iv, encryptedKeys, type = 'text', replyTo, attachment } = req.body;
   if (!encryptedContent || !iv) return res.status(400).json({ error: 'Encrypted content and IV required' });
   if (!encryptedKeys?.length) return res.status(400).json({ error: 'encryptedKeys array is required' });

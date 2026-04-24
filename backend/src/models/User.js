@@ -34,7 +34,17 @@ const userSchema = new mongoose.Schema({
 
   lastSeen: { type: Date, default: Date.now },
   banned: { type: Boolean, default: false },
-  refreshTokens: [String],
+  refreshTokens: {
+    type: [{
+      jti: String,
+      createdAt: { type: Date, default: Date.now },
+      userAgent: String,
+      ip: String,
+      lastUsed: { type: Date, default: Date.now },
+    }],
+    select: false,
+    default: [],
+  },
 }, {
   timestamps: true,
   toJSON: {
