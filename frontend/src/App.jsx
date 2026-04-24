@@ -26,14 +26,13 @@ function AppInner() {
     .split(',').map(u => u.trim().toLowerCase());
   const isAdmin = admins.includes(user.username?.toLowerCase());
 
-  if (showAdmin && isAdmin) {
-    return <AdminPage onBack={() => setShowAdmin(false)} />;
-  }
-
   return (
     <SocketProvider>
       <ChatProvider>
-        <ChatLayout onOpenAdmin={isAdmin ? () => setShowAdmin(true) : null} />
+        {showAdmin && isAdmin
+          ? <AdminPage onBack={() => setShowAdmin(false)} />
+          : <ChatLayout onOpenAdmin={isAdmin ? () => setShowAdmin(true) : null} />
+        }
       </ChatProvider>
     </SocketProvider>
   );
