@@ -14,8 +14,6 @@ const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
 function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentUserId }) {
   const myKey = encryptedKeys?.find(k => String(k.userId) === String(currentUserId))?.encryptedKey;
-  console.log('[AttachmentView] attachment:', JSON.stringify(attachment));
-  console.log('[AttachmentView]', { currentUserId, fileIv: attachment.fileIv, hasKey: !!myKey, keyIds: encryptedKeys?.map(k => String(k.userId)) });
   const decryptOpts = { encryptedKey: myKey, fileIv: attachment.fileIv, mimetype: attachment.mimetype, userId: currentUserId };
   const src = useAuthBlob(attachment.url, decryptOpts);
   if (attachment.mimetype?.startsWith('image/')) {
@@ -64,12 +62,11 @@ function useAuthBlob(url, { encryptedKey, fileIv, mimetype, userId } = {}) {
         if (encryptedKey && fileIv && userId) {
           try {
             finalBuf = await decryptFile(buf, fileIv, encryptedKey, userId);
-          } catch (err) {
-            console.error('[useAuthBlob] decryptFile failed:', err);
+          } catch {
             return;
           }
         } else {
-          console.warn('[useAuthBlob] skipping decryption — missing:', { encryptedKey: !!encryptedKey, fileIv: !!fileIv, userId: !!userId });
+          return;
         }
         objectUrl = URL.createObjectURL(new Blob([finalBuf], { type: mimetype || 'application/octet-stream' }));
         setSrc(objectUrl);

@@ -444,7 +444,6 @@ export default function ChatWindow({ conversationId, onBack }) {
         uploadedAttachment.mimetype = file.type;
         uploadedAttachment.originalName = file.name;
         uploadedAttachment.fileIv = fileIv;
-        console.log('[sendVoice] attachment to send:', JSON.stringify(uploadedAttachment));
         const payload = await buildEncryptedPayload('🎤', conv.participants, userIdRef.current, aesKey);
         if (replyTo) payload.replyTo = replyTo._id;
         payload.attachment = uploadedAttachment;
