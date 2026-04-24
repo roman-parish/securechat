@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../utils/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { useChat } from '../contexts/ChatContext.jsx';
 import Avatar from './Avatar.jsx';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -21,6 +22,7 @@ function formatBytes(bytes) {
 
 export default function AdminPage({ onBack }) {
   const { user } = useAuth();
+  const { onlineUsers } = useChat();
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
@@ -193,7 +195,10 @@ export default function AdminPage({ onBack }) {
             users.map(u => (
               <div key={u._id} className={`table-row ${u.banned ? 'banned' : ''}`}>
                 <div className="user-cell">
-                  <Avatar user={u} size={32} />
+                  <div className="avatar-online-wrap">
+                    <Avatar user={u} size={32} />
+                    {onlineUsers.has(String(u._id)) && <span className="online-dot" />}
+                  </div>
                   <div>
                     <span className="username">{u.displayName || u.username}</span>
                     <span className="handle">@{u.username}</span>
@@ -382,6 +387,12 @@ export default function AdminPage({ onBack }) {
           .table-row { grid-template-columns: 2fr 1fr 1.5fr; }
         }
         .user-cell { display: flex; align-items: center; gap: 10px; }
+        .avatar-online-wrap { position: relative; flex-shrink: 0; }
+        .online-dot {
+          position: absolute; bottom: 1px; right: 1px;
+          width: 9px; height: 9px; border-radius: 50%;
+          background: var(--green); border: 2px solid var(--bg-2);
+        }
         .username { display: block; font-size: 14px; font-weight: 500; color: var(--text-0); }
         .handle { display: block; font-size: 12px; color: var(--text-3); }
         .email { font-size: 13px; color: var(--text-2); }
