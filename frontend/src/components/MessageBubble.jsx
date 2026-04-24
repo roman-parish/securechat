@@ -21,7 +21,12 @@ function AudioPlayer({ url, isOwn }) {
   const toggle = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (playing) { audio.pause(); } else { audio.play(); }
+    if (playing) {
+      audio.pause();
+    } else {
+      const p = audio.play();
+      if (p !== undefined) p.catch(() => {});
+    }
   }, [playing]);
 
   const handleTimeUpdate = () => {
@@ -58,7 +63,8 @@ function AudioPlayer({ url, isOwn }) {
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleEnded}
-        preload="metadata"
+        preload="auto"
+        playsInline
       />
       <button className="audio-play-btn" onClick={toggle}>
         {playing
