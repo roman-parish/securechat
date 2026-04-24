@@ -49,6 +49,7 @@ export function createApp(ioRef = mockIo) {
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "blob:", "data:"],
+        mediaSrc: ["'self'", "blob:"],
         connectSrc: ["'self'"],
         fontSrc: ["'self'"],
         workerSrc: ["'self'"],
