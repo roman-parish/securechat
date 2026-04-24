@@ -417,19 +417,6 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   };
 
-  const handlePin = async (msg) => {
-    const pinned = conversation?.pinnedMessage;
-    const alreadyPinned = pinned && String(pinned.messageId) === String(msg._id);
-    if (alreadyPinned) {
-      await apiFetch(`/conversations/${conversationId}/pin`, { method: 'DELETE' });
-    } else {
-      await apiFetch(`/conversations/${conversationId}/pin`, {
-        method: 'POST',
-        body: JSON.stringify({ messageId: msg._id }),
-      });
-    }
-  };
-
   const myId = String(user?._id);
   const conv = conversation;
   const otherUser = conv?.type === 'direct'
@@ -509,23 +496,6 @@ export default function ChatWindow({ conversationId, onBack }) {
         )}
       </div>
 
-      {/* Pinned message banner */}
-      {conversation?.pinnedMessage?.messageId && (() => {
-        const pinned = conversation.pinnedMessage;
-        const pinnedMsg = messages.find(m => String(m._id) === String(pinned.messageId));
-        const preview = pinnedMsg
-          ? (decrypted[pinnedMsg._id] || pinnedMsg.attachment?.filename || 'Attachment')
-          : 'Pinned message';
-        return (
-          <div className="pinned-banner" onClick={() => pinnedMsg && jumpToMessage(pinnedMsg._id, pinnedMsg.createdAt)}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-              <path d="M12 2l3 6 6 1-4.5 4 1 6L12 16l-5.5 3 1-6L3 9l6-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span className="pinned-preview">{preview}</span>
-            <button className="pinned-close" onClick={e => { e.stopPropagation(); apiFetch(`/conversations/${conversationId}/pin`, { method: 'DELETE' }); }} title="Unpin">✕</button>
-          </div>
-        );
-      })()}
 
       {/* Search bar */}
       {searchOpen && (
@@ -624,7 +594,6 @@ export default function ChatWindow({ conversationId, onBack }) {
                         onReply={() => { setReplyTo(msg); setEditingMsg(null); textareaRef.current?.focus(); }}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
-                        onPin={handlePin}
                         currentUserId={myId}
                       />
                     </div>
@@ -900,16 +869,6 @@ export default function ChatWindow({ conversationId, onBack }) {
           color: var(--text-2); transition: all var(--transition); flex-shrink: 0;
         }
         .header-btn:hover { background: var(--bg-3); color: var(--text-0); }
-        .pinned-banner {
-          display: flex; align-items: center; gap: 8px;
-          padding: 7px 14px; background: var(--bg-2);
-          border-bottom: 1px solid var(--border); flex-shrink: 0;
-          cursor: pointer; color: var(--accent); font-size: 12px;
-        }
-        .pinned-banner:hover { background: var(--bg-3); }
-        .pinned-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-1); }
-        .pinned-close { background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 12px; padding: 0 2px; line-height: 1; }
-        .pinned-close:hover { color: var(--text-0); }
         .search-bar {
           display: flex; align-items: center; gap: 8px;
           padding: 8px 14px; background: var(--bg-2);

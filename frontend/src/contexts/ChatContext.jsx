@@ -144,18 +144,6 @@ export function ChatProvider({ children }) {
       setInvitations(prev => [...prev.filter(i => String(i._id) !== String(inv._id)), inv]);
     };
 
-    const onConversationPinned = ({ conversationId, messageId, pinnedBy }) =>
-      setConversations(prev => prev.map(c =>
-        String(c._id) === String(conversationId)
-          ? { ...c, pinnedMessage: { messageId, pinnedBy, pinnedAt: new Date().toISOString() } }
-          : c
-      ));
-
-    const onConversationUnpinned = ({ conversationId }) =>
-      setConversations(prev => prev.map(c =>
-        String(c._id) === String(conversationId) ? { ...c, pinnedMessage: null } : c
-      ));
-
     const onConnect = () => {
       setOnlineListLoaded(false);
       // Fallback: if online list doesn't arrive within 5s, mark as loaded anyway
@@ -171,8 +159,6 @@ export function ChatProvider({ children }) {
     socket.on('conversation:new', onConversationNew);
     socket.on('conversation:updated', onConversationUpdated);
     socket.on('conversation:removed', onConversationRemoved);
-    socket.on('conversation:pinned', onConversationPinned);
-    socket.on('conversation:unpinned', onConversationUnpinned);
     socket.on('user:updated', onUserUpdated);
     socket.on('message:new', onMessageNew);
     socket.on('typing:start', onTypingStart);
@@ -187,8 +173,6 @@ export function ChatProvider({ children }) {
       socket.off('conversation:new', onConversationNew);
       socket.off('conversation:updated', onConversationUpdated);
       socket.off('conversation:removed', onConversationRemoved);
-      socket.off('conversation:pinned', onConversationPinned);
-      socket.off('conversation:unpinned', onConversationUnpinned);
       socket.off('user:updated', onUserUpdated);
       socket.off('message:new', onMessageNew);
       socket.off('typing:start', onTypingStart);

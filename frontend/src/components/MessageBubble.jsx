@@ -11,7 +11,7 @@ import { apiFetch } from '../utils/api.js';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
-export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, onPin, currentUserId }) {
+export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId }) {
   const [lightbox, setLightbox] = useState(null);
   const [showActions, setShowActions] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -152,11 +152,6 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
                 </svg>
               </button>
             )}
-            <button className="act-btn" onClick={() => { setShowActions(false); onPin?.(msg); }} title="Pin message">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2l3 6 6 1-4.5 4 1 6L12 16l-5.5 3 1-6L3 9l6-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
             {canEdit && (
               <button className="act-btn" onClick={() => { setShowActions(false); onEdit?.(msg); }} title="Edit">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
