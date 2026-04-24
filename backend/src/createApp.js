@@ -78,6 +78,17 @@ export function createApp(ioRef = mockIo) {
     next();
   });
 
+  // Tight limit on login/register — prevents brute force and credential stuffing
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: process.env.NODE_ENV === 'test' ? 10000 : 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many attempts — try again in 15 minutes' },
+  });
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/register', authLimiter);
+
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/conversations', conversationRoutes);
