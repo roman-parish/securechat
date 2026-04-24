@@ -51,7 +51,7 @@ router.get('/:conversationId', authenticate, async (req, res) => {
 
     const messages = await Message.find(query)
       .populate('sender', 'username displayName avatar')
-      .populate('replyTo', 'sender encryptedContent encryptedKeys iv type attachment')
+      .populate({ path: 'replyTo', select: 'sender encryptedContent encryptedKeys iv type attachment', populate: { path: 'sender', select: 'username displayName avatar' } })
       .sort({ createdAt: -1 })
       .limit(Math.min(parseInt(limit), 100));
 
@@ -86,7 +86,7 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
     await message.save();
     await message.populate('sender', 'username displayName avatar');
     if (message.replyTo) {
-      await message.populate('replyTo', 'sender encryptedContent encryptedKeys iv type');
+      await message.populate({ path: 'replyTo', select: 'sender encryptedContent encryptedKeys iv type attachment', populate: { path: 'sender', select: 'username displayName avatar' } });
     }
 
     await Conversation.findByIdAndUpdate(conversation._id, {
