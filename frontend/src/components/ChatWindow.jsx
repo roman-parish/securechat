@@ -543,6 +543,23 @@ export default function ChatWindow({ conversationId, onBack }) {
     if (e.key === 'Escape') { setEditingMsg(null); setReplyTo(null); setText(''); }
   };
 
+  const handlePaste = (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imageItem = items.find(item => item.type.startsWith('image/'));
+    if (!imageItem) return;
+    e.preventDefault();
+    const file = imageItem.getAsFile();
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      setSendError('Pasted image too large — maximum size is 20 MB');
+      setTimeout(() => setSendError(''), 4000);
+      return;
+    }
+    const ext = file.type.split('/')[1] || 'png';
+    const named = new File([file], `pasted-image-${Date.now()}.${ext}`, { type: file.type });
+    setAttachment({ file: named, previewUrl: URL.createObjectURL(named), type: 'image' });
+  };
+
   const handleEdit = (msg) => {
     setEditingMsg(msg);
     setReplyTo(null);
@@ -871,6 +888,7 @@ export default function ChatWindow({ conversationId, onBack }) {
             value={text}
             onChange={handleTyping}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             rows={1}
             style={{ resize: 'none' }}
           />
