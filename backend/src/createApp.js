@@ -66,11 +66,15 @@ export function createApp(ioRef = mockIo) {
   // Relaxed rate limits in test environment
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: process.env.NODE_ENV === 'test' ? 10000 : 100,
+    max: process.env.NODE_ENV === 'test' ? 10000 : 500,
     standardHeaders: true,
     legacyHeaders: false,
   });
-  app.use('/api/', limiter);
+  app.use('/api/', (req, res, next) => {
+    // File downloads are already auth-gated — don't count them against the general limit
+    if (req.path.startsWith('/uploads/secure/')) return next();
+    return limiter(req, res, next);
+  });
 
   // Inject io into requests — resolves the ref lazily so index.js can set
   // ioRef.current after creating the Socket.IO server
