@@ -14,6 +14,7 @@ const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
 function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentUserId }) {
   const myKey = encryptedKeys?.find(k => String(k.userId) === String(currentUserId))?.encryptedKey;
+  console.log('[AttachmentView] attachment:', JSON.stringify(attachment));
   console.log('[AttachmentView]', { currentUserId, fileIv: attachment.fileIv, hasKey: !!myKey, keyIds: encryptedKeys?.map(k => String(k.userId)) });
   const decryptOpts = { encryptedKey: myKey, fileIv: attachment.fileIv, mimetype: attachment.mimetype, userId: currentUserId };
   const src = useAuthBlob(attachment.url, decryptOpts);
