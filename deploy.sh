@@ -32,6 +32,11 @@ BUILD_PID=$!
 # Stream the log until the background process finishes (or 15 min safety cap)
 timeout 900 tail -f "$LOG" --pid="$BUILD_PID" 2>/dev/null || true
 
+# Nginx uses a prebuilt image so `docker compose up` won't restart it when
+# only nginx.conf changed. Reload config explicitly so CSP/proxy changes apply.
+echo "🔄 Reloading nginx config..."
+docker compose exec nginx nginx -s reload 2>/dev/null || true
+
 # Wait for health check — the app may still be starting even if build is done
 echo ""
 echo "⏳ Waiting for app to be ready..."
