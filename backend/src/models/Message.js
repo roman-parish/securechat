@@ -39,10 +39,11 @@ const messageSchema = new mongoose.Schema({
   },
   attachment: {
     filename: String,
+    originalName: String,
     mimetype: String,
     size: Number,
     url: String,
-    encryptedKey: String,
+    fileIv: String,
   },
   replyTo: {
     type: mongoose.Schema.Types.ObjectId,

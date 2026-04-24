@@ -222,6 +222,33 @@ export async function decryptMessage(encryptedContent, iv, encryptedKey, userId)
   }
 }
 
+// ─── File encryption / decryption ────────────────────────────────────────────
+
+/**
+ * Encrypt a file's bytes with the provided AES-GCM key.
+ * Returns the encrypted buffer and the base64-encoded IV.
+ */
+export async function encryptFile(fileBuffer, aesKey) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, fileBuffer);
+  return { encryptedBuffer: encrypted, fileIv: bufToB64(iv) };
+}
+
+/**
+ * Decrypt a file's bytes using the current user's private key to unwrap the AES key.
+ */
+export async function decryptFile(encryptedBuffer, fileIvB64, encryptedKeyB64, userId) {
+  const keyPair = await loadKeyPairFromSession(userId);
+  if (!keyPair) throw new Error('Session expired');
+  const rawAes = await crypto.subtle.decrypt(
+    { name: 'RSA-OAEP' },
+    keyPair.privateKey,
+    b64ToBuf(encryptedKeyB64),
+  );
+  const aesKey = await crypto.subtle.importKey('raw', rawAes, { name: 'AES-GCM' }, false, ['decrypt']);
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBuf(fileIvB64) }, aesKey, encryptedBuffer);
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export function bufToB64(buf) {

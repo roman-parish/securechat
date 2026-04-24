@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useSocket } from '../contexts/SocketContext.jsx';
 import { useChat } from '../contexts/ChatContext.jsx';
 import { apiFetch, apiUpload } from '../utils/api.js';
-import { decryptMessage, bufToB64, b64ToBuf } from '../utils/crypto.js';
+import { decryptMessage, encryptFile, bufToB64, b64ToBuf } from '../utils/crypto.js';
 import Avatar from './Avatar.jsx';
 import MessageBubble from './MessageBubble.jsx';
 import GroupInfoModal from './GroupInfoModal.jsx';
@@ -434,10 +434,17 @@ export default function ChatWindow({ conversationId, onBack }) {
       if (!conv) return;
       setSending(true);
       try {
+        const aesKey = await generateMessageKey();
+        const fileBytes = await file.arrayBuffer();
+        const { encryptedBuffer, fileIv } = await encryptFile(fileBytes, aesKey);
+        const encBlob = new File([encryptedBuffer], file.name, { type: 'application/octet-stream' });
         const form = new FormData();
-        form.append('file', file);
+        form.append('file', encBlob);
         const uploadedAttachment = await apiUpload('/uploads', form);
-        const payload = await buildEncryptedPayload('🎤', conv.participants, userIdRef.current);
+        uploadedAttachment.mimetype = file.type;
+        uploadedAttachment.originalName = file.name;
+        uploadedAttachment.fileIv = fileIv;
+        const payload = await buildEncryptedPayload('🎤', conv.participants, userIdRef.current, aesKey);
         if (replyTo) payload.replyTo = replyTo._id;
         payload.attachment = uploadedAttachment;
         const msg = await apiFetch(`/messages/${conversationId}`, {
@@ -471,7 +478,8 @@ export default function ChatWindow({ conversationId, onBack }) {
       setText('');
       if (textareaRef.current) textareaRef.current.style.height = 'auto';
       try {
-        const payload = await buildEncryptedPayload(content, conv.participants, userIdRef.current);
+        const aesKey = await generateMessageKey();
+        const payload = await buildEncryptedPayload(content, conv.participants, userIdRef.current, aesKey);
         await apiFetch(`/messages/${editingMsg._id}`, { method: 'PUT', body: JSON.stringify(payload) });
         setMsg(editingMsg._id, content);
       } catch (err) {
@@ -487,19 +495,26 @@ export default function ChatWindow({ conversationId, onBack }) {
     setAttachment(null);
 
     try {
+      const aesKey = await generateMessageKey();
       let uploadedAttachment = null;
       if (pendingAttachment) {
         try {
+          const fileBytes = await pendingAttachment.file.arrayBuffer();
+          const { encryptedBuffer, fileIv } = await encryptFile(fileBytes, aesKey);
+          const encBlob = new File([encryptedBuffer], pendingAttachment.file.name, { type: 'application/octet-stream' });
           const form = new FormData();
-          form.append('file', pendingAttachment.file);
+          form.append('file', encBlob);
           uploadedAttachment = await apiUpload('/uploads', form);
+          uploadedAttachment.mimetype = pendingAttachment.file.type;
+          uploadedAttachment.originalName = pendingAttachment.file.name;
+          uploadedAttachment.fileIv = fileIv;
         } catch {
           setSendError('Attachment failed to upload — sending text only.');
           setTimeout(() => setSendError(''), 4000);
         }
       }
       const msgContent = content || '';
-      const payload = await buildEncryptedPayload(msgContent || (pendingAttachment ? '📎' : ''), conv.participants, userIdRef.current);
+      const payload = await buildEncryptedPayload(msgContent || (pendingAttachment ? '📎' : ''), conv.participants, userIdRef.current, aesKey);
       if (replyTo) payload.replyTo = replyTo._id;
       if (uploadedAttachment) payload.attachment = uploadedAttachment;
       const msg = await apiFetch(`/messages/${conversationId}`, {
@@ -1231,8 +1246,11 @@ export default function ChatWindow({ conversationId, onBack }) {
   );
 }
 
-async function buildEncryptedPayload(plaintext, participants, senderId) {
-  const aesKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+async function generateMessageKey() {
+  return crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+
+async function buildEncryptedPayload(plaintext, participants, senderId, aesKey) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, new TextEncoder().encode(plaintext));
   const rawAesKey = await crypto.subtle.exportKey('raw', aesKey);

@@ -8,11 +8,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { apiFetch } from '../utils/api.js';
+import { decryptFile } from '../utils/crypto.js';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
-function AttachmentView({ attachment, isOwn, onLightbox }) {
-  const src = useAuthBlob(attachment.url);
+function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentUserId }) {
+  const myKey = encryptedKeys?.find(k => String(k.userId) === String(currentUserId))?.encryptedKey;
+  const decryptOpts = { encryptedKey: myKey, fileIv: attachment.fileIv, mimetype: attachment.mimetype, userId: currentUserId };
+  const src = useAuthBlob(attachment.url, decryptOpts);
   if (attachment.mimetype?.startsWith('image/')) {
     return (
       <div className="msg-attachment">
@@ -44,7 +47,7 @@ function AttachmentView({ attachment, isOwn, onLightbox }) {
   );
 }
 
-function useAuthBlob(url) {
+function useAuthBlob(url, { encryptedKey, fileIv, mimetype, userId } = {}) {
   const [src, setSrc] = useState(null);
   useEffect(() => {
     if (!url) return;
@@ -52,15 +55,23 @@ function useAuthBlob(url) {
     let objectUrl;
     const token = localStorage.getItem('accessToken');
     fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-      .then(r => r.ok ? r.blob() : null)
-      .then(blob => {
-        if (!blob) return;
-        objectUrl = URL.createObjectURL(blob);
+      .then(r => r.ok ? r.arrayBuffer() : null)
+      .then(async (buf) => {
+        if (!buf) return;
+        let finalBuf = buf;
+        if (encryptedKey && fileIv && userId) {
+          try {
+            finalBuf = await decryptFile(buf, fileIv, encryptedKey, userId);
+          } catch {
+            return; // decryption failed — don't show broken media
+          }
+        }
+        objectUrl = URL.createObjectURL(new Blob([finalBuf], { type: mimetype || 'application/octet-stream' }));
         setSrc(objectUrl);
       })
       .catch(() => {});
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [url]);
+  }, [url, encryptedKey, fileIv, mimetype, userId]);
   return src;
 }
 
@@ -333,7 +344,13 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
                 </div>
               )}
               {msg.attachment && (
-                <AttachmentView attachment={msg.attachment} isOwn={isOwn} onLightbox={setLightbox} />
+                <AttachmentView
+                  attachment={msg.attachment}
+                  isOwn={isOwn}
+                  onLightbox={setLightbox}
+                  encryptedKeys={msg.encryptedKeys}
+                  currentUserId={currentUserId}
+                />
               )}
               {plaintext && plaintext !== '📎' && plaintext !== '🎤' && <p className="msg-text">{plaintext}</p>}
               <div className="msg-meta">

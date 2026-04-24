@@ -33,6 +33,7 @@ const upload = multer({
       'application/pdf', 'text/plain',
       'audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp4',
       'video/webm', 'video/mp4',
+      'application/octet-stream', // encrypted file blobs
     ];
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
@@ -42,11 +43,12 @@ const upload = multer({
   },
 });
 
-// Serve message attachment — requires valid session
+// Serve message attachment — requires valid session, always octet-stream (content is encrypted)
 router.get('/secure/:filename', authenticate, (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(UPLOAD_DIR, filename);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Not found' });
+  res.set('Content-Type', 'application/octet-stream');
   res.sendFile(filePath);
 });
 
