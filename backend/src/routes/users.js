@@ -53,7 +53,7 @@ router.get('/search', authenticate, async (req, res) => {
 router.get('/:userId', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.params.userId)
-      .select('username displayName avatar bio publicKey lastSeen customStatus');
+      .select('username displayName avatar bio publicKey lastSeen');
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -66,11 +66,11 @@ router.get('/:userId', authenticate, async (req, res) => {
 
 // Update own profile
 router.put('/me/profile', authenticate, async (req, res) => {
-  const { displayName, bio, customStatus } = req.body;
+  const { displayName, bio } = req.body;
   try {
     const user = await User.findByIdAndUpdate(
       req.user.userId,
-      { displayName, bio, customStatus },
+      { displayName, bio },
       { new: true, runValidators: true },
     );
     // Broadcast to all connected clients so they update cached participant data

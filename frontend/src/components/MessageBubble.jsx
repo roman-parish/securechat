@@ -11,7 +11,7 @@ import { apiFetch } from '../utils/api.js';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
-export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, onPin, onForward, currentUserId }) {
+export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, onPin, currentUserId }) {
   const [lightbox, setLightbox] = useState(null);
   const [showActions, setShowActions] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -152,14 +152,6 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
                 </svg>
               </button>
             )}
-            {plaintext && !isDeleted && (
-              <button className="act-btn" onClick={() => { setShowActions(false); onForward?.(msg); }} title="Forward">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M13 9l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M7 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2M17 13H7V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            )}
             <button className="act-btn" onClick={() => { setShowActions(false); onPin?.(msg); }} title="Pin message">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2l3 6 6 1-4.5 4 1 6L12 16l-5.5 3 1-6L3 9l6-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -204,9 +196,6 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
           className={`bubble ${isOwn ? 'own' : ''} ${failed ? 'failed' : ''} ${isDeleted ? 'deleted' : ''} ${showActions ? 'active' : ''}`}
           onClick={handleBubbleTap}
         >
-          {msg.forwarded && !isDeleted && (
-            <p className="forwarded-label">↪ Forwarded</p>
-          )}
           {isDeleted ? (
             <p className="deleted-text">🗑 Message deleted</p>
           ) : isDecrypting ? (
@@ -412,8 +401,6 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
         .bubble:not(.own) .msg-time { color: var(--text-3); }
         .edited-tag { font-size: 10px; color: rgba(255,255,255,0.4); font-style: italic; }
         .bubble:not(.own) .edited-tag { color: var(--text-3); }
-        .forwarded-label { font-size: 11px; color: rgba(255,255,255,0.5); font-style: italic; margin-bottom: 4px; }
-        .bubble:not(.own) .forwarded-label { color: var(--text-3); }
         .decrypting { display: flex; align-items: center; justify-content: center; padding: 4px; }
         .decrypt-dots { display: flex; gap: 4px; }
         .decrypt-dots span {

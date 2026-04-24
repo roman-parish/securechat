@@ -18,7 +18,6 @@ export default function ProfileModal({ onClose }) {
   const [tab, setTab] = useState('profile');
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
-  const [customStatus, setCustomStatus] = useState(user?.customStatus || '');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -59,7 +58,7 @@ export default function ProfileModal({ onClose }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateProfile({ displayName, bio, customStatus });
+      await updateProfile({ displayName, bio });
       setMsg('Profile saved!');
       setTimeout(() => setMsg(''), 2000);
     } catch (err) {
@@ -289,10 +288,6 @@ export default function ProfileModal({ onClose }) {
               <div className="field">
                 <label>Bio</label>
                 <textarea value={bio} onChange={e => setBio(e.target.value)} maxLength={200} rows={3} placeholder="Tell others about yourself…" />
-              </div>
-              <div className="field">
-                <label>Status</label>
-                <input value={customStatus} onChange={e => setCustomStatus(e.target.value)} maxLength={100} placeholder="What are you up to?" />
               </div>
               {msg && <p className="status-msg">{msg}</p>}
               <button className="primary-btn" onClick={handleSave} disabled={saving}>

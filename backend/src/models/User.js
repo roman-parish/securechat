@@ -34,7 +34,6 @@ const userSchema = new mongoose.Schema({
 
   lastSeen: { type: Date, default: Date.now },
   banned: { type: Boolean, default: false },
-  customStatus: { type: String, maxlength: 100, default: '' },
   refreshTokens: [String],
 }, {
   timestamps: true,

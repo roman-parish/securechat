@@ -53,7 +53,7 @@ router.get('/:conversationId', authenticate, async (req, res) => {
 
 // Send a message
 router.post('/:conversationId', authenticate, async (req, res) => {
-  const { encryptedContent, iv, encryptedKeys, type = 'text', replyTo, attachment, forwarded } = req.body;
+  const { encryptedContent, iv, encryptedKeys, type = 'text', replyTo, attachment } = req.body;
   if (!encryptedContent || !iv) return res.status(400).json({ error: 'Encrypted content and IV required' });
   if (!encryptedKeys?.length) return res.status(400).json({ error: 'encryptedKeys array is required' });
 
@@ -71,7 +71,6 @@ router.post('/:conversationId', authenticate, async (req, res) => {
       type,
       replyTo: replyTo || null,
       attachment: attachment || undefined,
-      forwarded: !!forwarded,
       readBy: [{ userId: req.user.userId }],
     });
     await message.save();

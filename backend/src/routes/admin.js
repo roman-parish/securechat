@@ -24,7 +24,7 @@ router.get('/stats', async (req, res) => {
     const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
-    const [totalUsers, totalMessages, totalConversations, activeToday, newUsersThisWeek, storageResult, messagesPerDay] = await Promise.all([
+    const [totalUsers, totalMessages, totalConversations, activeToday, newUsersThisWeek, storageResult] = await Promise.all([
       User.countDocuments(),
       Message.countDocuments({ type: { $ne: 'deleted' } }),
       Conversation.countDocuments(),
@@ -34,17 +34,6 @@ router.get('/stats', async (req, res) => {
       Message.aggregate([
         { $match: { 'attachment.size': { $exists: true } } },
         { $group: { _id: null, total: { $sum: '$attachment.size' } } },
-      ]),
-      // Message count per day for last 7 days
-      Message.aggregate([
-        { $match: { createdAt: { $gte: sevenDaysAgo }, type: { $ne: 'deleted' } } },
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { _id: 1 } },
       ]),
     ]);
 
@@ -57,7 +46,6 @@ router.get('/stats', async (req, res) => {
       activeToday,
       newUsersThisWeek,
       storageBytes,
-      messagesPerDay,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch stats' });
