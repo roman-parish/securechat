@@ -82,7 +82,7 @@ export function createApp(ioRef = mockIo) {
   // Tight limit on login/register — prevents brute force and credential stuffing
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: process.env.NODE_ENV === 'test' ? 10000 : 10,
+    max: process.env.NODE_ENV === 'test' ? 10000 : 20,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many attempts — try again in 15 minutes' },

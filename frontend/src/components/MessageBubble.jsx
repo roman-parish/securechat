@@ -30,7 +30,7 @@ function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentU
   if (attachment.mimetype?.startsWith('audio/')) {
     return (
       <div className="msg-attachment">
-        {src ? <AudioPlayer url={src} isOwn={isOwn} /> : <div className="attach-audio-placeholder" />}
+        {src ? <AudioPlayer url={src} isOwn={isOwn} /> : <div className="attach-audio-placeholder"><span className="attach-loading">🎤 decrypting…</span></div>}
       </div>
     );
   }
@@ -609,7 +609,9 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
         .attach-audio-placeholder {
           width: 180px; height: 32px; border-radius: var(--radius);
           background: rgba(0,0,0,0.15); animation: pulse 1.5s infinite;
+          display: flex; align-items: center; justify-content: center;
         }
+        .attach-loading { font-size: 11px; opacity: 0.5; }
         .attach-file {
           display: flex; align-items: center; gap: 6px;
           padding: 6px 10px; background: rgba(0,0,0,0.15);
