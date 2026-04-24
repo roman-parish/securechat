@@ -52,6 +52,11 @@ export default function ChatWindow({ conversationId, onBack }) {
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [attachment, setAttachment] = useState(null); // { file, previewUrl, type }
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
@@ -371,6 +376,86 @@ export default function ChatWindow({ conversationId, onBack }) {
         () => socket.emit('typing:stop', { conversationId, userId: user?._id }), 2000
       );
     }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : '';
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+      audioChunksRef.current = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.start(100);
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
+    } catch {
+      setSendError('Microphone access denied.');
+      setTimeout(() => setSendError(''), 3000);
+    }
+  };
+
+  const cancelRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder) {
+      recorder.stream.getTracks().forEach(t => t.stop());
+      recorder.stop();
+    }
+    clearInterval(recordingTimerRef.current);
+    audioChunksRef.current = [];
+    mediaRecorderRef.current = null;
+    setIsRecording(false);
+    setRecordingSeconds(0);
+  };
+
+  const sendVoiceMessage = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) return;
+    recorder.onstop = async () => {
+      const chunks = audioChunksRef.current;
+      if (!chunks.length) return;
+      const mimeType = recorder.mimeType || 'audio/webm';
+      const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
+      const blob = new Blob(chunks, { type: mimeType });
+      const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: mimeType });
+      recorder.stream.getTracks().forEach(t => t.stop());
+      clearInterval(recordingTimerRef.current);
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = null;
+      setIsRecording(false);
+      setRecordingSeconds(0);
+
+      const conv = conversationRef.current;
+      if (!conv) return;
+      setSending(true);
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        const uploadedAttachment = await apiUpload('/uploads', form);
+        const payload = await buildEncryptedPayload('🎤', conv.participants, userIdRef.current);
+        if (replyTo) payload.replyTo = replyTo._id;
+        payload.attachment = uploadedAttachment;
+        const msg = await apiFetch(`/messages/${conversationId}`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        setMsg(msg._id, '🎤');
+        setMessages(prev => prev.find(m => m._id === msg._id) ? prev : [...prev, msg]);
+        setReplyTo(null);
+        setAtBottom(true);
+      } catch (err) {
+        setSendError(err.message || 'Failed to send voice message.');
+        setTimeout(() => setSendError(''), 5000);
+      } finally {
+        setSending(false);
+      }
+    };
+    recorder.stop();
   };
 
   const sendMessage = async (e) => {
@@ -736,7 +821,30 @@ export default function ChatWindow({ conversationId, onBack }) {
         <div className="send-error-bar">{sendError}</div>
       )}
 
+      {/* Recording UI */}
+      {isRecording && (
+        <div className="recording-bar">
+          <span className="rec-dot" />
+          <span className="rec-timer">
+            {String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:{String(recordingSeconds % 60).padStart(2, '0')}
+          </span>
+          <span className="rec-label">Recording…</span>
+          <button type="button" className="rec-cancel-btn" onClick={cancelRecording} title="Cancel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+          <button type="button" className="rec-send-btn" onClick={sendVoiceMessage} disabled={sending} title="Send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Input */}
+      {!isRecording && (
       <form className="chat-input-bar" onSubmit={sendMessage}>
         <div className="input-wrapper">
           <textarea
@@ -788,6 +896,16 @@ export default function ChatWindow({ conversationId, onBack }) {
             </svg>
           </button>
         )}
+        {!editingMsg && !text.trim() && !attachment && (
+          <button type="button" className="mic-btn" onClick={startRecording} title="Voice message">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="9" y="2" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+        )}
         <button type="submit" className={`send-btn ${editingMsg ? 'edit-mode' : ''}`} disabled={(!text.trim() && !attachment) || sending}>
           {sending
             ? <span className="spinner" style={{ width: 16, height: 16 }} />
@@ -802,6 +920,7 @@ export default function ChatWindow({ conversationId, onBack }) {
           }
         </button>
       </form>
+      )}
 
       {showUserProfile && otherUser && (
         <div className="user-profile-overlay" onClick={() => setShowUserProfile(false)}>
@@ -1043,6 +1162,44 @@ export default function ChatWindow({ conversationId, onBack }) {
           transition: all var(--transition);
         }
         .attach-btn:hover { color: var(--text-0); background: var(--bg-3); }
+        .mic-btn {
+          width: 38px; height: 38px; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          color: var(--text-2); border-radius: var(--radius-sm);
+          transition: all var(--transition);
+        }
+        .mic-btn:hover { color: var(--accent); background: rgba(108,99,255,0.1); }
+        .recording-bar {
+          display: flex; align-items: center; gap: 10px;
+          padding: 10px 14px;
+          padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+          border-top: 1px solid var(--border);
+          background: var(--bg-1); flex-shrink: 0;
+        }
+        .rec-dot {
+          width: 10px; height: 10px; border-radius: 50%;
+          background: var(--red, #ff5757); flex-shrink: 0;
+          animation: rec-pulse 1s ease-in-out infinite;
+        }
+        @keyframes rec-pulse {
+          0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+        }
+        .rec-timer { font-size: 14px; font-weight: 600; color: var(--text-0); font-variant-numeric: tabular-nums; }
+        .rec-label { flex: 1; font-size: 13px; color: var(--text-3); }
+        .rec-cancel-btn {
+          width: 38px; height: 38px; display: flex; align-items: center;
+          justify-content: center; border-radius: var(--radius-sm);
+          color: var(--text-2); transition: all var(--transition);
+        }
+        .rec-cancel-btn:hover { background: var(--bg-3); color: var(--red, #ff5757); }
+        .rec-send-btn {
+          width: 42px; height: 42px; flex-shrink: 0;
+          background: var(--accent); color: white; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          transition: all var(--transition);
+        }
+        .rec-send-btn:hover:not(:disabled) { filter: brightness(1.15); transform: scale(1.05); }
+        .rec-send-btn:disabled { opacity: 0.4; cursor: default; }
         .attachment-preview {
           position: relative; padding: 8px 14px;
           border-top: 1px solid var(--border); background: var(--bg-2);

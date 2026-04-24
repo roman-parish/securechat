@@ -5,11 +5,74 @@
  *
  * https://github.com/roman-parish/securechat
  */
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { apiFetch } from '../utils/api.js';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+
+function AudioPlayer({ url, isOwn }) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  const toggle = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) { audio.pause(); } else { audio.play(); }
+  }, [playing]);
+
+  const handleTimeUpdate = () => {
+    const audio = audioRef.current;
+    if (!audio || !audio.duration) return;
+    setCurrentTime(audio.currentTime);
+    setProgress((audio.currentTime / audio.duration) * 100);
+  };
+
+  const handleLoadedMetadata = () => {
+    const d = audioRef.current?.duration;
+    if (d && isFinite(d)) setDuration(d);
+  };
+
+  const handleEnded = () => { setPlaying(false); setProgress(0); setCurrentTime(0); };
+
+  const seek = (e) => {
+    const audio = audioRef.current;
+    if (!audio || !audio.duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    audio.currentTime = ratio * audio.duration;
+  };
+
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+  return (
+    <div className={`audio-player ${isOwn ? 'own' : ''}`}>
+      <audio
+        ref={audioRef}
+        src={url}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={handleEnded}
+        preload="metadata"
+      />
+      <button className="audio-play-btn" onClick={toggle}>
+        {playing
+          ? <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
+        }
+      </button>
+      <div className="audio-track" onClick={seek}>
+        <div className="audio-track-fill" style={{ width: `${progress}%` }} />
+      </div>
+      <span className="audio-time">{fmt(currentTime)}{duration ? ` / ${fmt(duration)}` : ''}</span>
+    </div>
+  );
+}
 
 export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId }) {
   const [lightbox, setLightbox] = useState(null);
@@ -217,6 +280,8 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
                       className="attach-img"
                       onClick={e => { e.stopPropagation(); setLightbox(msg.attachment.url); }}
                     />
+                  ) : msg.attachment.mimetype?.startsWith('audio/') ? (
+                    <AudioPlayer url={msg.attachment.url} isOwn={isOwn} />
                   ) : (
                     <a href={msg.attachment.url} target="_blank" rel="noopener noreferrer" className="attach-file">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -476,6 +541,34 @@ export default function MessageBubble({ msg, plaintext, isOwn, isConsecutive, on
         }
         .attach-file:hover { background: rgba(0,0,0,0.25); }
         .attach-file span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+        .audio-player {
+          display: flex; align-items: center; gap: 8px;
+          padding: 4px 0; min-width: 180px;
+        }
+        .audio-play-btn {
+          width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%;
+          background: rgba(255,255,255,0.2);
+          display: flex; align-items: center; justify-content: center;
+          color: white; transition: background var(--transition);
+        }
+        .audio-player:not(.own) .audio-play-btn { background: var(--bg-4); color: var(--text-0); }
+        .audio-play-btn:hover { background: rgba(255,255,255,0.35); }
+        .audio-player:not(.own) .audio-play-btn:hover { background: var(--bg-5, var(--bg-4)); }
+        .audio-track {
+          flex: 1; height: 4px; background: rgba(255,255,255,0.25);
+          border-radius: 2px; cursor: pointer; position: relative;
+        }
+        .audio-player:not(.own) .audio-track { background: var(--border-strong); }
+        .audio-track-fill {
+          height: 100%; border-radius: 2px; background: white;
+          transition: width 0.1s linear;
+        }
+        .audio-player:not(.own) .audio-track-fill { background: var(--accent); }
+        .audio-time {
+          font-size: 11px; color: rgba(255,255,255,0.7);
+          white-space: nowrap; font-variant-numeric: tabular-nums;
+        }
+        .audio-player:not(.own) .audio-time { color: var(--text-3); }
       `}</style>
     </div>
   );
