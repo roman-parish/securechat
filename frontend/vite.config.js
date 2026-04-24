@@ -27,12 +27,18 @@ export default defineConfig({
         categories: ['social', 'productivity'],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html}'],
-        navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/uploads/, /^\/ws/],
+        globPatterns: ['**/*.{js,css}'],
+        navigateFallback: null,
         clientsClaim: true,
         skipWaiting: true,
         runtimeCaching: [
+          {
+            // Always fetch HTML from network so CSP/response headers stay fresh.
+            // Falls back to cached copy only when offline.
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: { cacheName: 'pages-cache', networkTimeoutSeconds: 3, expiration: { maxEntries: 5, maxAgeSeconds: 86400 } },
+          },
           {
             urlPattern: /^https?:\/\/.*\/api\//,
             handler: 'NetworkFirst',
