@@ -5,7 +5,8 @@
  *
  * https://github.com/roman-parish/securechat
  */
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useSocket } from '../contexts/SocketContext.jsx';
 import { useChat } from '../contexts/ChatContext.jsx';
@@ -113,13 +114,29 @@ export default function ChatWindow({ conversationId, onBack }) {
       apiFetch(`/messages/${conversationId}?limit=50`),
     ]).then(([conv, msgs]) => {
       if (cancelled) return;
-      setConversation(conv);
       conversationRef.current = conv;
-      setMessages(msgs);
-      setHasMore(msgs.length === 50);
+      // flushSync commits the DOM synchronously so we can scroll immediately after
+      flushSync(() => {
+        setConversation(conv);
+        setMessages(msgs);
+        setHasMore(msgs.length === 50);
+        setLoading(false);
+      });
+      if (cancelled) return;
+      // DOM is now committed — scroll to correct position with no animation
+      const savedId = localStorage.getItem(`sc:readPos:${conversationId}`);
+      if (savedId) {
+        document.getElementById(`msg-${savedId}`)?.scrollIntoView({ block: 'center' });
+      } else {
+        const area = messagesAreaRef.current;
+        if (area) area.scrollTop = area.scrollHeight;
+      }
+      prevMsgCountRef.current = msgs.length;
+      initialLoadDone.current = true;
+      atBottomRef.current = true;
+      setAtBottom(true);
       msgs.forEach(m => decryptOne(m));
-    }).catch(console.error)
-      .finally(() => { if (!cancelled) setLoading(false); });
+    }).catch(console.error);
 
     return () => {
       cancelled = true;
@@ -306,6 +323,9 @@ export default function ChatWindow({ conversationId, onBack }) {
     };
   }, [socket, conversationId, decryptOne, setMsg]);
 
+  const initialLoadDone = useRef(false);
+  const prevMsgCountRef = useRef(0);
+
   const scrollToBottom = (smooth = false) => {
     const area = messagesAreaRef.current;
     if (!area) return;
@@ -317,7 +337,6 @@ export default function ChatWindow({ conversationId, onBack }) {
   };
 
   // Auto-scroll only when message COUNT increases (real new message), not status/reaction updates
-  const prevMsgCountRef = useRef(0);
   useEffect(() => {
     const newCount = messages.length;
     const grew = newCount > prevMsgCountRef.current;
@@ -333,34 +352,6 @@ export default function ChatWindow({ conversationId, onBack }) {
       scrollToBottom(true);
     }
   }, [typingUsers]);
-
-  // Scroll to bottom (or saved position) when initial load completes.
-  // useLayoutEffect fires before browser paint so the user never sees the scroll happen.
-  const initialLoadDone = useRef(false);
-  useLayoutEffect(() => {
-    if (!loading && !initialLoadDone.current) {
-      initialLoadDone.current = true;
-      const savedId = conversationId ? localStorage.getItem(`sc:readPos:${conversationId}`) : null;
-      if (savedId) {
-        const tryScroll = () => {
-          const el = document.getElementById(`msg-${savedId}`);
-          if (el) {
-            el.scrollIntoView({ block: 'center' });
-          } else {
-            const msg = messages.find(m => String(m._id) === savedId);
-            if (msg) jumpToMessage(savedId, msg.createdAt);
-          }
-        };
-        requestAnimationFrame(tryScroll);
-      } else {
-        // Sync prevMsgCountRef so the auto-scroll effect doesn't fire smooth on initial load
-        prevMsgCountRef.current = messages.length;
-        scrollToBottom(false);
-        setAtBottom(true);
-        atBottomRef.current = true;
-      }
-    }
-  }, [loading, conversationId, messages, jumpToMessage]);
 
   // Mark read on mount and when active
   useEffect(() => {
