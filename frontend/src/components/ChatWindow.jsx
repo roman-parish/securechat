@@ -131,7 +131,9 @@ export default function ChatWindow({ conversationId, onBack }) {
       if (cancelled) return;
       // scrollHeight is now correct — all content is rendered at full height
       const area = messagesAreaRef.current;
+      console.log('[scroll-debug] area:', !!area, 'scrollHeight:', area?.scrollHeight, 'clientHeight:', area?.clientHeight, 'showMessages:', false);
       if (area) area.scrollTop = area.scrollHeight;
+      console.log('[scroll-debug] after set scrollTop:', area?.scrollTop);
       prevMsgCountRef.current = msgs.length;
       initialLoadDone.current = true;
       atBottomRef.current = true;
