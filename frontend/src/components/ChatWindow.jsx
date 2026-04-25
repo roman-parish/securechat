@@ -5,7 +5,7 @@
  *
  * https://github.com/roman-parish/securechat
  */
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useSocket } from '../contexts/SocketContext.jsx';
 import { useChat } from '../contexts/ChatContext.jsx';
@@ -334,9 +334,10 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   }, [typingUsers]);
 
-  // Scroll to bottom (or saved position) when initial load completes
+  // Scroll to bottom (or saved position) when initial load completes.
+  // useLayoutEffect fires before browser paint so the user never sees the scroll happen.
   const initialLoadDone = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!loading && !initialLoadDone.current) {
       initialLoadDone.current = true;
       const savedId = conversationId ? localStorage.getItem(`sc:readPos:${conversationId}`) : null;
@@ -351,14 +352,10 @@ export default function ChatWindow({ conversationId, onBack }) {
           }
         };
         requestAnimationFrame(tryScroll);
-        setTimeout(tryScroll, 150);
       } else {
         // Sync prevMsgCountRef so the auto-scroll effect doesn't fire smooth on initial load
         prevMsgCountRef.current = messages.length;
         scrollToBottom(false);
-        requestAnimationFrame(() => scrollToBottom(false));
-        setTimeout(() => scrollToBottom(false), 150);
-        setTimeout(() => scrollToBottom(false), 400);
         setAtBottom(true);
         atBottomRef.current = true;
       }
