@@ -6,7 +6,6 @@
  * https://github.com/roman-parish/securechat
  */
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
-import { flushSync } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useSocket } from '../contexts/SocketContext.jsx';
 import { useChat } from '../contexts/ChatContext.jsx';
@@ -105,57 +104,24 @@ export default function ChatWindow({ conversationId, onBack }) {
     setSearchOpen(false);
     setSearchQuery('');
     initialLoadDone.current = false;
-    prevMsgCountRef.current = 0;
     // Capture unread count before it gets cleared by the read receipt
     setInitialUnread(unreadCountsRef.current[conversationId] || 0);
 
     Promise.all([
       apiFetch(`/conversations/${conversationId}`),
       apiFetch(`/messages/${conversationId}?limit=50`),
-    ]).then(async ([conv, msgs]) => {
+    ]).then(([conv, msgs]) => {
       if (cancelled) return;
+      setConversation(conv);
       conversationRef.current = conv;
+      setMessages(msgs);
+      setHasMore(msgs.length === 50);
+      msgs.forEach(m => decryptOne(m));
+    }).catch(console.error)
+      .finally(() => { if (!cancelled) setLoading(false); });
 
-      // Build a complete decrypted map before touching React state so that
-      // messages + decrypted content land in the DOM in one render.
-      // This guarantees scrollHeight is final before we scroll.
-      const userId = userIdRef.current;
-      const decryptedMap = {};
-      await Promise.all(msgs.map(async (m) => {
-        if (m.type === 'system' || m.type === 'deleted') {
-          decryptedMap[m._id] = m.type === 'deleted' ? '🗑 Message deleted' : m.encryptedContent;
-          return;
-        }
-        const keys = m.encryptedKeys;
-        if (!keys?.length) { decryptedMap[m._id] = '[No keys]'; return; }
-        const keyEntry = keys.find(k => String(k.userId) === String(userId));
-        if (!keyEntry) { decryptedMap[m._id] = '[Not encrypted for this device]'; return; }
-        try {
-          decryptedMap[m._id] = await decryptMessage(m.encryptedContent, m.iv, keyEntry.encryptedKey, userId);
-        } catch {
-          decryptedMap[m._id] = '[Decryption failed]';
-        }
-      }));
-
-      if (cancelled) return;
-      // Sync decryptedRef so decryptOne won't re-decrypt on incremental updates
-      Object.assign(decryptedRef.current, decryptedMap);
-
-      // Commit messages + decrypted content in one render so scrollHeight is
-      // final when useLayoutEffect fires (before browser paints)
-      flushSync(() => {
-        setConversation(conv);
-        setMessages(msgs);
-        setDecrypted(decryptedMap);
-        setHasMore(msgs.length === 50);
-        setLoading(false);
-      });
-    }).catch(console.error);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [conversationId]);
+    return () => { cancelled = true; };
+  }, [conversationId, decryptOne]);
 
   // Load older messages (pagination)
   const loadMore = useCallback(async () => {
@@ -324,9 +290,7 @@ export default function ChatWindow({ conversationId, onBack }) {
     };
   }, [socket, conversationId, decryptOne, setMsg]);
 
-  const initialLoadDone = useRef(false);
-  const prevMsgCountRef = useRef(0);
-
+  // Scroll to bottom helper — direct scrollTop assignment for cross-browser reliability
   const scrollToBottom = (smooth = false) => {
     const area = messagesAreaRef.current;
     if (!area) return;
@@ -337,31 +301,25 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   };
 
-  // useLayoutEffect fires after DOM commit but before browser paint — the scroll
-  // position is already correct before the user ever sees the messages.
+  // Scroll to bottom when initial load completes — useLayoutEffect fires before
+  // the browser paints so the user never sees messages at the wrong position
+  const initialLoadDone = useRef(false);
   useLayoutEffect(() => {
-    const newCount = messages.length;
-    const grew = newCount > prevMsgCountRef.current;
-    prevMsgCountRef.current = newCount;
-    const area = messagesAreaRef.current;
-
-    if (!loading && !initialLoadDone.current && newCount > 0) {
-      // Initial conversation load: set scroll to bottom before first paint
+    if (!loading && !initialLoadDone.current && messages.length > 0) {
       initialLoadDone.current = true;
       atBottomRef.current = true;
-      if (area) area.scrollTop = area.scrollHeight;
-    } else if (grew && atBottomRef.current && initialLoadDone.current) {
-      // Incoming message: keep bottom visible if user was already there
+      setAtBottom(true);
+      const area = messagesAreaRef.current;
       if (area) area.scrollTop = area.scrollHeight;
     }
   }, [loading, messages]);
 
-  // Scroll when typing indicator appears and user is at bottom
+  // Auto-scroll when new messages arrive and user is at bottom
   useEffect(() => {
-    if (typingUsers.length > 0 && atBottomRef.current && initialLoadDone.current) {
+    if (atBottom && initialLoadDone.current) {
       scrollToBottom(true);
     }
-  }, [typingUsers]);
+  }, [messages, typingUsers, atBottom]);
 
   // Mark read on mount and when active
   useEffect(() => {
@@ -533,7 +491,7 @@ export default function ChatWindow({ conversationId, onBack }) {
         body: JSON.stringify(payload),
       });
       setMsg(msg._id, content);
-      atBottomRef.current = true; // always scroll to show the message you just sent
+      atBottomRef.current = true;
       setMessages(prev => prev.find(m => m._id === msg._id) ? prev : [...prev, msg]);
       setReplyTo(null);
       setAtBottom(true);
