@@ -340,6 +340,8 @@ export default function ChatWindow({ conversationId, onBack }) {
         // No saved position — jump to bottom instantly
         scrollToBottom(false);
         requestAnimationFrame(() => scrollToBottom(false));
+        setTimeout(() => scrollToBottom(false), 150);
+        setTimeout(() => scrollToBottom(false), 400);
         setAtBottom(true);
         atBottomRef.current = true;
       }
@@ -347,11 +349,13 @@ export default function ChatWindow({ conversationId, onBack }) {
   }, [loading, conversationId, messages, jumpToMessage]);
 
   // Auto-scroll when new messages arrive and user is at bottom
+  // Use atBottomRef (not atBottom state) so this only fires on message/typing changes,
+  // not when atBottom transitions to true during initial load (which would cause a smooth-scroll animation)
   useEffect(() => {
-    if (atBottom && initialLoadDone.current) {
+    if (atBottomRef.current && initialLoadDone.current) {
       scrollToBottom(true);
     }
-  }, [messages, typingUsers, atBottom]);
+  }, [messages, typingUsers]);
 
   // Mark read on mount and when active
   useEffect(() => {
