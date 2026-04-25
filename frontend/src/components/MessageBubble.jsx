@@ -521,6 +521,7 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
           border: 1px solid var(--border); position: relative; cursor: pointer;
           transition: filter var(--transition);
           -webkit-user-select: none; user-select: none;
+          display: flex; flex-direction: column; gap: 4px;
         }
         .bubble.own { background: var(--accent); border-color: transparent; }
         .bubble.failed { opacity: 0.5; }
@@ -531,14 +532,14 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
         .bubble.own.deleted { background: transparent; border-color: rgba(255,255,255,0.2); }
         .bubble.active { filter: brightness(1.12); }
         .bubble.own.active { filter: brightness(1.1); }
-        .deleted-text { font-size: 14px; color: var(--text-3); font-style: italic; }
+        .deleted-text { font-size: 14px; color: var(--text-3); font-style: italic; margin: 0; }
         .msg-text {
-          font-size: 15px; line-height: 1.5;
+          font-size: 15px; line-height: 1.5; margin: 0;
           white-space: pre-wrap; word-break: break-word; color: var(--text-0);
           -webkit-user-select: text; user-select: text;
         }
         .bubble.own .msg-text { color: white; }
-        .msg-meta { display: flex; align-items: center; gap: 4px; justify-content: flex-end; margin-top: 3px; }
+        .msg-meta { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
         .msg-time { font-size: 11px; color: rgba(255,255,255,0.45); }
         .bubble:not(.own) .msg-time { color: var(--text-3); }
         .edited-tag { font-size: 10px; color: rgba(255,255,255,0.4); font-style: italic; }
@@ -552,7 +553,7 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
         .decrypt-dots span:nth-child(2) { animation-delay: 0.2s; }
         .decrypt-dots span:nth-child(3) { animation-delay: 0.4s; }
         .reply-preview-bubble {
-          display: flex; gap: 8px; margin-bottom: 7px;
+          display: flex; gap: 8px;
           background: rgba(0,0,0,0.15); border-radius: var(--radius-sm); padding: 5px 8px;
         }
         .reply-bar-inner { width: 2px; background: rgba(255,255,255,0.35); border-radius: 2px; flex-shrink: 0; }
@@ -606,7 +607,7 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
           transition: background var(--transition);
         }
         .lightbox-download:hover { background: rgba(255,255,255,0.25); }
-        .msg-attachment { margin-bottom: 6px; }
+        .msg-attachment { }
         .attach-img {
           max-width: 180px; max-height: 200px; border-radius: var(--radius);
           display: block; object-fit: contain; cursor: pointer;
