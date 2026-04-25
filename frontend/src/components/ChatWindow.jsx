@@ -462,6 +462,7 @@ export default function ChatWindow({ conversationId, onBack }) {
           body: JSON.stringify(payload),
         });
         setMsg(msg._id, '🎤');
+        atBottomRef.current = true;
         setMessages(prev => prev.find(m => m._id === msg._id) ? prev : [...prev, msg]);
         setReplyTo(null);
         setAtBottom(true);
@@ -532,6 +533,7 @@ export default function ChatWindow({ conversationId, onBack }) {
         body: JSON.stringify(payload),
       });
       setMsg(msg._id, content);
+      atBottomRef.current = true; // always scroll to show the message you just sent
       setMessages(prev => prev.find(m => m._id === msg._id) ? prev : [...prev, msg]);
       setReplyTo(null);
       setAtBottom(true);
