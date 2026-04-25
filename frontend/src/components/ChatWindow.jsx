@@ -337,11 +337,9 @@ export default function ChatWindow({ conversationId, onBack }) {
         requestAnimationFrame(tryScroll);
         setTimeout(tryScroll, 150);
       } else {
-        // No saved position — go to bottom
+        // No saved position — jump to bottom instantly
         scrollToBottom(false);
         requestAnimationFrame(() => scrollToBottom(false));
-        setTimeout(() => scrollToBottom(false), 150);
-        setTimeout(() => scrollToBottom(false), 400);
         setAtBottom(true);
         atBottomRef.current = true;
       }
