@@ -52,6 +52,7 @@ export default function ChatWindow({ conversationId, onBack }) {
   const searchTimerRef = useRef(null);
   const [atBottom, setAtBottom] = useState(true);
   const atBottomRef = useRef(true);
+  const [showMessages, setShowMessages] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [attachment, setAttachment] = useState(null); // { file, previewUrl, type }
@@ -106,6 +107,7 @@ export default function ChatWindow({ conversationId, onBack }) {
     setSearchQuery('');
     initialLoadDone.current = false;
     prevMsgCountRef.current = 0;
+    setShowMessages(false);
     // Capture unread count before it gets cleared by the read receipt
     setInitialUnread(unreadCountsRef.current[conversationId] || 0);
 
@@ -123,18 +125,21 @@ export default function ChatWindow({ conversationId, onBack }) {
         setLoading(false);
       });
       if (cancelled) return;
-      // DOM is now committed — scroll to correct position with no animation
+      // DOM is committed — scroll to correct position before browser paints
       const savedId = localStorage.getItem(`sc:readPos:${conversationId}`);
       if (savedId) {
         document.getElementById(`msg-${savedId}`)?.scrollIntoView({ block: 'center' });
       } else {
-        const area = messagesAreaRef.current;
-        if (area) area.scrollTop = area.scrollHeight;
+        messagesEndRef.current?.scrollIntoView();
       }
       prevMsgCountRef.current = msgs.length;
       initialLoadDone.current = true;
       atBottomRef.current = true;
-      setAtBottom(true);
+      // Second flushSync reveals messages — guaranteed before browser paints
+      flushSync(() => {
+        setAtBottom(true);
+        setShowMessages(true);
+      });
       msgs.forEach(m => decryptOne(m));
     }).catch(console.error);
 
@@ -327,13 +332,7 @@ export default function ChatWindow({ conversationId, onBack }) {
   const prevMsgCountRef = useRef(0);
 
   const scrollToBottom = (smooth = false) => {
-    const area = messagesAreaRef.current;
-    if (!area) return;
-    if (smooth) {
-      area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
-    } else {
-      area.scrollTop = area.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
   };
 
   // Auto-scroll only when message COUNT increases (real new message), not status/reaction updates
@@ -723,7 +722,7 @@ export default function ChatWindow({ conversationId, onBack }) {
         {loading ? (
           <div className="msg-loading"><span className="spinner" /></div>
         ) : (
-          <>
+          <div style={{ opacity: showMessages ? 1 : 0 }}>
             {loadingMore && <div className="loading-more"><span className="spinner" style={{width:16,height:16}} /></div>}
             {!hasMore && messages.length > 0 && (
               <div className="history-start">Beginning of conversation</div>
@@ -771,7 +770,7 @@ export default function ChatWindow({ conversationId, onBack }) {
               </div>
             )}
             <div ref={messagesEndRef} />
-          </>
+          </div>
         )}
       </div>
 
@@ -1104,12 +1103,11 @@ export default function ChatWindow({ conversationId, onBack }) {
         .msg-jump-highlight { animation: jump-flash 2s ease; border-radius: 6px; }
         .messages-area {
           flex: 1; overflow-y: auto; padding: 8px 0;
-          display: flex; flex-direction: column;
           -webkit-overflow-scrolling: touch;
         }
         .msg-loading, .no-messages {
           display: flex; flex-direction: column; align-items: center;
-          justify-content: center; flex: 1; gap: 12px;
+          justify-content: center; height: 100%; gap: 12px;
           color: var(--text-3); font-size: 14px; text-align: center;
         }
         .loading-more { display: flex; justify-content: center; padding: 12px; }
