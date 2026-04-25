@@ -52,7 +52,6 @@ export default function ChatWindow({ conversationId, onBack }) {
   const searchTimerRef = useRef(null);
   const [atBottom, setAtBottom] = useState(true);
   const atBottomRef = useRef(true);
-  const [showMessages, setShowMessages] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [attachment, setAttachment] = useState(null); // { file, previewUrl, type }
@@ -107,7 +106,6 @@ export default function ChatWindow({ conversationId, onBack }) {
     setSearchQuery('');
     initialLoadDone.current = false;
     prevMsgCountRef.current = 0;
-    setShowMessages(false);
     // Capture unread count before it gets cleared by the read receipt
     setInitialUnread(unreadCountsRef.current[conversationId] || 0);
 
@@ -143,7 +141,8 @@ export default function ChatWindow({ conversationId, onBack }) {
       // Sync decryptedRef so decryptOne won't re-decrypt on incremental updates
       Object.assign(decryptedRef.current, decryptedMap);
 
-      // One render: messages + decrypted content together → correct content heights
+      // Commit messages + decrypted content in one render so scrollHeight is
+      // final when useLayoutEffect fires (before browser paints)
       flushSync(() => {
         setConversation(conv);
         setMessages(msgs);
@@ -151,18 +150,6 @@ export default function ChatWindow({ conversationId, onBack }) {
         setHasMore(msgs.length === 50);
         setLoading(false);
       });
-      if (cancelled) return;
-
-      prevMsgCountRef.current = msgs.length;
-      initialLoadDone.current = true;
-      atBottomRef.current = true;
-
-      // scrollHeight is final — scroll to true bottom, still hidden (opacity:0)
-      const area = messagesAreaRef.current;
-      if (area) area.scrollTop = area.scrollHeight;
-
-      // Single paint: messages visible, already at correct position
-      flushSync(() => setShowMessages(true));
     }).catch(console.error);
 
     return () => {
@@ -350,17 +337,24 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   };
 
-  // Auto-scroll when a new message arrives — useLayoutEffect fires before paint so
-  // the message is never visible in a half-covered state
+  // useLayoutEffect fires after DOM commit but before browser paint — the scroll
+  // position is already correct before the user ever sees the messages.
   useLayoutEffect(() => {
     const newCount = messages.length;
     const grew = newCount > prevMsgCountRef.current;
     prevMsgCountRef.current = newCount;
-    if (grew && atBottomRef.current && initialLoadDone.current) {
-      const area = messagesAreaRef.current;
+    const area = messagesAreaRef.current;
+
+    if (!loading && !initialLoadDone.current && newCount > 0) {
+      // Initial conversation load: set scroll to bottom before first paint
+      initialLoadDone.current = true;
+      atBottomRef.current = true;
+      if (area) area.scrollTop = area.scrollHeight;
+    } else if (grew && atBottomRef.current && initialLoadDone.current) {
+      // Incoming message: keep bottom visible if user was already there
       if (area) area.scrollTop = area.scrollHeight;
     }
-  }, [messages]);
+  }, [loading, messages]);
 
   // Scroll when typing indicator appears and user is at bottom
   useEffect(() => {
@@ -738,7 +732,7 @@ export default function ChatWindow({ conversationId, onBack }) {
         {loading ? (
           <div className="msg-loading"><span className="spinner" /></div>
         ) : (
-          <div style={{ opacity: showMessages ? 1 : 0 }}>
+          <>
             {loadingMore && <div className="loading-more"><span className="spinner" style={{width:16,height:16}} /></div>}
             {!hasMore && messages.length > 0 && (
               <div className="history-start">Beginning of conversation</div>
@@ -786,7 +780,7 @@ export default function ChatWindow({ conversationId, onBack }) {
               </div>
             )}
             <div ref={messagesEndRef} />
-          </div>
+          </>
         )}
       </div>
 
