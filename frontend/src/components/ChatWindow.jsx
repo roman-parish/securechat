@@ -129,19 +129,18 @@ export default function ChatWindow({ conversationId, onBack }) {
         setLoading(false);
       });
       if (cancelled) return;
-      // scrollHeight is now correct — all content is rendered at full height
-      const area = messagesAreaRef.current;
-      console.log('[scroll-debug] area:', !!area, 'scrollHeight:', area?.scrollHeight, 'clientHeight:', area?.clientHeight, 'showMessages:', false);
-      if (area) area.scrollTop = area.scrollHeight;
-      console.log('[scroll-debug] after set scrollTop:', area?.scrollTop);
       prevMsgCountRef.current = msgs.length;
       initialLoadDone.current = true;
       atBottomRef.current = true;
-      // Reveal messages — happens before browser paints so user sees correct position instantly
-      flushSync(() => {
-        setAtBottom(true);
-        setShowMessages(true);
-      });
+      // Flush all pending setDecrypted updates (still hidden, opacity:0) so
+      // scrollHeight reflects fully-decrypted content heights
+      flushSync(() => setAtBottom(true));
+      if (cancelled) return;
+      // Now scroll to true bottom — all content is at final height
+      const area = messagesAreaRef.current;
+      if (area) area.scrollTop = area.scrollHeight;
+      // Reveal — browser paints once with messages visible at correct position
+      flushSync(() => setShowMessages(true));
     }).catch(console.error);
 
     return () => {
