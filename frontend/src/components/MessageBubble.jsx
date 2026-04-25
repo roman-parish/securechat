@@ -521,8 +521,8 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
           border: 1px solid var(--border); position: relative; cursor: pointer;
           transition: filter var(--transition);
           -webkit-user-select: none; user-select: none;
-          display: flex; flex-direction: column; gap: 4px;
         }
+        .bubble > * + * { margin-top: 4px; }
         .bubble.own { background: var(--accent); border-color: transparent; }
         .bubble.failed { opacity: 0.5; }
         .bubble.deleted {
