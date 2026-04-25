@@ -5,7 +5,7 @@
  *
  * https://github.com/roman-parish/securechat
  */
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useSocket } from '../contexts/SocketContext.jsx';
@@ -114,10 +114,14 @@ export default function ChatWindow({ conversationId, onBack }) {
     Promise.all([
       apiFetch(`/conversations/${conversationId}`),
       apiFetch(`/messages/${conversationId}?limit=50`),
-    ]).then(([conv, msgs]) => {
+    ]).then(async ([conv, msgs]) => {
       if (cancelled) return;
       conversationRef.current = conv;
-      // flushSync commits the DOM synchronously so we can scroll immediately after
+      // Decrypt all messages while spinner is still showing.
+      // This ensures scrollHeight is accurate when we reveal the messages.
+      await Promise.all(msgs.map(m => decryptOne(m)));
+      if (cancelled) return;
+      // Commit everything to DOM in one synchronous pass
       flushSync(() => {
         setConversation(conv);
         setMessages(msgs);
@@ -125,20 +129,17 @@ export default function ChatWindow({ conversationId, onBack }) {
         setLoading(false);
       });
       if (cancelled) return;
-      // DOM is committed — scroll to bottom instantly before browser paints
-      // Clear any saved position so opening a conversation always shows latest messages
-      localStorage.removeItem(`sc:readPos:${conversationId}`);
+      // scrollHeight is now correct — all content is rendered at full height
       const area = messagesAreaRef.current;
       if (area) area.scrollTop = area.scrollHeight;
       prevMsgCountRef.current = msgs.length;
       initialLoadDone.current = true;
       atBottomRef.current = true;
-      // Second flushSync reveals messages — all happens before browser paints, no animation visible
+      // Reveal messages — happens before browser paints so user sees correct position instantly
       flushSync(() => {
         setAtBottom(true);
         setShowMessages(true);
       });
-      msgs.forEach(m => decryptOne(m));
     }).catch(console.error);
 
     return () => {
@@ -326,13 +327,15 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   };
 
-  // Auto-scroll when a new message arrives and user is at bottom
-  useEffect(() => {
+  // Auto-scroll when a new message arrives — useLayoutEffect fires before paint so
+  // the message is never visible in a half-covered state
+  useLayoutEffect(() => {
     const newCount = messages.length;
     const grew = newCount > prevMsgCountRef.current;
     prevMsgCountRef.current = newCount;
     if (grew && atBottomRef.current && initialLoadDone.current) {
-      scrollToBottom(false);
+      const area = messagesAreaRef.current;
+      if (area) area.scrollTop = area.scrollHeight;
     }
   }, [messages]);
 
