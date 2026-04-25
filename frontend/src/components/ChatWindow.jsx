@@ -125,17 +125,15 @@ export default function ChatWindow({ conversationId, onBack }) {
         setLoading(false);
       });
       if (cancelled) return;
-      // DOM is committed — scroll to correct position before browser paints
-      const savedId = localStorage.getItem(`sc:readPos:${conversationId}`);
-      if (savedId) {
-        document.getElementById(`msg-${savedId}`)?.scrollIntoView({ block: 'center' });
-      } else {
-        messagesEndRef.current?.scrollIntoView();
-      }
+      // DOM is committed — scroll to bottom instantly before browser paints
+      // Clear any saved position so opening a conversation always shows latest messages
+      localStorage.removeItem(`sc:readPos:${conversationId}`);
+      const area = messagesAreaRef.current;
+      if (area) area.scrollTop = area.scrollHeight;
       prevMsgCountRef.current = msgs.length;
       initialLoadDone.current = true;
       atBottomRef.current = true;
-      // Second flushSync reveals messages — guaranteed before browser paints
+      // Second flushSync reveals messages — all happens before browser paints, no animation visible
       flushSync(() => {
         setAtBottom(true);
         setShowMessages(true);
@@ -145,19 +143,6 @@ export default function ChatWindow({ conversationId, onBack }) {
 
     return () => {
       cancelled = true;
-      // Save scroll position if user was reading old messages
-      if (!atBottomRef.current && conversationId) {
-        const area = messagesAreaRef.current;
-        const els = area?.querySelectorAll('[id^="msg-"]');
-        if (els?.length) {
-          for (const el of els) {
-            if (el.offsetTop >= area.scrollTop) {
-              localStorage.setItem(`sc:readPos:${conversationId}`, el.id.replace('msg-', ''));
-              break;
-            }
-          }
-        }
-      }
     };
   }, [conversationId, decryptOne]);
 
@@ -332,7 +317,13 @@ export default function ChatWindow({ conversationId, onBack }) {
   const prevMsgCountRef = useRef(0);
 
   const scrollToBottom = (smooth = false) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+    const area = messagesAreaRef.current;
+    if (!area) return;
+    if (smooth) {
+      area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
+    } else {
+      area.scrollTop = area.scrollHeight;
+    }
   };
 
   // Auto-scroll only when message COUNT increases (real new message), not status/reaction updates
@@ -713,7 +704,6 @@ export default function ChatWindow({ conversationId, onBack }) {
           atBottomRef.current = bottom;
           if (bottom) {
             setInitialUnread(0);
-            localStorage.removeItem(`sc:readPos:${conversationId}`);
           }
           // Load more when near top
           if (el.scrollTop < 100 && !loadingMore && hasMore && !searchQuery) loadMore();
@@ -1103,11 +1093,12 @@ export default function ChatWindow({ conversationId, onBack }) {
         .msg-jump-highlight { animation: jump-flash 2s ease; border-radius: 6px; }
         .messages-area {
           flex: 1; overflow-y: auto; padding: 8px 0;
+          display: flex; flex-direction: column;
           -webkit-overflow-scrolling: touch;
         }
         .msg-loading, .no-messages {
           display: flex; flex-direction: column; align-items: center;
-          justify-content: center; height: 100%; gap: 12px;
+          justify-content: center; flex: 1; gap: 12px;
           color: var(--text-3); font-size: 14px; text-align: center;
         }
         .loading-more { display: flex; justify-content: center; padding: 12px; }
