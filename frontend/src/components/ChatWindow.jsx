@@ -316,6 +316,20 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   }, [loading, messages]);
 
+  // After initial load, watch for content height changes (blob/image loads) and
+  // keep scrolled to the bottom for a short settle window
+  useEffect(() => {
+    if (loading) return;
+    const area = messagesAreaRef.current;
+    if (!area) return;
+    const observer = new ResizeObserver(() => {
+      if (atBottomRef.current) area.scrollTop = area.scrollHeight;
+    });
+    observer.observe(area);
+    const t = setTimeout(() => observer.disconnect(), 1500);
+    return () => { clearTimeout(t); observer.disconnect(); };
+  }, [loading]);
+
   // Auto-scroll when new messages arrive and user is at bottom
   useEffect(() => {
     if (atBottom && initialLoadDone.current) {
