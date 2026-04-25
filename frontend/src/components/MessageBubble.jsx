@@ -30,7 +30,7 @@ function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentU
   if (attachment.mimetype?.startsWith('audio/')) {
     return (
       <div className="msg-attachment">
-        {src ? <AudioPlayer url={src} isOwn={isOwn} /> : <div className="attach-audio-placeholder"><span className="attach-loading">🎤 decrypting…</span></div>}
+        <AudioPlayer url={src} isOwn={isOwn} />
       </div>
     );
   }
@@ -83,6 +83,18 @@ function AudioPlayer({ url, isOwn }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+
+  if (!url) {
+    return (
+      <div className={`audio-player ${isOwn ? 'own' : ''}`} style={{ opacity: 0.4 }}>
+        <button className="audio-play-btn" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
+        </button>
+        <div className="audio-track"><div className="audio-track-fill" style={{ width: '0%' }} /></div>
+        <span className="audio-time">—:——</span>
+      </div>
+    );
+  }
 
   const toggle = useCallback((e) => {
     e.stopPropagation();
@@ -606,12 +618,6 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
           width: 180px; height: 200px; border-radius: var(--radius);
           background: rgba(0,0,0,0.15); animation: pulse 1.5s infinite;
         }
-        .attach-audio-placeholder {
-          width: 180px; height: 40px; border-radius: var(--radius);
-          background: rgba(0,0,0,0.15); animation: pulse 1.5s infinite;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .attach-loading { font-size: 11px; opacity: 0.5; }
         .attach-file {
           display: flex; align-items: center; gap: 6px;
           padding: 6px 10px; background: rgba(0,0,0,0.15);
