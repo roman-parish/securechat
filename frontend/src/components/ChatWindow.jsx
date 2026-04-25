@@ -104,6 +104,7 @@ export default function ChatWindow({ conversationId, onBack }) {
     setSearchOpen(false);
     setSearchQuery('');
     initialLoadDone.current = false;
+    prevMsgCountRef.current = 0;
     // Capture unread count before it gets cleared by the read receipt
     setInitialUnread(unreadCountsRef.current[conversationId] || 0);
 
@@ -305,15 +306,10 @@ export default function ChatWindow({ conversationId, onBack }) {
     };
   }, [socket, conversationId, decryptOne, setMsg]);
 
-  // Scroll to bottom helper — direct scrollTop assignment for cross-browser reliability
   const scrollToBottom = (smooth = false) => {
-    const area = messagesAreaRef.current;
-    if (!area) return;
-    if (smooth) {
-      area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
-    } else {
-      area.scrollTop = area.scrollHeight;
-    }
+    const end = messagesEndRef.current;
+    if (!end) return;
+    end.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant', block: 'end' });
   };
 
   // Scroll to bottom (or saved position) when initial load completes
@@ -323,13 +319,11 @@ export default function ChatWindow({ conversationId, onBack }) {
       initialLoadDone.current = true;
       const savedId = conversationId ? localStorage.getItem(`sc:readPos:${conversationId}`) : null;
       if (savedId) {
-        // Restore saved scroll position
         const tryScroll = () => {
           const el = document.getElementById(`msg-${savedId}`);
           if (el) {
             el.scrollIntoView({ block: 'center' });
           } else {
-            // Message not in current batch — fetch and jump
             const msg = messages.find(m => String(m._id) === savedId);
             if (msg) jumpToMessage(savedId, msg.createdAt);
           }
@@ -337,7 +331,6 @@ export default function ChatWindow({ conversationId, onBack }) {
         requestAnimationFrame(tryScroll);
         setTimeout(tryScroll, 150);
       } else {
-        // No saved position — jump to bottom instantly
         scrollToBottom(false);
         requestAnimationFrame(() => scrollToBottom(false));
         setTimeout(() => scrollToBottom(false), 150);
@@ -348,14 +341,23 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   }, [loading, conversationId, messages, jumpToMessage]);
 
-  // Auto-scroll when new messages arrive and user is at bottom
-  // Use atBottomRef (not atBottom state) so this only fires on message/typing changes,
-  // not when atBottom transitions to true during initial load (which would cause a smooth-scroll animation)
+  // Auto-scroll only when message COUNT increases (new message added), not status updates
+  const prevMsgCountRef = useRef(0);
   useEffect(() => {
-    if (atBottomRef.current && initialLoadDone.current) {
+    const newCount = messages.length;
+    const grew = newCount > prevMsgCountRef.current;
+    prevMsgCountRef.current = newCount;
+    if (grew && atBottomRef.current && initialLoadDone.current) {
       scrollToBottom(true);
     }
-  }, [messages, typingUsers]);
+  }, [messages]);
+
+  // Scroll when typing indicator appears/disappears and user is at bottom
+  useEffect(() => {
+    if (typingUsers.length > 0 && atBottomRef.current && initialLoadDone.current) {
+      scrollToBottom(true);
+    }
+  }, [typingUsers]);
 
   // Mark read on mount and when active
   useEffect(() => {
