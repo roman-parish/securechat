@@ -603,11 +603,11 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
         }
         .attach-img:hover { opacity: 0.85; }
         .attach-img-placeholder {
-          width: 140px; height: 100px; border-radius: var(--radius);
+          width: 180px; height: 200px; border-radius: var(--radius);
           background: rgba(0,0,0,0.15); animation: pulse 1.5s infinite;
         }
         .attach-audio-placeholder {
-          width: 180px; height: 32px; border-radius: var(--radius);
+          width: 180px; height: 40px; border-radius: var(--radius);
           background: rgba(0,0,0,0.15); animation: pulse 1.5s infinite;
           display: flex; align-items: center; justify-content: center;
         }
