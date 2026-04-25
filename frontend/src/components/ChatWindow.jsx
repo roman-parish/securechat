@@ -117,36 +117,58 @@ export default function ChatWindow({ conversationId, onBack }) {
     ]).then(async ([conv, msgs]) => {
       if (cancelled) return;
       conversationRef.current = conv;
-      // Decrypt all messages while spinner is still showing.
-      // This ensures scrollHeight is accurate when we reveal the messages.
-      await Promise.all(msgs.map(m => decryptOne(m)));
+
+      // Build a complete decrypted map before touching React state so that
+      // messages + decrypted content land in the DOM in one render.
+      // This guarantees scrollHeight is final before we scroll.
+      const userId = userIdRef.current;
+      const decryptedMap = {};
+      await Promise.all(msgs.map(async (m) => {
+        if (m.type === 'system' || m.type === 'deleted') {
+          decryptedMap[m._id] = m.type === 'deleted' ? '🗑 Message deleted' : m.encryptedContent;
+          return;
+        }
+        const keys = m.encryptedKeys;
+        if (!keys?.length) { decryptedMap[m._id] = '[No keys]'; return; }
+        const keyEntry = keys.find(k => String(k.userId) === String(userId));
+        if (!keyEntry) { decryptedMap[m._id] = '[Not encrypted for this device]'; return; }
+        try {
+          decryptedMap[m._id] = await decryptMessage(m.encryptedContent, m.iv, keyEntry.encryptedKey, userId);
+        } catch {
+          decryptedMap[m._id] = '[Decryption failed]';
+        }
+      }));
+
       if (cancelled) return;
-      // Commit everything to DOM in one synchronous pass
+      // Sync decryptedRef so decryptOne won't re-decrypt on incremental updates
+      Object.assign(decryptedRef.current, decryptedMap);
+
+      // One render: messages + decrypted content together → correct content heights
       flushSync(() => {
         setConversation(conv);
         setMessages(msgs);
+        setDecrypted(decryptedMap);
         setHasMore(msgs.length === 50);
         setLoading(false);
       });
       if (cancelled) return;
+
       prevMsgCountRef.current = msgs.length;
       initialLoadDone.current = true;
       atBottomRef.current = true;
-      // Flush all pending setDecrypted updates (still hidden, opacity:0) so
-      // scrollHeight reflects fully-decrypted content heights
-      flushSync(() => setAtBottom(true));
-      if (cancelled) return;
-      // Now scroll to true bottom — all content is at final height
+
+      // scrollHeight is final — scroll to true bottom, still hidden (opacity:0)
       const area = messagesAreaRef.current;
       if (area) area.scrollTop = area.scrollHeight;
-      // Reveal — browser paints once with messages visible at correct position
+
+      // Single paint: messages visible, already at correct position
       flushSync(() => setShowMessages(true));
     }).catch(console.error);
 
     return () => {
       cancelled = true;
     };
-  }, [conversationId, decryptOne]);
+  }, [conversationId]);
 
   // Load older messages (pagination)
   const loadMore = useCallback(async () => {
