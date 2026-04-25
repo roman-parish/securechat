@@ -110,15 +110,17 @@ export default function ChatWindow({ conversationId, onBack }) {
     Promise.all([
       apiFetch(`/conversations/${conversationId}`),
       apiFetch(`/messages/${conversationId}?limit=50`),
-    ]).then(([conv, msgs]) => {
+    ]).then(async ([conv, msgs]) => {
       if (cancelled) return;
       setConversation(conv);
       conversationRef.current = conv;
       setMessages(msgs);
       setHasMore(msgs.length === 50);
-      msgs.forEach(m => decryptOne(m));
-    }).catch(console.error)
-      .finally(() => { if (!cancelled) setLoading(false); });
+      // Await all decryptions so content is at full height before the spinner
+      // disappears — useLayoutEffect then scrolls to the true bottom in one paint
+      await Promise.all(msgs.map(m => decryptOne(m)));
+      if (!cancelled) setLoading(false);
+    }).catch(err => { console.error(err); setLoading(false); });
 
     return () => { cancelled = true; };
   }, [conversationId, decryptOne]);
