@@ -307,10 +307,32 @@ export default function ChatWindow({ conversationId, onBack }) {
   }, [socket, conversationId, decryptOne, setMsg]);
 
   const scrollToBottom = (smooth = false) => {
-    const end = messagesEndRef.current;
-    if (!end) return;
-    end.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant', block: 'end' });
+    const area = messagesAreaRef.current;
+    if (!area) return;
+    if (smooth) {
+      area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
+    } else {
+      area.scrollTop = area.scrollHeight;
+    }
   };
+
+  // Auto-scroll only when message COUNT increases (real new message), not status/reaction updates
+  const prevMsgCountRef = useRef(0);
+  useEffect(() => {
+    const newCount = messages.length;
+    const grew = newCount > prevMsgCountRef.current;
+    prevMsgCountRef.current = newCount;
+    if (grew && atBottomRef.current && initialLoadDone.current) {
+      scrollToBottom(true);
+    }
+  }, [messages]);
+
+  // Scroll when typing indicator appears and user is at bottom
+  useEffect(() => {
+    if (typingUsers.length > 0 && atBottomRef.current && initialLoadDone.current) {
+      scrollToBottom(true);
+    }
+  }, [typingUsers]);
 
   // Scroll to bottom (or saved position) when initial load completes
   const initialLoadDone = useRef(false);
@@ -331,6 +353,8 @@ export default function ChatWindow({ conversationId, onBack }) {
         requestAnimationFrame(tryScroll);
         setTimeout(tryScroll, 150);
       } else {
+        // Sync prevMsgCountRef so the auto-scroll effect doesn't fire smooth on initial load
+        prevMsgCountRef.current = messages.length;
         scrollToBottom(false);
         requestAnimationFrame(() => scrollToBottom(false));
         setTimeout(() => scrollToBottom(false), 150);
@@ -340,24 +364,6 @@ export default function ChatWindow({ conversationId, onBack }) {
       }
     }
   }, [loading, conversationId, messages, jumpToMessage]);
-
-  // Auto-scroll only when message COUNT increases (new message added), not status updates
-  const prevMsgCountRef = useRef(0);
-  useEffect(() => {
-    const newCount = messages.length;
-    const grew = newCount > prevMsgCountRef.current;
-    prevMsgCountRef.current = newCount;
-    if (grew && atBottomRef.current && initialLoadDone.current) {
-      scrollToBottom(true);
-    }
-  }, [messages]);
-
-  // Scroll when typing indicator appears/disappears and user is at bottom
-  useEffect(() => {
-    if (typingUsers.length > 0 && atBottomRef.current && initialLoadDone.current) {
-      scrollToBottom(true);
-    }
-  }, [typingUsers]);
 
   // Mark read on mount and when active
   useEffect(() => {
