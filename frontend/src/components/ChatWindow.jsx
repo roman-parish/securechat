@@ -326,13 +326,13 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   };
 
-  // Auto-scroll only when message COUNT increases (real new message), not status/reaction updates
+  // Auto-scroll when a new message arrives and user is at bottom
   useEffect(() => {
     const newCount = messages.length;
     const grew = newCount > prevMsgCountRef.current;
     prevMsgCountRef.current = newCount;
     if (grew && atBottomRef.current && initialLoadDone.current) {
-      scrollToBottom(true);
+      scrollToBottom(false);
     }
   }, [messages]);
 
