@@ -84,18 +84,6 @@ function AudioPlayer({ url, isOwn }) {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
 
-  if (!url) {
-    return (
-      <div className={`audio-player ${isOwn ? 'own' : ''}`} style={{ opacity: 0.4 }}>
-        <button className="audio-play-btn" disabled>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
-        </button>
-        <div className="audio-track"><div className="audio-track-fill" style={{ width: '0%' }} /></div>
-        <span className="audio-time">—:——</span>
-      </div>
-    );
-  }
-
   const toggle = useCallback((e) => {
     e.stopPropagation();
     const audio = audioRef.current;
@@ -132,6 +120,18 @@ function AudioPlayer({ url, isOwn }) {
   };
 
   const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+  if (!url) {
+    return (
+      <div className={`audio-player ${isOwn ? 'own' : ''}`} style={{ opacity: 0.4 }}>
+        <button className="audio-play-btn" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
+        </button>
+        <div className="audio-track"><div className="audio-track-fill" style={{ width: '0%' }} /></div>
+        <span className="audio-time">—:——</span>
+      </div>
+    );
+  }
 
   return (
     <div className={`audio-player ${isOwn ? 'own' : ''}`}>
