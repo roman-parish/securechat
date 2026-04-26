@@ -202,13 +202,8 @@ function convTimestamp(dateStr) {
 
 function convPreview(conv, currentUser, unread) {
   if (!conv.lastMessage) return 'Start a conversation';
-  const mt = conv.lastMessage.attachment?.mimetype || '';
-  const attachLabel = mt.startsWith('audio/') ? '🎤 Voice message'
-    : mt.startsWith('image/') ? '🖼 Image'
-    : mt ? '📎 Attachment'
-    : null;
-  if (unread > 0) return attachLabel || (unread === 1 ? 'New message' : `${unread} new messages`);
-  return attachLabel || '';
+  if (unread > 0) return unread === 1 ? 'New message' : `${unread} new messages`;
+  return '';
 }
 
 function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onMuteToggle }) {
