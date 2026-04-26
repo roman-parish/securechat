@@ -293,11 +293,14 @@ export default function ChatWindow({ conversationId, onBack }) {
     };
   }, [socket, conversationId, decryptOne, setMsg]);
 
-  // scrollToBottom — uses scrollIntoView on the sentinel element which is reliable
-  // on iOS Safari (direct scrollTop assignment can be silently ignored by the
-  // momentum scroll engine; scrollIntoView is a native browser instruction).
   const scrollToBottom = (smooth = false) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant', block: 'end' });
+    const area = messagesAreaRef.current;
+    if (!area) return;
+    if (smooth) {
+      area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
+    } else {
+      area.scrollTop = area.scrollHeight;
+    }
   };
 
   // Scroll to bottom when initial load completes — useLayoutEffect fires before
@@ -308,20 +311,28 @@ export default function ChatWindow({ conversationId, onBack }) {
       initialLoadDone.current = true;
       atBottomRef.current = true;
       setAtBottom(true);
-      messagesEndRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' });
+      const area = messagesAreaRef.current;
+      if (area) area.scrollTop = area.scrollHeight;
     }
   }, [loading, messages]);
 
-  // Watch the inner content div (not the scroll container) for height changes caused
-  // by blobs/images/audio loading asynchronously. The outer container has fixed height
-  // so ResizeObserver on it never fires for content changes — must observe the content.
+  // Watch the inner content div for height changes (blobs/images/audio loading).
+  // The outer container has fixed height so ResizeObserver on it never fires for
+  // content changes — must observe the inner content div.
+  // rAF defers the snap one frame so iOS Safari layout is finalized before we read
+  // scrollHeight (direct assignment in the observer callback can land too early on iOS).
   useEffect(() => {
     if (loading) return;
+    const area = messagesAreaRef.current;
     const content = messagesContentRef.current;
-    if (!content) return;
+    if (!area || !content) return;
     const observer = new ResizeObserver(() => {
       if (atBottomRef.current) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' });
+        requestAnimationFrame(() => {
+          if (atBottomRef.current && messagesAreaRef.current) {
+            messagesAreaRef.current.scrollTop = messagesAreaRef.current.scrollHeight;
+          }
+        });
       }
     });
     observer.observe(content);
