@@ -293,15 +293,11 @@ export default function ChatWindow({ conversationId, onBack }) {
     };
   }, [socket, conversationId, decryptOne, setMsg]);
 
-  // Scroll to bottom helper — direct scrollTop assignment for cross-browser reliability
+  // scrollToBottom — uses scrollIntoView on the sentinel element which is reliable
+  // on iOS Safari (direct scrollTop assignment can be silently ignored by the
+  // momentum scroll engine; scrollIntoView is a native browser instruction).
   const scrollToBottom = (smooth = false) => {
-    const area = messagesAreaRef.current;
-    if (!area) return;
-    if (smooth) {
-      area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
-    } else {
-      area.scrollTop = area.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant', block: 'end' });
   };
 
   // Scroll to bottom when initial load completes — useLayoutEffect fires before
@@ -312,8 +308,7 @@ export default function ChatWindow({ conversationId, onBack }) {
       initialLoadDone.current = true;
       atBottomRef.current = true;
       setAtBottom(true);
-      const area = messagesAreaRef.current;
-      if (area) area.scrollTop = area.scrollHeight;
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' });
     }
   }, [loading, messages]);
 
@@ -322,11 +317,12 @@ export default function ChatWindow({ conversationId, onBack }) {
   // so ResizeObserver on it never fires for content changes — must observe the content.
   useEffect(() => {
     if (loading) return;
-    const area = messagesAreaRef.current;
     const content = messagesContentRef.current;
-    if (!area || !content) return;
+    if (!content) return;
     const observer = new ResizeObserver(() => {
-      if (atBottomRef.current) area.scrollTop = area.scrollHeight;
+      if (atBottomRef.current) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' });
+      }
     });
     observer.observe(content);
     return () => observer.disconnect();
