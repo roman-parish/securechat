@@ -316,8 +316,9 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   }, [loading, messages]);
 
-  // After initial load, watch for content height changes (blob/image loads) and
-  // keep scrolled to the bottom for a short settle window
+  // Watch for content height changes (blob/image/audio loads) and keep scrolled
+  // to the bottom. No timeout — blobs can take arbitrarily long to decrypt and
+  // render. Observer only snaps when atBottomRef is true, so user scroll-up wins.
   useEffect(() => {
     if (loading) return;
     const area = messagesAreaRef.current;
@@ -326,8 +327,7 @@ export default function ChatWindow({ conversationId, onBack }) {
       if (atBottomRef.current) area.scrollTop = area.scrollHeight;
     });
     observer.observe(area);
-    const t = setTimeout(() => observer.disconnect(), 1500);
-    return () => { clearTimeout(t); observer.disconnect(); };
+    return () => observer.disconnect();
   }, [loading]);
 
   // Auto-scroll when new messages arrive and user is at bottom
