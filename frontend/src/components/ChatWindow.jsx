@@ -62,6 +62,7 @@ export default function ChatWindow({ conversationId, onBack }) {
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
+  const messagesContentRef = useRef(null);
   const typingTimerRef = useRef(null);
   const conversationRef = useRef(null);
   const textareaRef = useRef(null);
@@ -316,17 +317,18 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   }, [loading, messages]);
 
-  // Watch for content height changes (blob/image/audio loads) and keep scrolled
-  // to the bottom. No timeout — blobs can take arbitrarily long to decrypt and
-  // render. Observer only snaps when atBottomRef is true, so user scroll-up wins.
+  // Watch the inner content div (not the scroll container) for height changes caused
+  // by blobs/images/audio loading asynchronously. The outer container has fixed height
+  // so ResizeObserver on it never fires for content changes — must observe the content.
   useEffect(() => {
     if (loading) return;
     const area = messagesAreaRef.current;
-    if (!area) return;
+    const content = messagesContentRef.current;
+    if (!area || !content) return;
     const observer = new ResizeObserver(() => {
       if (atBottomRef.current) area.scrollTop = area.scrollHeight;
     });
-    observer.observe(area);
+    observer.observe(content);
     return () => observer.disconnect();
   }, [loading]);
 
@@ -708,7 +710,7 @@ export default function ChatWindow({ conversationId, onBack }) {
         {loading ? (
           <div className="msg-loading"><span className="spinner" /></div>
         ) : (
-          <>
+          <div ref={messagesContentRef}>
             {loadingMore && <div className="loading-more"><span className="spinner" style={{width:16,height:16}} /></div>}
             {!hasMore && messages.length > 0 && (
               <div className="history-start">Beginning of conversation</div>
@@ -756,7 +758,7 @@ export default function ChatWindow({ conversationId, onBack }) {
               </div>
             )}
             <div ref={messagesEndRef} />
-          </>
+          </div>
         )}
       </div>
 
