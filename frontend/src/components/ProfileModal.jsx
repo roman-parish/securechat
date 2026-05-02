@@ -21,11 +21,12 @@ export default function ProfileModal({ onClose }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
+  const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '', totp: '' });
   const [pwMsg, setPwMsg] = useState('');
   const [pwSaving, setPwSaving] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
+  const [deleteTotp, setDeleteTotp] = useState('');
   const [deleteMsg, setDeleteMsg] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -39,7 +40,10 @@ export default function ProfileModal({ onClose }) {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [twoFactorMsg, setTwoFactorMsg] = useState('');
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
-  const [twoFactorStep, setTwoFactorStep] = useState('qr'); // 'qr' | 'confirm'
+  const [twoFactorStep, setTwoFactorStep] = useState('qr'); // 'qr' | 'confirm' | 'codes'
+  const [recoveryCodes, setRecoveryCodes] = useState(null);
+  const [remainingCodes, setRemainingCodes] = useState(null);
+  const [showRegenerateCodes, setShowRegenerateCodes] = useState(false);
 
   // Check if there's an actual push subscription on mount
   useEffect(() => {
@@ -86,7 +90,7 @@ export default function ProfileModal({ onClose }) {
     try {
       await apiFetch('/auth/account', {
         method: 'DELETE',
-        body: JSON.stringify({ password: deletePassword }),
+        body: JSON.stringify({ password: deletePassword, twoFactorCode: deleteTotp || undefined }),
       });
       await logout();
     } catch (err) {
@@ -110,10 +114,10 @@ export default function ProfileModal({ onClose }) {
     try {
       await apiFetch('/auth/change-password', {
         method: 'POST',
-        body: JSON.stringify({ currentPassword: passwords.current, newPassword: passwords.newPass }),
+        body: JSON.stringify({ currentPassword: passwords.current, newPassword: passwords.newPass, twoFactorCode: passwords.totp || undefined }),
       });
       setPwMsg('✓ Password changed successfully!');
-      setPasswords({ current: '', newPass: '', confirm: '' });
+      setPasswords({ current: '', newPass: '', confirm: '', totp: '' });
       setTimeout(() => { setPwMsg(''); setShowChangePassword(false); }, 2000);
     } catch (err) {
       setPwMsg(err.message || 'Failed to change password');
@@ -135,7 +139,12 @@ export default function ProfileModal({ onClose }) {
     }
   };
 
-  // Load sessions when security tab is opened
+  // Load sessions and recovery code count when security tab is opened
+  useEffect(() => {
+    if (tab !== 'security' || !twoFactorEnabled || remainingCodes !== null) return;
+    apiFetch('/auth/2fa/recovery-codes/count').then(d => setRemainingCodes(d.remaining)).catch(() => {});
+  }, [tab, twoFactorEnabled, remainingCodes]);
+
   useEffect(() => {
     if (tab !== 'security' || sessions !== null) return;
     setSessionsLoading(true);
@@ -177,11 +186,28 @@ export default function ProfileModal({ onClose }) {
     setTwoFactorLoading(true);
     setTwoFactorMsg('');
     try {
-      await apiFetch('/auth/2fa/confirm', { method: 'POST', body: JSON.stringify({ code: twoFactorCode.replace(/\s/g, '') }) });
+      const data = await apiFetch('/auth/2fa/confirm', { method: 'POST', body: JSON.stringify({ code: twoFactorCode.replace(/\s/g, '') }) });
       setTwoFactorEnabled(true);
-      setShowTwoFactorSetup(false);
-      setTwoFactorQr(null);
+      setRecoveryCodes(data.recoveryCodes);
+      setRemainingCodes(data.recoveryCodes.length);
+      setTwoFactorStep('codes');
       setTwoFactorCode('');
+    } catch (err) {
+      setTwoFactorMsg(err.message || 'Invalid code');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const handleRegenerateCodes = async () => {
+    setTwoFactorLoading(true);
+    setTwoFactorMsg('');
+    try {
+      const data = await apiFetch('/auth/2fa/recovery-codes', { method: 'POST', body: JSON.stringify({ code: twoFactorCode.replace(/\s/g, '') }) });
+      setRecoveryCodes(data.recoveryCodes);
+      setRemainingCodes(data.recoveryCodes.length);
+      setTwoFactorCode('');
+      setTwoFactorStep('codes');
     } catch (err) {
       setTwoFactorMsg(err.message || 'Invalid code');
     } finally {
@@ -525,6 +551,18 @@ export default function ProfileModal({ onClose }) {
                 )}
               </div>
 
+              {twoFactorEnabled && remainingCodes !== null && (
+                <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
+                  <div className="setting-text">
+                    <p className="setting-label">Recovery Codes</p>
+                    <p className="setting-desc">{remainingCodes} of 10 codes remaining</p>
+                  </div>
+                  <button className="secondary-btn" onClick={() => { setShowRegenerateCodes(true); setTwoFactorCode(''); setTwoFactorMsg(''); }}>
+                    Regenerate
+                  </button>
+                </div>
+              )}
+
               <div className="sessions-section">
                 <p className="sessions-label">Active Sessions</p>
                 {sessionsLoading ? (
@@ -675,6 +713,18 @@ export default function ProfileModal({ onClose }) {
                     onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))}
                   />
                 </div>
+                {twoFactorEnabled && (
+                  <div className="field">
+                    <label>Authentication Code</label>
+                    <input
+                      type="text" inputMode="numeric" autoComplete="one-time-code"
+                      placeholder="000 000" maxLength={7}
+                      value={passwords.totp}
+                      onChange={e => setPasswords(p => ({ ...p, totp: e.target.value }))}
+                      style={{ textAlign: 'center', letterSpacing: 4 }}
+                    />
+                  </div>
+                )}
                 {pwMsg && <p className={`pw-msg ${pwMsg.startsWith('✓') ? 'success' : 'error'}`}>{pwMsg}</p>}
                 <div className="cp-actions">
                   <button className="cancel-btn" onClick={() => setShowChangePassword(false)}>Cancel</button>
@@ -710,6 +760,18 @@ export default function ProfileModal({ onClose }) {
                     autoFocus
                   />
                 </div>
+                {twoFactorEnabled && (
+                  <div className="field">
+                    <label>Authentication Code</label>
+                    <input
+                      type="text" inputMode="numeric" autoComplete="one-time-code"
+                      placeholder="000 000" maxLength={7}
+                      value={deleteTotp}
+                      onChange={e => setDeleteTotp(e.target.value)}
+                      style={{ textAlign: 'center', letterSpacing: 4 }}
+                    />
+                  </div>
+                )}
                 {deleteMsg && <p className="pw-msg error">{deleteMsg}</p>}
                 <div className="cp-actions">
                   <button className="cancel-btn" onClick={() => setShowDeleteAccount(false)}>Cancel</button>
@@ -733,7 +795,7 @@ export default function ProfileModal({ onClose }) {
                   </svg>
                 </button>
               </div>
-              {twoFactorStep === 'qr' ? (
+              {twoFactorStep === 'qr' && (
                 <div className="change-password-form">
                   <p className="cp-note">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code to confirm.</p>
                   {twoFactorQr && <img src={twoFactorQr} alt="2FA QR Code" style={{ width: '100%', maxWidth: 200, display: 'block', margin: '12px auto', borderRadius: 8 }} />}
@@ -742,7 +804,8 @@ export default function ProfileModal({ onClose }) {
                     <button className="primary-btn" onClick={() => { setTwoFactorStep('confirm'); setTwoFactorCode(''); setTwoFactorMsg(''); }}>Next</button>
                   </div>
                 </div>
-              ) : (
+              )}
+              {twoFactorStep === 'confirm' && (
                 <div className="change-password-form">
                   <p className="cp-note">Enter the 6-digit code from your authenticator app to confirm setup.</p>
                   <div className="field">
@@ -762,6 +825,70 @@ export default function ProfileModal({ onClose }) {
                     <button className="primary-btn" onClick={handleTwoFactorConfirm} disabled={twoFactorLoading || twoFactorCode.replace(/\s/g, '').length < 6}>
                       {twoFactorLoading ? 'Verifying…' : 'Activate 2FA'}
                     </button>
+                  </div>
+                </div>
+              )}
+              {twoFactorStep === 'codes' && recoveryCodes && (
+                <div className="change-password-form">
+                  <p className="cp-note">2FA is now active. Save these recovery codes somewhere safe — each can only be used once if you lose access to your authenticator app.</p>
+                  <div style={{ background: 'var(--bg-0)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px', fontFamily: 'monospace', fontSize: 14, lineHeight: 2 }}>
+                    {recoveryCodes.map(c => <div key={c}>{c}</div>)}
+                  </div>
+                  <button className="secondary-btn" style={{ width: '100%' }} onClick={() => {
+                    const text = recoveryCodes.join('\n');
+                    navigator.clipboard.writeText(text).catch(() => {});
+                  }}>Copy all codes</button>
+                  <div className="cp-actions">
+                    <button className="primary-btn" onClick={() => { setShowTwoFactorSetup(false); setRecoveryCodes(null); setTwoFactorStep('qr'); }}>Done</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showRegenerateCodes && (
+          <div className="cp-overlay" onClick={() => setShowRegenerateCodes(false)}>
+            <div className="cp-modal" onClick={e => e.stopPropagation()}>
+              <div className="cp-header">
+                <h3>{twoFactorStep === 'codes' ? 'New Recovery Codes' : 'Regenerate Recovery Codes'}</h3>
+                <button className="close-btn" onClick={() => { setShowRegenerateCodes(false); setTwoFactorStep('qr'); setRecoveryCodes(null); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+              {twoFactorStep !== 'codes' ? (
+                <div className="change-password-form">
+                  <p className="cp-note">This will invalidate all existing recovery codes. Enter your authentication code to confirm.</p>
+                  <div className="field">
+                    <label>Authentication Code</label>
+                    <input
+                      type="text" inputMode="numeric" autoComplete="one-time-code"
+                      placeholder="000 000" maxLength={7}
+                      value={twoFactorCode}
+                      onChange={e => setTwoFactorCode(e.target.value)}
+                      autoFocus
+                      style={{ textAlign: 'center', fontSize: 20, letterSpacing: 4 }}
+                    />
+                  </div>
+                  {twoFactorMsg && <p className="pw-msg error">{twoFactorMsg}</p>}
+                  <div className="cp-actions">
+                    <button className="cancel-btn" onClick={() => { setShowRegenerateCodes(false); setTwoFactorStep('qr'); }}>Cancel</button>
+                    <button className="primary-btn" onClick={handleRegenerateCodes} disabled={twoFactorLoading || twoFactorCode.replace(/\s/g, '').length < 6}>
+                      {twoFactorLoading ? 'Generating…' : 'Generate new codes'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="change-password-form">
+                  <p className="cp-note">Save these new recovery codes. Your old codes are now invalid.</p>
+                  <div style={{ background: 'var(--bg-0)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px', fontFamily: 'monospace', fontSize: 14, lineHeight: 2 }}>
+                    {recoveryCodes.map(c => <div key={c}>{c}</div>)}
+                  </div>
+                  <button className="secondary-btn" style={{ width: '100%' }} onClick={() => navigator.clipboard.writeText(recoveryCodes.join('\n')).catch(() => {})}>Copy all codes</button>
+                  <div className="cp-actions">
+                    <button className="primary-btn" onClick={() => { setShowRegenerateCodes(false); setTwoFactorStep('qr'); setRecoveryCodes(null); }}>Done</button>
                   </div>
                 </div>
               )}

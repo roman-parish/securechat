@@ -35,6 +35,17 @@ const userSchema = new mongoose.Schema({
   // Two-factor authentication (TOTP)
   twoFactorSecret: { type: String, default: null, select: false },
   twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorRecoveryCodes: {
+    type: [{ code: String, used: { type: Boolean, default: false } }],
+    select: false,
+    default: [],
+  },
+  // Trusted devices — skip 2FA prompt for 30 days
+  trustedDevices: {
+    type: [{ token: String, userAgent: String, createdAt: { type: Date, default: Date.now } }],
+    select: false,
+    default: [],
+  },
 
   lastSeen: { type: Date, default: Date.now },
   banned: { type: Boolean, default: false },
@@ -56,6 +67,8 @@ const userSchema = new mongoose.Schema({
       delete ret.password;
       delete ret.refreshTokens;
       delete ret.twoFactorSecret;
+      delete ret.twoFactorRecoveryCodes;
+      delete ret.trustedDevices;
       return ret;
     },
   },

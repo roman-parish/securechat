@@ -27,6 +27,8 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [twoFactorState, setTwoFactorState] = useState(null); // { tempToken, password }
   const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [trustDevice, setTrustDevice] = useState(false);
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
   const { login, completeTwoFactorLogin, register } = useAuth();
 
   const handleSubmit = async (e) => {
@@ -36,7 +38,8 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        const result = await login({ username: form.username, password: form.password });
+        const trustedToken = localStorage.getItem('sc_trusted');
+        const result = await login({ username: form.username, password: form.password, trustedToken });
         if (result?.requiresTwoFactor) {
           setTwoFactorState({ tempToken: result.tempToken, password: form.password });
           setLoading(false);
@@ -66,11 +69,19 @@ export default function AuthPage() {
     setError('');
     setLoading(true);
     try {
-      await completeTwoFactorLogin({
+      const result = await completeTwoFactorLogin({
         tempToken: twoFactorState.tempToken,
         code: twoFactorCode.replace(/\s/g, ''),
         password: twoFactorState.password,
+        trustDevice,
       });
+      // Store trusted device token locally for 30 days
+      if (result?.trustedToken) {
+        localStorage.setItem('sc_trusted', result.trustedToken);
+      }
+      if (result?.recoveryCodeUsed) {
+        // Will be shown after login via app state — handled in completeTwoFactorLogin return
+      }
     } catch (err) {
       setError(err.message || 'Invalid code');
     } finally {
@@ -94,25 +105,33 @@ export default function AuthPage() {
             <p>Two-factor authentication</p>
           </div>
           <form className="auth-form" onSubmit={handleTwoFactor}>
-            <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 8 }}>
-              Enter the 6-digit code from your authenticator app.
+            <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 4 }}>
+              {useRecoveryCode ? 'Enter one of your saved recovery codes.' : 'Enter the 6-digit code from your authenticator app.'}
             </p>
             <input
               type="text"
-              inputMode="numeric"
+              inputMode={useRecoveryCode ? 'text' : 'numeric'}
               autoComplete="one-time-code"
-              placeholder="000 000"
+              placeholder={useRecoveryCode ? 'XXXX-XXXX' : '000 000'}
               value={twoFactorCode}
               onChange={e => setTwoFactorCode(e.target.value)}
-              maxLength={7}
+              maxLength={useRecoveryCode ? 9 : 7}
               autoFocus
-              style={{ textAlign: 'center', fontSize: 24, letterSpacing: 6 }}
+              style={{ textAlign: 'center', fontSize: useRecoveryCode ? 18 : 24, letterSpacing: useRecoveryCode ? 2 : 6 }}
             />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={trustDevice} onChange={e => setTrustDevice(e.target.checked)} />
+              Trust this device for 30 days
+            </label>
             {error && <div className="auth-error"><span>{error}</span></div>}
-            <button type="submit" className="auth-submit" disabled={loading || twoFactorCode.replace(/\s/g, '').length < 6}>
+            <button type="submit" className="auth-submit" disabled={loading || twoFactorCode.replace(/[\s-]/g, '').length < 6}>
               {loading ? <span className="spinner" /> : 'Verify'}
             </button>
-            <button type="button" style={{ background: 'none', color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}
+            <button type="button" style={{ background: 'none', color: 'var(--text-3)', fontSize: 13 }}
+              onClick={() => { setUseRecoveryCode(r => !r); setTwoFactorCode(''); setError(''); }}>
+              {useRecoveryCode ? 'Use authenticator app instead' : 'Use a recovery code instead'}
+            </button>
+            <button type="button" style={{ background: 'none', color: 'var(--text-3)', fontSize: 13 }}
               onClick={() => { setTwoFactorState(null); setTwoFactorCode(''); setError(''); }}>
               Back to login
             </button>

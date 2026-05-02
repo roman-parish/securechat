@@ -18,8 +18,28 @@ import logger from '../utils/logger.js';
 import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification } from '../utils/email.js';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
+import { randomBytes, createHash } from 'crypto';
 
 const router = Router();
+
+// Generate 10 recovery codes, return plaintext + store hashed versions
+function generateRecoveryCodes() {
+  const plain = Array.from({ length: 10 }, () => {
+    const bytes = randomBytes(4).toString('hex').toUpperCase();
+    return `${bytes.slice(0, 4)}-${bytes.slice(4)}`;
+  });
+  const hashed = plain.map(code => ({
+    code: createHash('sha256').update(code).digest('hex'),
+    used: false,
+  }));
+  return { plain, hashed };
+}
+
+function hashRecoveryCode(code) {
+  return createHash('sha256').update(code.replace(/\s/g, '').toUpperCase()).digest('hex');
+}
+
+const TRUSTED_DEVICE_COOKIE = 'sc_trusted';
 
 function generateTokens(user) {
   const base = { userId: user._id.toString(), username: user.username, displayName: user.displayName || user.username };
@@ -78,20 +98,28 @@ router.post('/login', [
       return res.status(403).json({ error: 'Your account has been suspended. Contact an administrator.' });
     }
 
+    // If 2FA is enabled, check for trusted device cookie before prompting
+    if (user.twoFactorEnabled) {
+      const trustedToken = req.body.trustedToken;
+      const userWithTrusted = await User.findById(user._id).select('+trustedDevices');
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const isTrusted = trustedToken && userWithTrusted.trustedDevices.some(
+        d => d.token === trustedToken && d.createdAt > cutoff
+      );
+      if (!isTrusted) {
+        const tempToken = jwt.sign(
+          { userId: String(user._id), purpose: '2fa' },
+          process.env.JWT_SECRET,
+          { expiresIn: '5m' }
+        );
+        return res.json({ requiresTwoFactor: true, tempToken });
+      }
+    }
+
     const { accessToken, refreshToken, refreshJti } = generateTokens(user);
     user.refreshTokens.push({ jti: refreshJti, userAgent: req.headers['user-agent'], ip: req.ip, createdAt: new Date(), lastUsed: new Date() });
     if (user.refreshTokens.length > 5) user.refreshTokens = user.refreshTokens.slice(-5);
     await user.save();
-
-    // If 2FA is enabled, return a short-lived temp token instead of full access
-    if (user.twoFactorEnabled) {
-      const tempToken = jwt.sign(
-        { userId: String(user._id), purpose: '2fa' },
-        process.env.JWT_SECRET,
-        { expiresIn: '5m' }
-      );
-      return res.json({ requiresTwoFactor: true, tempToken });
-    }
 
     // Login notification — fire and forget, don't block response
     if (user.email) {
@@ -197,15 +225,21 @@ router.post('/logout', authenticate, async (req, res) => {
 
 // Delete account
 router.delete('/account', authenticate, async (req, res) => {
-  const { password } = req.body;
+  const { password, twoFactorCode } = req.body;
   if (!password) return res.status(400).json({ error: 'Password required to delete account' });
 
   try {
-    const user = await User.findById(req.user.userId).select('+password');
+    const user = await User.findById(req.user.userId).select('+password +twoFactorSecret');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const valid = await user.comparePassword(password);
     if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+
+    if (user.twoFactorEnabled) {
+      if (!twoFactorCode) return res.status(403).json({ error: 'Two-factor code required', requiresTwoFactor: true });
+      const totpValid = speakeasy.totp.verify({ secret: user.twoFactorSecret, encoding: 'base32', token: twoFactorCode.replace(/\s/g, ''), window: 1 });
+      if (!totpValid) return res.status(401).json({ error: 'Invalid two-factor code' });
+    }
 
     const userId = req.user.userId;
 
@@ -279,7 +313,7 @@ router.delete('/sessions/:jti', authenticate, async (req, res) => {
 
 // Change password
 router.post('/change-password', authenticate, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const { currentPassword, newPassword, twoFactorCode } = req.body;
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: 'Current and new password required' });
   }
@@ -287,11 +321,17 @@ router.post('/change-password', authenticate, async (req, res) => {
     return res.status(400).json({ error: 'New password must be at least 8 characters' });
   }
   try {
-    const user = await User.findById(req.user.userId).select('+password');
+    const user = await User.findById(req.user.userId).select('+password +twoFactorSecret');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const valid = await user.comparePassword(currentPassword);
     if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+
+    if (user.twoFactorEnabled) {
+      if (!twoFactorCode) return res.status(403).json({ error: 'Two-factor code required', requiresTwoFactor: true });
+      const totpValid = speakeasy.totp.verify({ secret: user.twoFactorSecret, encoding: 'base32', token: twoFactorCode.replace(/\s/g, ''), window: 1 });
+      if (!totpValid) return res.status(401).json({ error: 'Invalid two-factor code' });
+    }
 
     user.password = newPassword;
     // Clear all refresh tokens to log out other sessions
@@ -315,26 +355,46 @@ router.post('/change-password', authenticate, async (req, res) => {
 
 // Complete login with TOTP code (after password succeeded)
 router.post('/2fa/authenticate', async (req, res) => {
-  const { tempToken, code } = req.body;
+  const { tempToken, code, trustDevice } = req.body;
   if (!tempToken || !code) return res.status(400).json({ error: 'Token and code required' });
   try {
     const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
     if (decoded.purpose !== '2fa') return res.status(401).json({ error: 'Invalid token' });
 
-    const user = await User.findById(decoded.userId).select('+twoFactorSecret +refreshTokens');
+    const user = await User.findById(decoded.userId).select('+twoFactorSecret +twoFactorRecoveryCodes +refreshTokens +trustedDevices');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const valid = speakeasy.totp.verify({
+    // Try TOTP first, then recovery code
+    const totpValid = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token: code,
+      token: code.replace(/\s/g, ''),
       window: 1,
     });
-    if (!valid) return res.status(401).json({ error: 'Invalid code' });
+
+    let usedRecovery = false;
+    if (!totpValid) {
+      const hashed = hashRecoveryCode(code);
+      const recoveryEntry = user.twoFactorRecoveryCodes.find(r => r.code === hashed && !r.used);
+      if (!recoveryEntry) return res.status(401).json({ error: 'Invalid code' });
+      recoveryEntry.used = true;
+      usedRecovery = true;
+    }
 
     const { accessToken, refreshToken, refreshJti } = generateTokens(user);
     user.refreshTokens.push({ jti: refreshJti, userAgent: req.headers['user-agent'], ip: req.ip, createdAt: new Date(), lastUsed: new Date() });
     if (user.refreshTokens.length > 5) user.refreshTokens = user.refreshTokens.slice(-5);
+
+    // Trust this device for 30 days
+    let trustedToken = null;
+    if (trustDevice) {
+      trustedToken = randomBytes(32).toString('hex');
+      user.trustedDevices.push({ token: trustedToken, userAgent: req.headers['user-agent'] });
+      // Expire old trusted devices after 30 days
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      user.trustedDevices = user.trustedDevices.filter(d => d.createdAt > cutoff);
+    }
+
     await user.save();
 
     if (user.email) {
@@ -347,7 +407,9 @@ router.post('/2fa/authenticate', async (req, res) => {
       }).catch(() => {});
     }
 
-    res.json({
+    const remainingCodes = user.twoFactorRecoveryCodes.filter(r => !r.used).length;
+
+    const response = {
       user,
       accessToken,
       refreshToken,
@@ -357,7 +419,11 @@ router.post('/2fa/authenticate', async (req, res) => {
         wrapIv: user.keyWrapIv,
         publicKey: user.publicKey,
       } : null,
-    });
+      ...(usedRecovery && { recoveryCodeUsed: true, remainingRecoveryCodes: remainingCodes }),
+      ...(trustedToken && { trustedToken }),
+    };
+
+    res.json(response);
   } catch (err) {
     if (err.name === 'TokenExpiredError') return res.status(401).json({ error: 'Code expired — please log in again' });
     res.status(401).json({ error: 'Invalid token' });
@@ -376,39 +442,80 @@ router.post('/2fa/setup', authenticate, async (req, res) => {
       issuer: 'SecureChat',
     });
 
-    // Store secret temporarily — only activated after user confirms with a valid code
     user.twoFactorSecret = secret.base32;
     await user.save();
 
     const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
     res.json({ qrCode: qrCodeUrl, secret: secret.base32 });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Failed to set up 2FA' });
   }
 });
 
-// Confirm 2FA setup with a valid code — activates 2FA on the account
+// Confirm 2FA setup — activates 2FA and returns one-time recovery codes
 router.post('/2fa/confirm', authenticate, async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Code required' });
   try {
-    const user = await User.findById(req.user.userId).select('+twoFactorSecret');
+    const user = await User.findById(req.user.userId).select('+twoFactorSecret +twoFactorRecoveryCodes');
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (!user.twoFactorSecret) return res.status(400).json({ error: 'Run 2FA setup first' });
 
     const valid = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token: code,
+      token: code.replace(/\s/g, ''),
       window: 1,
     });
     if (!valid) return res.status(401).json({ error: 'Invalid code — check your authenticator app' });
 
+    const { plain, hashed } = generateRecoveryCodes();
     user.twoFactorEnabled = true;
+    user.twoFactorRecoveryCodes = hashed;
     await user.save();
-    res.json({ success: true });
+
+    // Return plaintext codes once — never stored in plaintext
+    res.json({ success: true, recoveryCodes: plain });
   } catch {
     res.status(500).json({ error: 'Failed to confirm 2FA' });
+  }
+});
+
+// Regenerate recovery codes — requires current TOTP code
+router.post('/2fa/recovery-codes', authenticate, async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Code required' });
+  try {
+    const user = await User.findById(req.user.userId).select('+twoFactorSecret +twoFactorRecoveryCodes');
+    if (!user || !user.twoFactorEnabled) return res.status(400).json({ error: '2FA is not enabled' });
+
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code.replace(/\s/g, ''),
+      window: 1,
+    });
+    if (!valid) return res.status(401).json({ error: 'Invalid code' });
+
+    const { plain, hashed } = generateRecoveryCodes();
+    user.twoFactorRecoveryCodes = hashed;
+    await user.save();
+
+    res.json({ recoveryCodes: plain });
+  } catch {
+    res.status(500).json({ error: 'Failed to regenerate recovery codes' });
+  }
+});
+
+// Get remaining recovery code count
+router.get('/2fa/recovery-codes/count', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('+twoFactorRecoveryCodes');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const remaining = user.twoFactorRecoveryCodes.filter(r => !r.used).length;
+    res.json({ remaining });
+  } catch {
+    res.status(500).json({ error: 'Failed to get recovery code count' });
   }
 });
 
@@ -417,20 +524,22 @@ router.post('/2fa/disable', authenticate, async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Code required' });
   try {
-    const user = await User.findById(req.user.userId).select('+twoFactorSecret');
+    const user = await User.findById(req.user.userId).select('+twoFactorSecret +twoFactorRecoveryCodes');
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (!user.twoFactorEnabled) return res.status(400).json({ error: '2FA is not enabled' });
 
     const valid = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token: code,
+      token: code.replace(/\s/g, ''),
       window: 1,
     });
     if (!valid) return res.status(401).json({ error: 'Invalid code' });
 
     user.twoFactorEnabled = false;
     user.twoFactorSecret = null;
+    user.twoFactorRecoveryCodes = [];
+    user.trustedDevices = [];
     await user.save();
     res.json({ success: true });
   } catch {

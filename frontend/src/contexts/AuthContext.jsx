@@ -140,10 +140,10 @@ export function AuthProvider({ children }) {
     return updatedUser;
   }, []);
 
-  const completeTwoFactorLogin = useCallback(async ({ tempToken, code, password }) => {
+  const completeTwoFactorLogin = useCallback(async ({ tempToken, code, password, trustDevice }) => {
     const data = await apiFetch('/auth/2fa/authenticate', {
       method: 'POST',
-      body: JSON.stringify({ tempToken, code }),
+      body: JSON.stringify({ tempToken, code, trustDevice }),
     });
 
     setTokens(data.accessToken, data.refreshToken);
@@ -167,13 +167,13 @@ export function AuthProvider({ children }) {
     setUser(data.user);
     setNeedsKeyUnlock(false);
     setTimeout(() => { subscribeToPush().catch(() => {}); }, 2000);
-    return data.user;
+    return data; // return full response so caller can read trustedToken, recoveryCodeUsed etc.
   }, []);
 
-  const login = useCallback(async ({ username, password }) => {
+  const login = useCallback(async ({ username, password, trustedToken }) => {
     const data = await apiFetch('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, trustedToken }),
     });
 
     // 2FA required — return flag so UI can show the TOTP screen
