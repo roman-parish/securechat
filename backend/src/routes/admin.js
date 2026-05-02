@@ -120,6 +120,20 @@ router.put('/users/:userId/reset-password', async (req, res) => {
   }
 });
 
+// PUT /api/admin/users/:userId/reset-2fa
+router.put('/users/:userId/reset-2fa', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.twoFactorEnabled = false;
+    user.twoFactorSecret = null;
+    await user.save();
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to reset 2FA' });
+  }
+});
+
 // DELETE /api/admin/users/:userId
 router.delete('/users/:userId', async (req, res) => {
   try {

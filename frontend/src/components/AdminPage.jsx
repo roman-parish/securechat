@@ -32,6 +32,7 @@ export default function AdminPage({ onBack }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [resetPassword, setResetPassword] = useState(null);
   const [newPassword, setNewPassword] = useState('');
+  const [reset2faUser, setReset2faUser] = useState(null);
 
   const loadStats = useCallback(async () => {
     try {
@@ -60,6 +61,17 @@ export default function AdminPage({ onBack }) {
     const timer = setTimeout(() => loadUsers(search), 300);
     return () => clearTimeout(timer);
   }, [search, loadUsers]);
+
+  const handleReset2fa = async () => {
+    try {
+      await apiFetch(`/admin/users/${reset2faUser._id}/reset-2fa`, { method: 'PUT' });
+      setActionMsg(`2FA reset for ${reset2faUser.username}`);
+      setReset2faUser(null);
+      setTimeout(() => setActionMsg(''), 3000);
+    } catch (err) {
+      setActionMsg('Error: ' + err.message);
+    }
+  };
 
   const handleBan = async (u) => {
     try {
@@ -241,6 +253,13 @@ export default function AdminPage({ onBack }) {
                         🔑
                       </button>
                       <button
+                        className="action-btn reset"
+                        onClick={() => setReset2faUser(u)}
+                        title="Reset 2FA"
+                      >
+                        🔐
+                      </button>
+                      <button
                         className="action-btn delete"
                         onClick={() => setConfirmDelete(u)}
                         title="Delete user"
@@ -282,6 +301,20 @@ export default function AdminPage({ onBack }) {
               <button className="confirm-delete-btn" style={{ background: 'var(--accent)' }} onClick={handleResetPassword}>
                 Reset Password
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset 2FA confirmation modal */}
+      {reset2faUser && (
+        <div className="confirm-overlay" onClick={() => setReset2faUser(null)}>
+          <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+            <h3>Reset 2FA?</h3>
+            <p>This will disable two-factor authentication for <strong>{reset2faUser.username}</strong>. They will be able to log in with just their password until they re-enable it.</p>
+            <div className="confirm-actions">
+              <button className="cancel-btn" onClick={() => setReset2faUser(null)}>Cancel</button>
+              <button className="confirm-delete-btn" style={{ background: 'var(--accent)' }} onClick={handleReset2fa}>Reset 2FA</button>
             </div>
           </div>
         </div>
