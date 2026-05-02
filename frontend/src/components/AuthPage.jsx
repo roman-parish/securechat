@@ -138,7 +138,7 @@ export default function AuthPage() {
               style={{ textAlign: 'center', fontSize: useRecoveryCode ? 18 : 24, letterSpacing: useRecoveryCode ? 2 : 6 }}
             />
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={trustDevice} onChange={e => setTrustDevice(e.target.checked)} />
+              <input type="checkbox" checked={trustDevice} onChange={e => setTrustDevice(e.target.checked)} style={{ width: 'auto', padding: 0, background: 'none', border: 'none' }} />
               Trust this device for 30 days
             </label>
             {error && <div className="auth-error"><span>{error}</span></div>}
