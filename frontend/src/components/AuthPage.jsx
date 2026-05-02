@@ -209,7 +209,7 @@ export default function AuthPage() {
                     <p style={{ fontSize: 13, color: 'var(--text-3)' }}>If that email is registered, you'll receive a reset link shortly.</p>
                   </div>
                 ) : (
-                  <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <form onSubmit={handleForgotPassword} className="auth-form">
                     <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>Enter your email address and we'll send you a link to reset your password.</p>
                     <input
                       type="email" placeholder="your@email.com"
