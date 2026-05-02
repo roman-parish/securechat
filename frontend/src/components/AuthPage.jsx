@@ -29,7 +29,25 @@ export default function AuthPage() {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [trustDevice, setTrustDevice] = useState(false);
   const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStatus, setForgotStatus] = useState('idle'); // idle | loading | sent
   const { login, completeTwoFactorLogin, register } = useAuth();
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotStatus('loading');
+    try {
+      await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      setForgotStatus('sent');
+    } catch {
+      setForgotStatus('sent'); // always show success to prevent enumeration
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -183,6 +201,33 @@ export default function AuthPage() {
           </div>
         ) : (
           <>
+            {forgotMode ? (
+              <div className="auth-form">
+                {forgotStatus === 'sent' ? (
+                  <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                    <p style={{ fontSize: 15, color: 'var(--text-1)', marginBottom: 8 }}>Check your inbox</p>
+                    <p style={{ fontSize: 13, color: 'var(--text-3)' }}>If that email is registered, you'll receive a reset link shortly.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>Enter your email address and we'll send you a link to reset your password.</p>
+                    <input
+                      type="email" placeholder="your@email.com"
+                      value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
+                      autoFocus autoComplete="email" required
+                    />
+                    <button type="submit" className="auth-submit" disabled={forgotStatus === 'loading'}>
+                      {forgotStatus === 'loading' ? <span className="spinner" /> : 'Send reset link'}
+                    </button>
+                  </form>
+                )}
+                <button type="button" style={{ background: 'none', color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}
+                  onClick={() => { setForgotMode(false); setForgotStatus('idle'); setForgotEmail(''); }}>
+                  Back to login
+                </button>
+              </div>
+            ) : (
+            <>
             <div className="auth-tabs">
               <button className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setError(''); }}>
                 Sign in
@@ -254,6 +299,12 @@ export default function AuthPage() {
               </button>
             </form>
 
+            {mode === 'login' && (
+              <button type="button" style={{ background: 'none', color: 'var(--text-3)', fontSize: 13, textAlign: 'center' }}
+                onClick={() => { setForgotMode(true); setForgotStatus('idle'); setForgotEmail(''); setError(''); }}>
+                Forgot password?
+              </button>
+            )}
             {mode === 'register' && (
               <div className="auth-notice">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -264,6 +315,8 @@ export default function AuthPage() {
                 You can log in from any device — just enter your password.
               </div>
             )}
+          </>
+          )}
           </>
         )}
       </div>

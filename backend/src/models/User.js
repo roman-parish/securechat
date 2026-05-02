@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema({
   // AES-GCM IV used to wrap the private key
   keyWrapIv: { type: String, default: null },
 
+  // Password reset
+  passwordResetToken: { type: String, default: null, select: false },
+  passwordResetExpires: { type: Date, default: null },
+
   // Two-factor authentication (TOTP)
   twoFactorSecret: { type: String, default: null, select: false },
   twoFactorEnabled: { type: Boolean, default: false },

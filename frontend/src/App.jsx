@@ -19,6 +19,11 @@ function AppInner() {
   const [showAdmin, setShowAdmin] = useState(false);
 
   if (loading) return <SplashScreen />;
+
+  // Handle password reset link: /?reset=TOKEN
+  const resetToken = new URLSearchParams(window.location.search).get('reset');
+  if (resetToken) return <ResetPasswordPage token={resetToken} />;
+
   if (!user) return <AuthPage />;
 
   // Check admin access
@@ -195,6 +200,83 @@ function SplashScreen() {
           <circle cx="12" cy="16" r="1.5" fill="var(--accent)"/>
         </svg>
         <p style={{ color: 'var(--text-2)', marginTop: 16, fontSize: 14 }}>Loading SecureChat…</p>
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordPage({ token }) {
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [status, setStatus] = useState('idle'); // idle | loading | success | error
+  const [msg, setMsg] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (password.length < 8) { setMsg('Password must be at least 8 characters'); return; }
+    if (password !== confirm) { setMsg('Passwords do not match'); return; }
+    setStatus('loading');
+    setMsg('');
+    try {
+      await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword: password }),
+      }).then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Reset failed');
+        return data;
+      });
+      setStatus('success');
+      // Clear the token from URL and redirect to login after 2s
+      setTimeout(() => { window.location.href = '/'; }, 2000);
+    } catch (err) {
+      setMsg(err.message);
+      setStatus('error');
+    }
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-0)', padding: 16 }}>
+      <div style={{ width: '100%', maxWidth: 380, background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: 32, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ textAlign: 'center' }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
+            <rect x="3" y="11" width="18" height="11" rx="3" fill="var(--accent)" opacity="0.2"/>
+            <rect x="3" y="11" width="18" height="11" rx="3" stroke="var(--accent)" strokeWidth="1.5"/>
+            <path d="M7 11V7a5 5 0 0110 0v4" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="12" cy="16.5" r="1.5" fill="var(--accent)"/>
+          </svg>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-0)', margin: 0 }}>Reset Password</h1>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>Choose a new password for your account</p>
+        </div>
+        {status === 'success' ? (
+          <div style={{ textAlign: 'center', color: 'var(--text-2)' }}>
+            <p style={{ fontSize: 15 }}>✓ Password reset successfully. Redirecting to login…</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <input
+              type="password" placeholder="New password (min. 8 characters)"
+              value={password} onChange={e => setPassword(e.target.value)}
+              autoFocus
+              style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 15, color: 'var(--text-0)', boxSizing: 'border-box' }}
+            />
+            <input
+              type="password" placeholder="Confirm new password"
+              value={confirm} onChange={e => setConfirm(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 15, color: 'var(--text-0)', boxSizing: 'border-box' }}
+            />
+            {msg && (
+              <div style={{ background: 'var(--red-dim)', border: '1px solid var(--red)', borderRadius: 'var(--radius-md)', padding: '10px 12px', fontSize: 13, color: 'var(--red)' }}>
+                {msg}
+              </div>
+            )}
+            <button type="submit" disabled={status === 'loading'}
+              style={{ padding: 11, background: 'var(--accent)', color: 'white', borderRadius: 'var(--radius-md)', fontSize: 15, fontWeight: 600, cursor: status === 'loading' ? 'default' : 'pointer', opacity: status === 'loading' ? 0.6 : 1 }}>
+              {status === 'loading' ? 'Resetting…' : 'Reset Password'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

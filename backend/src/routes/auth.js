@@ -15,7 +15,7 @@ import Conversation from '../models/Conversation.js';
 import PushSubscription from '../models/PushSubscription.js';
 import { authenticate } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
-import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification } from '../utils/email.js';
+import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification, sendPasswordResetEmail } from '../utils/email.js';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { randomBytes, createHash } from 'crypto';
@@ -544,6 +544,70 @@ router.post('/2fa/disable', authenticate, async (req, res) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed to disable 2FA' });
+  }
+});
+
+// Forgot password — send reset link to email
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  try {
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+passwordResetToken +passwordResetExpires');
+    // Always respond success to prevent email enumeration
+    if (!user) return res.json({ success: true });
+
+    const token = randomBytes(32).toString('hex');
+    user.passwordResetToken = createHash('sha256').update(token).digest('hex');
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    const resetUrl = `${process.env.CLIENT_URL}/?reset=${token}`;
+    await sendPasswordResetEmail({
+      to: user.email,
+      displayName: user.displayName || user.username,
+      resetUrl,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, 'Forgot password failed');
+    res.status(500).json({ error: 'Failed to send reset email' });
+  }
+});
+
+// Reset password using token from email
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password required' });
+  if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  try {
+    const hashedToken = createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: new Date() },
+    }).select('+password +refreshTokens +passwordResetToken +passwordResetExpires');
+
+    if (!user) return res.status(400).json({ error: 'Reset link is invalid or has expired' });
+
+    user.password = newPassword;
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
+    user.refreshTokens = []; // log out all devices
+    await user.save();
+
+    if (user.email) {
+      sendPasswordChangedNotification({
+        to: user.email,
+        displayName: user.displayName || user.username,
+        time: new Date().toUTCString(),
+      }).catch(() => {});
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, 'Reset password failed');
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 

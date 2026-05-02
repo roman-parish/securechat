@@ -81,3 +81,25 @@ export async function sendAccountDeletedNotification({ to, displayName }) {
     `,
   });
 }
+
+export async function sendPasswordResetEmail({ to, displayName, resetUrl }) {
+  await send({
+    to,
+    subject: 'Reset your SecureChat password',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="margin:0 0 16px">Reset your password</h2>
+        <p>Hi ${displayName},</p>
+        <p>We received a request to reset your SecureChat password. Click the button below to choose a new one.</p>
+        <div style="margin:24px 0;text-align:center">
+          <a href="${resetUrl}" style="background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
+            Reset Password
+          </a>
+        </div>
+        <p style="color:#666;font-size:13px">This link expires in 1 hour. If you didn't request a password reset, you can ignore this email.</p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
+        <p style="font-size:12px;color:#999">SecureChat — End-to-end encrypted messaging</p>
+      </div>
+    `,
+  });
+}
