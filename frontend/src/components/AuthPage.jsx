@@ -172,7 +172,7 @@ export default function AuthPage() {
             <circle cx="12" cy="16.5" r="1.5" fill="var(--accent)"/>
           </svg>
           <h1>SecureChat</h1>
-          <p>End-to-end encrypted messaging</p>
+          <p>{forgotMode ? 'Reset your password' : 'End-to-end encrypted messaging'}</p>
         </div>
 
         {sslError ? (
@@ -202,30 +202,32 @@ export default function AuthPage() {
         ) : (
           <>
             {forgotMode ? (
-              <div className="auth-form">
+              <>
                 {forgotStatus === 'sent' ? (
                   <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                    <p style={{ fontSize: 15, color: 'var(--text-1)', marginBottom: 8 }}>Check your inbox</p>
-                    <p style={{ fontSize: 13, color: 'var(--text-3)' }}>If that email is registered, you'll receive a reset link shortly.</p>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-0)', marginBottom: 8 }}>Check your inbox</p>
+                    <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6 }}>If that email is registered, you'll receive a reset link shortly.</p>
                   </div>
                 ) : (
                   <form onSubmit={handleForgotPassword} className="auth-form">
-                    <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>Enter your email address and we'll send you a link to reset your password.</p>
-                    <input
-                      type="email" placeholder="your@email.com"
-                      value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
-                      autoFocus autoComplete="email" required
-                    />
+                    <div className="field">
+                      <label>Email address</label>
+                      <input
+                        type="email" placeholder="your@email.com"
+                        value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
+                        autoFocus autoComplete="email" required
+                      />
+                    </div>
                     <button type="submit" className="auth-submit" disabled={forgotStatus === 'loading'}>
                       {forgotStatus === 'loading' ? <span className="spinner" /> : 'Send reset link'}
                     </button>
                   </form>
                 )}
-                <button type="button" style={{ background: 'none', color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}
+                <button type="button" style={{ background: 'none', color: 'var(--text-3)', fontSize: 13, textAlign: 'center' }}
                   onClick={() => { setForgotMode(false); setForgotStatus('idle'); setForgotEmail(''); }}>
-                  Back to login
+                  Back to sign in
                 </button>
-              </div>
+              </>
             ) : (
             <>
             <div className="auth-tabs">
