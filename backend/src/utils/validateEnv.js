@@ -16,6 +16,7 @@ const REQUIRED = [
 const OPTIONAL_WARN = [
   'VAPID_PUBLIC_KEY',
   'VAPID_PRIVATE_KEY',
+  'RESEND_API_KEY',
 ];
 
 export function validateEnv(logger) {

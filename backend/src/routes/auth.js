@@ -15,6 +15,7 @@ import Conversation from '../models/Conversation.js';
 import PushSubscription from '../models/PushSubscription.js';
 import { authenticate } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
+import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification } from '../utils/email.js';
 
 const router = Router();
 
@@ -79,6 +80,17 @@ router.post('/login', [
     user.refreshTokens.push({ jti: refreshJti, userAgent: req.headers['user-agent'], ip: req.ip, createdAt: new Date(), lastUsed: new Date() });
     if (user.refreshTokens.length > 5) user.refreshTokens = user.refreshTokens.slice(-5);
     await user.save();
+
+    // Login notification — fire and forget, don't block response
+    if (user.email) {
+      sendLoginNotification({
+        to: user.email,
+        displayName: user.displayName || user.username,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'] || 'Unknown device',
+        time: new Date().toUTCString(),
+      }).catch(() => {});
+    }
 
     // Return full key material so client can restore keypair
     res.json({
@@ -208,6 +220,14 @@ router.delete('/account', authenticate, async (req, res) => {
     // Delete push subscriptions
     await PushSubscription.deleteMany({ userId });
 
+    // Send deletion confirmation before wiping the user doc
+    if (user.email) {
+      await sendAccountDeletedNotification({
+        to: user.email,
+        displayName: user.displayName || user.username,
+      }).catch(() => {});
+    }
+
     // Delete the user
     await User.deleteOne({ _id: userId });
 
@@ -265,6 +285,14 @@ router.post('/change-password', authenticate, async (req, res) => {
     // Clear all refresh tokens to log out other sessions
     user.refreshTokens = [];
     await user.save();
+
+    if (user.email) {
+      sendPasswordChangedNotification({
+        to: user.email,
+        displayName: user.displayName || user.username,
+        time: new Date().toUTCString(),
+      }).catch(() => {});
+    }
 
     res.json({ success: true });
   } catch (err) {
