@@ -16,6 +16,8 @@ import PushSubscription from '../models/PushSubscription.js';
 import { authenticate } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification } from '../utils/email.js';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 
 const router = Router();
 
@@ -80,6 +82,16 @@ router.post('/login', [
     user.refreshTokens.push({ jti: refreshJti, userAgent: req.headers['user-agent'], ip: req.ip, createdAt: new Date(), lastUsed: new Date() });
     if (user.refreshTokens.length > 5) user.refreshTokens = user.refreshTokens.slice(-5);
     await user.save();
+
+    // If 2FA is enabled, return a short-lived temp token instead of full access
+    if (user.twoFactorEnabled) {
+      const tempToken = jwt.sign(
+        { userId: String(user._id), purpose: '2fa' },
+        process.env.JWT_SECRET,
+        { expiresIn: '5m' }
+      );
+      return res.json({ requiresTwoFactor: true, tempToken });
+    }
 
     // Login notification — fire and forget, don't block response
     if (user.email) {
@@ -298,6 +310,131 @@ router.post('/change-password', authenticate, async (req, res) => {
   } catch (err) {
     logger.error({ err }, 'Password change failed');
     res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// Complete login with TOTP code (after password succeeded)
+router.post('/2fa/authenticate', async (req, res) => {
+  const { tempToken, code } = req.body;
+  if (!tempToken || !code) return res.status(400).json({ error: 'Token and code required' });
+  try {
+    const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+    if (decoded.purpose !== '2fa') return res.status(401).json({ error: 'Invalid token' });
+
+    const user = await User.findById(decoded.userId).select('+twoFactorSecret +refreshTokens');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code,
+      window: 1,
+    });
+    if (!valid) return res.status(401).json({ error: 'Invalid code' });
+
+    const { accessToken, refreshToken, refreshJti } = generateTokens(user);
+    user.refreshTokens.push({ jti: refreshJti, userAgent: req.headers['user-agent'], ip: req.ip, createdAt: new Date(), lastUsed: new Date() });
+    if (user.refreshTokens.length > 5) user.refreshTokens = user.refreshTokens.slice(-5);
+    await user.save();
+
+    if (user.email) {
+      sendLoginNotification({
+        to: user.email,
+        displayName: user.displayName || user.username,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'] || 'Unknown device',
+        time: new Date().toUTCString(),
+      }).catch(() => {});
+    }
+
+    res.json({
+      user,
+      accessToken,
+      refreshToken,
+      keyMaterial: user.encryptedPrivateKey ? {
+        encryptedPrivateKey: user.encryptedPrivateKey,
+        salt: user.keyDerivationSalt,
+        wrapIv: user.keyWrapIv,
+        publicKey: user.publicKey,
+      } : null,
+    });
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') return res.status(401).json({ error: 'Code expired — please log in again' });
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// Generate 2FA secret and QR code (user must confirm before it's enabled)
+router.post('/2fa/setup', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.twoFactorEnabled) return res.status(400).json({ error: '2FA is already enabled' });
+
+    const secret = speakeasy.generateSecret({
+      name: `SecureChat (${user.username})`,
+      issuer: 'SecureChat',
+    });
+
+    // Store secret temporarily — only activated after user confirms with a valid code
+    user.twoFactorSecret = secret.base32;
+    await user.save();
+
+    const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
+    res.json({ qrCode: qrCodeUrl, secret: secret.base32 });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to set up 2FA' });
+  }
+});
+
+// Confirm 2FA setup with a valid code — activates 2FA on the account
+router.post('/2fa/confirm', authenticate, async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Code required' });
+  try {
+    const user = await User.findById(req.user.userId).select('+twoFactorSecret');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.twoFactorSecret) return res.status(400).json({ error: 'Run 2FA setup first' });
+
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code,
+      window: 1,
+    });
+    if (!valid) return res.status(401).json({ error: 'Invalid code — check your authenticator app' });
+
+    user.twoFactorEnabled = true;
+    await user.save();
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to confirm 2FA' });
+  }
+});
+
+// Disable 2FA — requires current TOTP code to confirm
+router.post('/2fa/disable', authenticate, async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Code required' });
+  try {
+    const user = await User.findById(req.user.userId).select('+twoFactorSecret');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.twoFactorEnabled) return res.status(400).json({ error: '2FA is not enabled' });
+
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code,
+      window: 1,
+    });
+    if (!valid) return res.status(401).json({ error: 'Invalid code' });
+
+    user.twoFactorEnabled = false;
+    user.twoFactorSecret = null;
+    await user.save();
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to disable 2FA' });
   }
 });
 

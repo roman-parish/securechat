@@ -140,11 +140,46 @@ export function AuthProvider({ children }) {
     return updatedUser;
   }, []);
 
+  const completeTwoFactorLogin = useCallback(async ({ tempToken, code, password }) => {
+    const data = await apiFetch('/auth/2fa/authenticate', {
+      method: 'POST',
+      body: JSON.stringify({ tempToken, code }),
+    });
+
+    setTokens(data.accessToken, data.refreshToken);
+    localStorage.setItem('userId', data.user._id);
+
+    if (data.keyMaterial) {
+      try {
+        const keyPair = await restoreKeyPair(
+          data.keyMaterial.encryptedPrivateKey,
+          data.keyMaterial.salt,
+          data.keyMaterial.wrapIv,
+          data.keyMaterial.publicKey,
+          password,
+        );
+        await saveKeyPairToSession(data.user._id, keyPair);
+      } catch (err) {
+        console.error('[auth] Key restore failed:', err);
+      }
+    }
+
+    setUser(data.user);
+    setNeedsKeyUnlock(false);
+    setTimeout(() => { subscribeToPush().catch(() => {}); }, 2000);
+    return data.user;
+  }, []);
+
   const login = useCallback(async ({ username, password }) => {
     const data = await apiFetch('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
+
+    // 2FA required — return flag so UI can show the TOTP screen
+    if (data.requiresTwoFactor) {
+      return { requiresTwoFactor: true, tempToken: data.tempToken, password };
+    }
 
     setTokens(data.accessToken, data.refreshToken);
     localStorage.setItem('userId', data.user._id);
@@ -215,7 +250,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, loading, needsKeyUnlock,
-      register, login, logout, updateProfile, unlockKeys, setUser,
+      register, login, completeTwoFactorLogin, logout, updateProfile, unlockKeys, setUser,
     }}>
       {children}
     </AuthContext.Provider>

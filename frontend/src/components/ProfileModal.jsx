@@ -32,6 +32,14 @@ export default function ProfileModal({ onClose }) {
   const [sessions, setSessions] = useState(null);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [revokingJti, setRevokingJti] = useState(null);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(user?.twoFactorEnabled || false);
+  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
+  const [showTwoFactorDisable, setShowTwoFactorDisable] = useState(false);
+  const [twoFactorQr, setTwoFactorQr] = useState(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorMsg, setTwoFactorMsg] = useState('');
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [twoFactorStep, setTwoFactorStep] = useState('qr'); // 'qr' | 'confirm'
 
   // Check if there's an actual push subscription on mount
   useEffect(() => {
@@ -146,6 +154,53 @@ export default function ProfileModal({ onClose }) {
       // ignore
     } finally {
       setRevokingJti(null);
+    }
+  };
+
+  const handleTwoFactorSetup = async () => {
+    setTwoFactorLoading(true);
+    setTwoFactorMsg('');
+    try {
+      const data = await apiFetch('/auth/2fa/setup', { method: 'POST' });
+      setTwoFactorQr(data.qrCode);
+      setTwoFactorStep('qr');
+      setTwoFactorCode('');
+      setShowTwoFactorSetup(true);
+    } catch (err) {
+      setTwoFactorMsg(err.message || 'Failed to start 2FA setup');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const handleTwoFactorConfirm = async () => {
+    setTwoFactorLoading(true);
+    setTwoFactorMsg('');
+    try {
+      await apiFetch('/auth/2fa/confirm', { method: 'POST', body: JSON.stringify({ code: twoFactorCode.replace(/\s/g, '') }) });
+      setTwoFactorEnabled(true);
+      setShowTwoFactorSetup(false);
+      setTwoFactorQr(null);
+      setTwoFactorCode('');
+    } catch (err) {
+      setTwoFactorMsg(err.message || 'Invalid code');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const handleTwoFactorDisable = async () => {
+    setTwoFactorLoading(true);
+    setTwoFactorMsg('');
+    try {
+      await apiFetch('/auth/2fa/disable', { method: 'POST', body: JSON.stringify({ code: twoFactorCode.replace(/\s/g, '') }) });
+      setTwoFactorEnabled(false);
+      setShowTwoFactorDisable(false);
+      setTwoFactorCode('');
+    } catch (err) {
+      setTwoFactorMsg(err.message || 'Invalid code');
+    } finally {
+      setTwoFactorLoading(false);
     }
   };
 
@@ -454,6 +509,22 @@ export default function ProfileModal({ onClose }) {
                 </button>
               </div>
 
+              <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
+                <div className="setting-text">
+                  <p className="setting-label">Two-Factor Authentication</p>
+                  <p className="setting-desc">{twoFactorEnabled ? 'Enabled — your account is protected with TOTP' : 'Add an extra layer of security with an authenticator app'}</p>
+                </div>
+                {twoFactorEnabled ? (
+                  <button className="danger-btn" onClick={() => { setShowTwoFactorDisable(true); setTwoFactorCode(''); setTwoFactorMsg(''); }}>
+                    Disable
+                  </button>
+                ) : (
+                  <button className="secondary-btn" onClick={handleTwoFactorSetup} disabled={twoFactorLoading}>
+                    {twoFactorLoading ? '…' : 'Enable'}
+                  </button>
+                )}
+              </div>
+
               <div className="sessions-section">
                 <p className="sessions-label">Active Sessions</p>
                 {sessionsLoading ? (
@@ -644,6 +715,89 @@ export default function ProfileModal({ onClose }) {
                   <button className="cancel-btn" onClick={() => setShowDeleteAccount(false)}>Cancel</button>
                   <button className="danger-btn" onClick={handleDeleteAccount} disabled={deleting}>
                     {deleting ? 'Deleting…' : 'Delete My Account'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showTwoFactorSetup && (
+          <div className="cp-overlay" onClick={() => setShowTwoFactorSetup(false)}>
+            <div className="cp-modal" onClick={e => e.stopPropagation()}>
+              <div className="cp-header">
+                <h3>Enable Two-Factor Authentication</h3>
+                <button className="close-btn" onClick={() => setShowTwoFactorSetup(false)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+              {twoFactorStep === 'qr' ? (
+                <div className="change-password-form">
+                  <p className="cp-note">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code to confirm.</p>
+                  {twoFactorQr && <img src={twoFactorQr} alt="2FA QR Code" style={{ width: '100%', maxWidth: 200, display: 'block', margin: '12px auto', borderRadius: 8 }} />}
+                  <div className="cp-actions">
+                    <button className="cancel-btn" onClick={() => setShowTwoFactorSetup(false)}>Cancel</button>
+                    <button className="primary-btn" onClick={() => { setTwoFactorStep('confirm'); setTwoFactorCode(''); setTwoFactorMsg(''); }}>Next</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="change-password-form">
+                  <p className="cp-note">Enter the 6-digit code from your authenticator app to confirm setup.</p>
+                  <div className="field">
+                    <label>Authentication Code</label>
+                    <input
+                      type="text" inputMode="numeric" autoComplete="one-time-code"
+                      placeholder="000 000" maxLength={7}
+                      value={twoFactorCode}
+                      onChange={e => setTwoFactorCode(e.target.value)}
+                      autoFocus
+                      style={{ textAlign: 'center', fontSize: 20, letterSpacing: 4 }}
+                    />
+                  </div>
+                  {twoFactorMsg && <p className="pw-msg error">{twoFactorMsg}</p>}
+                  <div className="cp-actions">
+                    <button className="cancel-btn" onClick={() => setTwoFactorStep('qr')}>Back</button>
+                    <button className="primary-btn" onClick={handleTwoFactorConfirm} disabled={twoFactorLoading || twoFactorCode.replace(/\s/g, '').length < 6}>
+                      {twoFactorLoading ? 'Verifying…' : 'Activate 2FA'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showTwoFactorDisable && (
+          <div className="cp-overlay" onClick={() => setShowTwoFactorDisable(false)}>
+            <div className="cp-modal" onClick={e => e.stopPropagation()}>
+              <div className="cp-header">
+                <h3>Disable Two-Factor Authentication</h3>
+                <button className="close-btn" onClick={() => setShowTwoFactorDisable(false)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+              <div className="change-password-form">
+                <p className="cp-note danger-note">Enter your current authentication code to disable 2FA.</p>
+                <div className="field">
+                  <label>Authentication Code</label>
+                  <input
+                    type="text" inputMode="numeric" autoComplete="one-time-code"
+                    placeholder="000 000" maxLength={7}
+                    value={twoFactorCode}
+                    onChange={e => setTwoFactorCode(e.target.value)}
+                    autoFocus
+                    style={{ textAlign: 'center', fontSize: 20, letterSpacing: 4 }}
+                  />
+                </div>
+                {twoFactorMsg && <p className="pw-msg error">{twoFactorMsg}</p>}
+                <div className="cp-actions">
+                  <button className="cancel-btn" onClick={() => setShowTwoFactorDisable(false)}>Cancel</button>
+                  <button className="danger-btn" onClick={handleTwoFactorDisable} disabled={twoFactorLoading || twoFactorCode.replace(/\s/g, '').length < 6}>
+                    {twoFactorLoading ? 'Disabling…' : 'Disable 2FA'}
                   </button>
                 </div>
               </div>

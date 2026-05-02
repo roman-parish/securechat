@@ -25,7 +25,9 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [sslError, setSslError] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login, register } = useAuth();
+  const [twoFactorState, setTwoFactorState] = useState(null); // { tempToken, password }
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const { login, completeTwoFactorLogin, register } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,7 +36,12 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        await login({ username: form.username, password: form.password });
+        const result = await login({ username: form.username, password: form.password });
+        if (result?.requiresTwoFactor) {
+          setTwoFactorState({ tempToken: result.tempToken, password: form.password });
+          setLoading(false);
+          return;
+        }
       } else {
         if (form.password.length < 8) {
           setError('Password must be at least 8 characters');
@@ -53,6 +60,68 @@ export default function AuthPage() {
       setLoading(false);
     }
   };
+
+  const handleTwoFactor = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await completeTwoFactorLogin({
+        tempToken: twoFactorState.tempToken,
+        code: twoFactorCode.replace(/\s/g, ''),
+        password: twoFactorState.password,
+      });
+    } catch (err) {
+      setError(err.message || 'Invalid code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (twoFactorState) {
+    return (
+      <div className="auth-page">
+        <div className="auth-glow" />
+        <div className="auth-card">
+          <div className="auth-logo">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="11" width="18" height="11" rx="3" fill="var(--accent)" opacity="0.2"/>
+              <rect x="3" y="11" width="18" height="11" rx="3" stroke="var(--accent)" strokeWidth="1.5"/>
+              <path d="M7 11V7a5 5 0 0110 0v4" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="12" cy="16.5" r="1.5" fill="var(--accent)"/>
+            </svg>
+            <h1>SecureChat</h1>
+            <p>Two-factor authentication</p>
+          </div>
+          <form className="auth-form" onSubmit={handleTwoFactor}>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 8 }}>
+              Enter the 6-digit code from your authenticator app.
+            </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000 000"
+              value={twoFactorCode}
+              onChange={e => setTwoFactorCode(e.target.value)}
+              maxLength={7}
+              autoFocus
+              style={{ textAlign: 'center', fontSize: 24, letterSpacing: 6 }}
+            />
+            {error && <div className="auth-error"><span>{error}</span></div>}
+            <button type="submit" className="auth-submit" disabled={loading || twoFactorCode.replace(/\s/g, '').length < 6}>
+              {loading ? <span className="spinner" /> : 'Verify'}
+            </button>
+            <button type="button" style={{ background: 'none', color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}
+              onClick={() => { setTwoFactorState(null); setTwoFactorCode(''); setError(''); }}>
+              Back to login
+            </button>
+          </form>
+        </div>
+        <style>{`.auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-0);padding:16px}.auth-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 70%);pointer-events:none}.auth-card{width:100%;max-width:380px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;display:flex;flex-direction:column;gap:24px}.auth-logo{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}.auth-logo h1{font-size:22px;font-weight:700;color:var(--text-0)}.auth-logo p{font-size:13px;color:var(--text-3)}.auth-form{display:flex;flex-direction:column;gap:12px}.auth-form input{width:100%;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-md);font-size:15px;color:var(--text-0);box-sizing:border-box}.auth-submit{width:100%;padding:11px;background:var(--accent);color:white;border-radius:var(--radius-md);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}.auth-submit:disabled{opacity:.6;cursor:default}.auth-error{background:var(--red-dim);border:1px solid var(--red);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--red)}`}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-page">

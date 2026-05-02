@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema({
   // AES-GCM IV used to wrap the private key
   keyWrapIv: { type: String, default: null },
 
+  // Two-factor authentication (TOTP)
+  twoFactorSecret: { type: String, default: null, select: false },
+  twoFactorEnabled: { type: Boolean, default: false },
+
   lastSeen: { type: Date, default: Date.now },
   banned: { type: Boolean, default: false },
   refreshTokens: {
@@ -51,6 +55,7 @@ const userSchema = new mongoose.Schema({
     transform: (_doc, ret) => {
       delete ret.password;
       delete ret.refreshTokens;
+      delete ret.twoFactorSecret;
       return ret;
     },
   },
