@@ -248,9 +248,9 @@ export default function AdminPage({ onBack }) {
 
         {/* ── Settings section ── */}
         <div className="ap-group-label">Settings</div>
-        <div className="ap-group">
 
-          {/* Registration toggle */}
+        {/* Registration toggle — own card */}
+        <div className="ap-group">
           <div className="ap-row">
             <div className="ap-row-text">
               <div className="ap-row-title">Open Registration</div>
@@ -264,30 +264,26 @@ export default function AdminPage({ onBack }) {
               <span className="ap-toggle-knob" />
             </button>
           </div>
+        </div>
 
-          <div className="ap-sep" />
-
-          {/* Invite links */}
+        {/* Invite links — own card */}
+        <div className="ap-group">
           <div className="ap-row">
             <div className="ap-row-text">
               <div className="ap-row-title">Invite Links</div>
-              <div className="ap-row-sub">{invites.length} active</div>
+              <div className="ap-row-sub">{invites.length} active invite{invites.length !== 1 ? 's' : ''}</div>
             </div>
             <button className="ap-pill-btn" onClick={() => { setInviteEmail(''); setInviteExpiry('24'); setInviteResult(null); setShowInviteForm(true); }}>
               + Create
             </button>
           </div>
-
-          {invites.map((inv, i) => (
-            <div key={inv._id}>
-              <div className="ap-sep" />
-              <div className="ap-row ap-row-sm">
-                <div className="ap-row-text">
-                  <div className="ap-row-title ap-mono">{inv.email || 'No email — link only'}</div>
-                  <div className="ap-row-sub">Expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}</div>
-                </div>
-                <button className="ap-ghost-btn" onClick={() => handleRevokeInvite(inv._id)}>Revoke</button>
+          {invites.map(inv => (
+            <div key={inv._id} className="ap-invite-item">
+              <div className="ap-row-text">
+                <div className="ap-invite-email">{inv.email || 'No email — link only'}</div>
+                <div className="ap-row-sub">Expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}</div>
               </div>
+              <button className="ap-ghost-btn" onClick={() => handleRevokeInvite(inv._id)}>Revoke</button>
             </div>
           ))}
         </div>
@@ -335,12 +331,10 @@ export default function AdminPage({ onBack }) {
                     {u.email && <span className="ap-user-email">&nbsp;· {u.email}</span>}
                   </div>
                 </div>
-                {/* Right: badge + action */}
+                {/* Right: badges + ··· button in one row */}
                 <div className="ap-user-end">
-                  <div className="ap-badges">
-                    <span className={`ap-badge ${u.banned ? 'red' : 'green'}`}>{u.banned ? 'Suspended' : 'Active'}</span>
-                    {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
-                  </div>
+                  {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
+                  <span className={`ap-badge ${u.banned ? 'red' : 'green'}`}>{u.banned ? 'Suspended' : 'Active'}</span>
                   {isMe(u)
                     ? <span className="ap-you">You</span>
                     : (
@@ -669,12 +663,22 @@ export default function AdminPage({ onBack }) {
         }
         .ap-user-email { color: var(--text-3); }
 
-        /* Right side of user row — stacks badges above menu btn */
+        /* Right side of user row — badges + menu button in one row */
         .ap-user-end {
           flex-shrink: 0;
-          display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+          display: flex; flex-direction: row; align-items: center; gap: 6px;
         }
-        .ap-badges { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+
+        /* Invite item row inside invite card */
+        .ap-invite-item {
+          display: flex; align-items: center; gap: 12px;
+          padding: 12px 16px;
+          border-top: 1px solid var(--border);
+        }
+        .ap-invite-email {
+          font-size: 13px; color: var(--text-1); font-family: var(--font-mono);
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
         .ap-menu-btn {
           width: 32px; height: 32px;
           display: flex; align-items: center; justify-content: center;
