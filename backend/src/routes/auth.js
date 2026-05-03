@@ -15,7 +15,7 @@ import Conversation from '../models/Conversation.js';
 import PushSubscription from '../models/PushSubscription.js';
 import { authenticate } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
-import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification, sendPasswordResetEmail } from '../utils/email.js';
+import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification, sendPasswordResetEmail, sendTwoFactorDisabledNotification } from '../utils/email.js';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { randomBytes, createHash } from 'crypto';
@@ -541,6 +541,15 @@ router.post('/2fa/disable', authenticate, async (req, res) => {
     user.twoFactorRecoveryCodes = [];
     user.trustedDevices = [];
     await user.save();
+
+    if (user.email) {
+      sendTwoFactorDisabledNotification({
+        to: user.email,
+        displayName: user.displayName || user.username,
+        time: new Date().toUTCString(),
+      });
+    }
+
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed to disable 2FA' });

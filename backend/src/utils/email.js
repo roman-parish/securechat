@@ -82,6 +82,24 @@ export async function sendAccountDeletedNotification({ to, displayName }) {
   });
 }
 
+export async function sendTwoFactorDisabledNotification({ to, displayName, time }) {
+  await send({
+    to,
+    subject: 'Two-factor authentication disabled on your SecureChat account',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="margin:0 0 16px">Two-factor authentication disabled</h2>
+        <p>Hi ${displayName},</p>
+        <p>Two-factor authentication was disabled on your SecureChat account on ${time}.</p>
+        <p>Your account is now protected by password only.</p>
+        <p>If you did not make this change, contact your administrator immediately and change your password.</p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
+        <p style="font-size:12px;color:#999">SecureChat — End-to-end encrypted messaging</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendPasswordResetEmail({ to, displayName, resetUrl }) {
   await send({
     to,
