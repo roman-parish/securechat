@@ -351,7 +351,7 @@ export default function AdminPage({ onBack }) {
 
         {/* ── Audit log ── */}
         <div className="ap-group-label">Audit Log</div>
-        <div className="ap-group">
+        <div className="ap-group ap-group-scroll">
           {auditLoading ? (
             <div className="ap-empty">Loading…</div>
           ) : auditLogs.length === 0 ? (
@@ -568,6 +568,10 @@ export default function AdminPage({ onBack }) {
         .ap-group {
           background: var(--bg-2); border: 1px solid var(--border);
           border-radius: 14px; overflow: hidden;
+        }
+        .ap-group-scroll {
+          max-height: 420px;
+          overflow-y: auto; -webkit-overflow-scrolling: touch;
         }
         .ap-sep { height: 1px; background: var(--border); margin: 0 16px; }
 
