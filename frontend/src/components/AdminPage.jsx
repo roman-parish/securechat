@@ -212,6 +212,8 @@ export default function AdminPage({ onBack }) {
 
   const isMe = (u) => String(u._id) === String(user?._id);
 
+  const TAB_TITLES = { stats: 'Stats', settings: 'Settings', users: 'Users', logs: 'Audit Log' };
+
   return (
     <div className="ap">
 
@@ -222,186 +224,202 @@ export default function AdminPage({ onBack }) {
             <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <span className="ap-title">Admin</span>
+        <span className="ap-title">{TAB_TITLES[activeTab]}</span>
         <div style={{ width: 44 }} />
       </div>
 
-      {/* ── Content ── */}
-      <div className="ap-content">
+      {/* ── Page content (scrollable) ── */}
+      <div className="ap-page">
+        <div className="ap-inner">
 
-        {/* Stats */}
-        {stats && (
-          <div className="ap-stats">
-            {[
-              { v: stats.totalUsers,              l: 'Users' },
-              { v: stats.totalMessages,           l: 'Messages' },
-              { v: stats.totalConversations,      l: 'Chats' },
-              { v: stats.activeToday,             l: 'Active Today' },
-              { v: stats.newUsersThisWeek,        l: 'New This Week' },
-              { v: formatBytes(stats.storageBytes), l: 'Storage' },
-            ].map(({ v, l }) => (
-              <div key={l} className="ap-stat">
-                <span className="ap-stat-val">{v}</span>
-                <span className="ap-stat-lbl">{l}</span>
+          {flash && <div className="ap-flash">{flash}</div>}
+
+          {/* ════ STATS ════ */}
+          {activeTab === 'stats' && (
+            <div className="ap-stats">
+              {stats ? [
+                { v: stats.totalUsers,              l: 'Total Users' },
+                { v: stats.totalMessages,           l: 'Messages Sent' },
+                { v: stats.totalConversations,      l: 'Conversations' },
+                { v: stats.activeToday,             l: 'Active Today' },
+                { v: stats.newUsersThisWeek,        l: 'New This Week' },
+                { v: formatBytes(stats.storageBytes), l: 'Storage Used' },
+              ].map(({ v, l }) => (
+                <div key={l} className="ap-stat">
+                  <span className="ap-stat-val">{v}</span>
+                  <span className="ap-stat-lbl">{l}</span>
+                </div>
+              )) : <div className="ap-empty">Loading…</div>}
+            </div>
+          )}
+
+          {/* ════ SETTINGS ════ */}
+          {activeTab === 'settings' && (
+            <>
+              <div className="ap-group">
+                <div className="ap-row">
+                  <div className="ap-row-text">
+                    <div className="ap-row-title">Open Registration</div>
+                    <div className="ap-row-sub">Allow new users to sign up</div>
+                  </div>
+                  <button
+                    className={`ap-toggle ${registrationOpen ? 'on' : ''}`}
+                    onClick={handleToggleRegistration}
+                    aria-label="Toggle registration"
+                  >
+                    <span className="ap-toggle-knob" />
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
-        )}
 
-        {/* ── Settings section ── */}
-        <div className="ap-group-label">Settings</div>
-
-        {/* Registration toggle — own card */}
-        <div className="ap-group">
-          <div className="ap-row">
-            <div className="ap-row-text">
-              <div className="ap-row-title">Open Registration</div>
-              <div className="ap-row-sub">Allow new users to sign up</div>
-            </div>
-            <button
-              className={`ap-toggle ${registrationOpen ? 'on' : ''}`}
-              onClick={handleToggleRegistration}
-              aria-label="Toggle registration"
-            >
-              <span className="ap-toggle-knob" />
-            </button>
-          </div>
-        </div>
-
-        {/* Invite links — own card */}
-        <div className="ap-group">
-          <div className="ap-row">
-            <div className="ap-row-text">
-              <div className="ap-row-title">Invite Links</div>
-              <div className="ap-row-sub">{invites.length} active invite{invites.length !== 1 ? 's' : ''}</div>
-            </div>
-            <button className="ap-pill-btn" onClick={() => { setInviteEmail(''); setInviteExpiry('24'); setInviteResult(null); setShowInviteForm(true); }}>
-              + Create
-            </button>
-          </div>
-          {invites.map(inv => (
-            <div key={inv._id} className="ap-invite-item">
-              <div className="ap-row-text">
-                <div className="ap-invite-email">{inv.email || 'No email — link only'}</div>
-                <div className="ap-row-sub">Expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}</div>
-              </div>
-              <button className="ap-ghost-btn" onClick={() => handleRevokeInvite(inv._id)}>Revoke</button>
-            </div>
-          ))}
-        </div>
-
-        {flash && <div className="ap-flash">{flash}</div>}
-
-        {/* ── Users tab ── */}
-        {activeTab === 'users' && (
-          <>
-            <div className="ap-search">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
-                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
-                <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              <input
-                type="search"
-                placeholder="Search users…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="ap-search-input"
-              />
-              {total > 0 && <span className="ap-count">{total}</span>}
-            </div>
-
-            <div className="ap-group ap-group-scroll">
-              {loading ? (
-                <div className="ap-empty">Loading…</div>
-              ) : users.length === 0 ? (
-                <div className="ap-empty">No users found</div>
-              ) : users.map((u, idx) => (
-                <div key={u._id}>
-                  {idx > 0 && <div className="ap-sep" />}
-                  <div className={`ap-user-row${u.banned ? ' banned' : ''}`}>
-                    <div className="ap-avatar-wrap">
-                      <Avatar user={u} size={42} />
-                      {onlineUsers.has(String(u._id)) && <span className="ap-dot" />}
+              <div className="ap-group">
+                <div className="ap-row">
+                  <div className="ap-row-text">
+                    <div className="ap-row-title">Invite Links</div>
+                    <div className="ap-row-sub">{invites.length} active invite{invites.length !== 1 ? 's' : ''}</div>
+                  </div>
+                  <button className="ap-pill-btn" onClick={() => { setInviteEmail(''); setInviteExpiry('24'); setInviteResult(null); setShowInviteForm(true); }}>
+                    + Create
+                  </button>
+                </div>
+                {invites.map(inv => (
+                  <div key={inv._id} className="ap-invite-item">
+                    <div className="ap-row-text">
+                      <div className="ap-invite-email">{inv.email || 'No email — link only'}</div>
+                      <div className="ap-row-sub">Expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}</div>
                     </div>
-                    <div className="ap-user-info">
-                      <div className="ap-user-name">{u.displayName || u.username}</div>
-                      <div className="ap-user-sub">
-                        @{u.username}
-                        {u.email && <span className="ap-user-email">&nbsp;· {u.email}</span>}
+                    <button className="ap-ghost-btn" onClick={() => handleRevokeInvite(inv._id)}>Revoke</button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ════ USERS ════ */}
+          {activeTab === 'users' && (
+            <>
+              <div className="ap-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+                  <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                <input
+                  type="search"
+                  placeholder="Search users…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="ap-search-input"
+                />
+                {total > 0 && <span className="ap-count">{total}</span>}
+              </div>
+
+              <div className="ap-group">
+                {loading ? (
+                  <div className="ap-empty">Loading…</div>
+                ) : users.length === 0 ? (
+                  <div className="ap-empty">No users found</div>
+                ) : users.map((u, idx) => (
+                  <div key={u._id}>
+                    {idx > 0 && <div className="ap-sep" />}
+                    <div className={`ap-user-row${u.banned ? ' banned' : ''}`}>
+                      <div className="ap-avatar-wrap">
+                        <Avatar user={u} size={42} />
+                        {onlineUsers.has(String(u._id)) && <span className="ap-dot" />}
+                      </div>
+                      <div className="ap-user-info">
+                        <div className="ap-user-name">{u.displayName || u.username}</div>
+                        <div className="ap-user-sub">
+                          @{u.username}
+                          {u.email && <span className="ap-user-email">&nbsp;· {u.email}</span>}
+                        </div>
+                      </div>
+                      <div className="ap-user-end">
+                        {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
+                        <span className={`ap-badge ${u.banned ? 'red' : 'green'}`}>{u.banned ? 'Suspended' : 'Active'}</span>
+                        {isMe(u)
+                          ? <span className="ap-you">You</span>
+                          : (
+                            <button className="ap-menu-btn" onClick={() => setMenuUser(u)} aria-label="User actions">
+                              <IconDots />
+                            </button>
+                          )
+                        }
                       </div>
                     </div>
-                    <div className="ap-user-end">
-                      {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
-                      <span className={`ap-badge ${u.banned ? 'red' : 'green'}`}>{u.banned ? 'Suspended' : 'Active'}</span>
-                      {isMe(u)
-                        ? <span className="ap-you">You</span>
-                        : (
-                          <button className="ap-menu-btn" onClick={() => setMenuUser(u)} aria-label="User actions">
-                            <IconDots />
-                          </button>
-                        )
-                      }
-                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ════ AUDIT LOG ════ */}
+          {activeTab === 'logs' && (
+            <div className="ap-group">
+              {auditLoading ? (
+                <div className="ap-empty">Loading…</div>
+              ) : auditLogs.length === 0 ? (
+                <div className="ap-empty">No activity yet</div>
+              ) : auditLogs.map((log, idx) => (
+                <div key={log._id}>
+                  {idx > 0 && <div className="ap-sep" />}
+                  <div className="ap-audit">
+                    <span className={`ap-badge audit-${log.action.split('.')[1]}`}>
+                      {ACTION_LABELS[log.action] || log.action}
+                    </span>
+                    <span className="ap-audit-who">
+                      {log.performedByUsername}
+                      {log.targetUsername && <span className="ap-audit-target"> → {log.targetUsername}</span>}
+                      {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
+                      {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
+                    </span>
+                    <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
                   </div>
                 </div>
               ))}
             </div>
-          </>
-        )}
+          )}
 
-        {/* ── Audit log tab ── */}
-        {activeTab === 'audit' && (
-          <div className="ap-group ap-group-scroll">
-            {auditLoading ? (
-              <div className="ap-empty">Loading…</div>
-            ) : auditLogs.length === 0 ? (
-              <div className="ap-empty">No activity yet</div>
-            ) : auditLogs.map((log, idx) => (
-              <div key={log._id}>
-                {idx > 0 && <div className="ap-sep" />}
-                <div className="ap-audit">
-                  <span className={`ap-badge audit-${log.action.split('.')[1]}`}>
-                    {ACTION_LABELS[log.action] || log.action}
-                  </span>
-                  <span className="ap-audit-who">
-                    {log.performedByUsername}
-                    {log.targetUsername && <span className="ap-audit-target"> → {log.targetUsername}</span>}
-                    {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
-                    {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
-                  </span>
-                  <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-      </div>{/* /ap-content */}
+        </div>
+      </div>{/* /ap-page */}
 
       {/* ── Bottom tab bar ── */}
       <div className="ap-tab-bar">
-        <button
-          className={`ap-tab ${activeTab === 'users' ? 'active' : ''}`}
-          onClick={() => setActiveTab('users')}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/>
-            <path d="M3 21v-2a5 5 0 015-5h4a5 5 0 015 5v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-          </svg>
-          Users {total > 0 && <span className="ap-tab-count">{total}</span>}
-        </button>
-        <button
-          className={`ap-tab ${activeTab === 'audit' ? 'active' : ''}`}
-          onClick={() => setActiveTab('audit')}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.8"/>
-            <path d="M9 12h6M9 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-          </svg>
-          Audit Log {auditLogs.length > 0 && <span className="ap-tab-count">{auditLogs.length}</span>}
-        </button>
+        {[
+          { id: 'stats', label: 'Stats', icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )},
+          { id: 'settings', label: 'Settings', icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="1.8"/>
+            </svg>
+          )},
+          { id: 'users', label: 'Users', icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/>
+              <path d="M3 21v-2a5 5 0 015-5h4a5 5 0 015 5v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          )},
+          { id: 'logs', label: 'Logs', icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.8"/>
+              <path d="M9 12h6M9 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          )},
+        ].map(({ id, label, icon }) => (
+          <button
+            key={id}
+            className={`ap-tab ${activeTab === id ? 'active' : ''}`}
+            onClick={() => setActiveTab(id)}
+          >
+            {icon}
+            <span>{label}</span>
+          </button>
+        ))}
       </div>
 
       {/* ════════════════════════════════
@@ -532,18 +550,21 @@ export default function AdminPage({ onBack }) {
 
       {/* ══════════════ STYLES ══════════════ */}
       <style>{`
-        /* Outer container — this IS the scroll zone */
+        /* Full-screen container — fixed so height is always exact viewport */
         .ap {
-          flex: 1;
-          min-height: 0;
-          overflow-y: auto;
-          -webkit-overflow-scrolling: touch;
+          position: fixed;
+          top: env(safe-area-inset-top, 0px);
+          left: env(safe-area-inset-left, 0px);
+          right: env(safe-area-inset-right, 0px);
+          bottom: 0;
+          display: flex; flex-direction: column;
           background: var(--bg-0);
+          z-index: 1;
         }
 
-        /* Sticky header — stays at top while page scrolls */
+        /* Header — fixed height, never scrolls */
         .ap-header {
-          position: sticky; top: 0; z-index: 10;
+          flex-shrink: 0;
           display: flex; align-items: center; justify-content: space-between;
           height: 56px; padding: 0 8px;
           border-bottom: 1px solid var(--border);
@@ -559,37 +580,35 @@ export default function AdminPage({ onBack }) {
         @media(hover:hover){.ap-back:hover{background:var(--bg-3);color:var(--text-0);}}
         .ap-title { font-size: 17px; font-weight: 700; color: var(--text-0); }
 
-        /* Content area */
-        .ap-content {
+        /* Scrollable page area — grows to fill between header and tab bar */
+        .ap-page {
+          flex: 1; min-height: 0;
+          overflow-y: auto; -webkit-overflow-scrolling: touch;
+        }
+        .ap-inner {
           padding: 20px 16px 24px;
-          display: flex; flex-direction: column; gap: 8px;
+          display: flex; flex-direction: column; gap: 10px;
           max-width: 860px; margin: 0 auto; width: 100%;
           box-sizing: border-box;
         }
 
-        /* Sticky bottom tab bar */
+        /* Bottom tab bar — fixed height, always at screen bottom */
         .ap-tab-bar {
-          position: sticky; bottom: 0; z-index: 10;
+          flex-shrink: 0;
           display: flex;
           background: var(--bg-1);
           border-top: 1px solid var(--border);
           padding-bottom: env(safe-area-inset-bottom, 0px);
         }
         .ap-tab {
-          flex: 1; display: flex; align-items: center; justify-content: center;
-          gap: 6px; padding: 14px 16px;
-          font-size: 14px; font-weight: 500; color: var(--text-3);
-          transition: all var(--transition);
+          flex: 1; display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          gap: 4px; padding: 10px 4px;
+          font-size: 11px; font-weight: 500; color: var(--text-3);
+          transition: color var(--transition);
         }
         .ap-tab.active { color: var(--accent); }
-        .ap-tab-count {
-          font-size: 11px; font-weight: 700;
-          background: var(--bg-3); color: var(--text-3);
-          padding: 2px 7px; border-radius: 20px;
-        }
-        .ap-tab.active .ap-tab-count {
-          background: var(--accent-dim); color: var(--accent);
-        }
+        .ap-tab span { line-height: 1; }
 
         /* Stats: 2-col on phones, 3-col on ≥480px, 6-col on ≥900px */
         .ap-stats {
