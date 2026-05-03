@@ -224,8 +224,8 @@ export default function AdminPage({ onBack }) {
         <div style={{ width: 44 }} />
       </div>
 
-      {/* ── Body ── */}
-      <div className="ap-body">
+      {/* ── Content ── */}
+      <div className="ap-content">
 
         {/* Stats */}
         {stats && (
@@ -375,7 +375,7 @@ export default function AdminPage({ onBack }) {
           ))}
         </div>
 
-      </div>{/* /ap-body */}
+      </div>{/* /ap-content */}
 
       {/* ════════════════════════════════
           Modals / sheets
@@ -505,17 +505,20 @@ export default function AdminPage({ onBack }) {
 
       {/* ══════════════ STYLES ══════════════ */}
       <style>{`
-        /* Container */
+        /* Outer container — this IS the scroll zone */
         .ap {
-          display: flex; flex-direction: column;
-          flex: 1; min-height: 0; overflow: hidden;
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
           background: var(--bg-0);
         }
 
-        /* Header */
+        /* Sticky header — stays at top while page scrolls */
         .ap-header {
+          position: sticky; top: 0; z-index: 10;
           display: flex; align-items: center; justify-content: space-between;
-          height: 56px; padding: 0 8px; flex-shrink: 0;
+          height: 56px; padding: 0 8px;
           border-bottom: 1px solid var(--border);
           background: var(--bg-1);
         }
@@ -529,13 +532,13 @@ export default function AdminPage({ onBack }) {
         @media(hover:hover){.ap-back:hover{background:var(--bg-3);color:var(--text-0);}}
         .ap-title { font-size: 17px; font-weight: 700; color: var(--text-0); }
 
-        /* Scrollable body */
-        .ap-body {
-          flex: 1; min-height: 0;
-          overflow-y: auto; -webkit-overflow-scrolling: touch;
-          padding: 16px 14px;
-          padding-bottom: max(32px, env(safe-area-inset-bottom, 32px));
-          display: flex; flex-direction: column; gap: 6px;
+        /* Content area — natural flow, no flex tricks needed */
+        .ap-content {
+          padding: 20px 16px;
+          padding-bottom: max(48px, env(safe-area-inset-bottom, 48px));
+          display: flex; flex-direction: column; gap: 8px;
+          max-width: 860px; margin: 0 auto; width: 100%;
+          box-sizing: border-box;
         }
 
         /* Stats: 2-col on phones, 3-col on ≥480px, 6-col on ≥900px */
