@@ -9,7 +9,7 @@ import { Resend } from 'resend';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-const FROM = process.env.EMAIL_FROM || 'SecureChat <noreply@w5rcp.com>';
+const FROM = process.env.EMAIL_FROM || 'SecureChat <securechat@securechat.w5rcp.com>';
 const CLIENT_URL = process.env.CLIENT_URL || 'https://securechat.w5rcp.com';
 
 async function send({ to, subject, html }) {
