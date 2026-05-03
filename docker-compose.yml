@@ -52,6 +52,7 @@ services:
       CLIENT_URL: ${CLIENT_URL:-http://localhost}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
+      ADMIN_USERNAMES: ${ADMIN_USERNAMES:-}
     depends_on:
       mongodb:
         condition: service_healthy
