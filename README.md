@@ -42,21 +42,29 @@ A self-hosted, fully encrypted messaging PWA. Messages are encrypted on your dev
 - 👥 **Group chats** — admin controls, member management, online member count
 - 📨 **Group invitations** — invite users with an accept/decline flow
 - 🔕 **Conversation muting** — suppress push notifications per conversation
+- 📦 **Conversation archive** — hide conversations without deleting; auto-unarchives on new message
+- 🚫 **User blocking** — block users from messaging you; manage from profile settings
 - 💬 **Unread jump button** — shows unread count, jumps to first unread message
 
 ### Notifications & Presence
 - 🔔 **Push notifications** — desktop and iOS (16.4+)
+- 📧 **Email notifications** — login alerts, password changes, account deletion (via Resend)
 - 👁️ **Last seen timestamps** — shows when a contact was last online
 - ⌨️ **Typing indicators** — real-time typing state per conversation
 
 ### Privacy & Account
+- 🔐 **Two-factor authentication** — TOTP with recovery codes, trusted devices, and admin reset
+- 🔑 **Password reset via email** — self-serve password reset link with 1-hour expiry
 - 🗑️ **Account self-deletion** — permanently delete your account and all data (GDPR compliant)
 - 🔑 **Password-protected key backup** — log in from any device, keys restore automatically
 - 🌙 **Light/dark mode** — per-user preference saved locally
 
 ### Platform
 - 📱 **PWA** — installable on iOS and Android, works offline
-- 🛡️ **Admin panel** — user management, ban/suspend, reset passwords, usage stats
+- 🛡️ **Admin panel** — user management, ban/suspend, reset passwords, 2FA reset, usage stats
+- 📋 **Audit log** — full log of admin actions with timestamps
+- 🔗 **Invite links** — time-limited single-use invite links with optional email delivery
+- 🔒 **Registration control** — open or close registration from the admin panel
 - 🔐 **Let's Encrypt SSL** — automatic HTTPS via setup script
 
 ## Encryption Architecture
@@ -128,9 +136,11 @@ VAPID_EMAIL=admin@yourdomain.com
 
 Users listed in `ADMIN_USERNAMES` see an admin button in the sidebar. The admin panel provides:
 - User statistics (total users, messages, active today, storage used)
-- User management (view, search, suspend, delete)
-- Password reset for any user
-- Online indicators per user
+- User management (view, search, suspend, delete, reset password, reset 2FA)
+- 2FA status visible per user
+- Registration open/close toggle
+- Time-limited invite link generation with optional email delivery
+- Full audit log of all admin actions
 
 ## Changelog
 
