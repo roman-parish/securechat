@@ -267,7 +267,7 @@ export default function AdminPage({ onBack }) {
               <span className="settings-label">Invite Links</span>
               <span className="settings-hint">{invites.length} active invite{invites.length !== 1 ? 's' : ''}</span>
             </div>
-            <button className="auth-submit" style={{ width: 'auto', padding: '8px 16px', fontSize: 13, marginTop: 0 }}
+            <button className="invite-create-btn"
               onClick={() => { setInviteEmail(''); setInviteExpiry('24'); setInviteResult(null); setShowInviteModal(true); }}>
               Create invite
             </button>
@@ -439,10 +439,9 @@ export default function AdminPage({ onBack }) {
             <input
               type="email" placeholder="Email address (optional)"
               value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-              style={{ width: '100%', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 12px', fontSize: 14, color: 'var(--text-0)', boxSizing: 'border-box' }}
+              className="modal-input"
             />
-            <select value={inviteExpiry} onChange={e => setInviteExpiry(e.target.value)}
-              style={{ width: '100%', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 12px', fontSize: 14, color: 'var(--text-0)', boxSizing: 'border-box' }}>
+            <select value={inviteExpiry} onChange={e => setInviteExpiry(e.target.value)} className="modal-select">
               <option value="24">Expires in 24 hours</option>
               <option value="72">Expires in 3 days</option>
               <option value="168">Expires in 7 days</option>
@@ -487,11 +486,7 @@ export default function AdminPage({ onBack }) {
               placeholder="New password (min 8 characters)"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
-              style={{
-                width: '100%', background: 'var(--bg-3)',
-                border: '1px solid var(--border)', borderRadius: 'var(--radius)',
-                padding: '10px 12px', fontSize: '14px', color: 'var(--text-0)',
-              }}
+              className="modal-input"
               autoFocus
             />
             <div className="confirm-actions">
@@ -694,6 +689,30 @@ export default function AdminPage({ onBack }) {
         .audit-actor { font-weight: 500; color: var(--text-0); }
         .audit-target { color: var(--text-2); }
         .audit-time { margin-left: auto; font-size: 12px; color: var(--text-3); flex-shrink: 0; }
+        .invite-create-btn {
+          padding: 7px 14px; background: var(--accent); color: white;
+          border-radius: var(--radius); font-size: 13px; font-weight: 500;
+          transition: all var(--transition); flex-shrink: 0;
+        }
+        .invite-create-btn:hover { background: var(--accent-light); }
+        .modal-input {
+          width: 100%; background: var(--bg-3); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 10px 12px;
+          font-size: 14px; color: var(--text-0); box-sizing: border-box;
+          transition: border-color var(--transition);
+        }
+        .modal-input:focus { border-color: var(--accent); }
+        .modal-input::placeholder { color: var(--text-3); }
+        .modal-select {
+          width: 100%; background: var(--bg-3); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 10px 12px;
+          font-size: 14px; color: var(--text-0); box-sizing: border-box;
+          cursor: pointer; appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+          background-repeat: no-repeat; background-position: right 12px center;
+          padding-right: 32px;
+        }
+        .modal-select option { background: var(--bg-3); color: var(--text-0); }
         .invite-row {
           display: flex; align-items: center; justify-content: space-between;
           padding: 10px 16px; border-top: 1px solid var(--border); gap: 12px;
