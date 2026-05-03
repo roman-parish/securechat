@@ -312,8 +312,7 @@ export default function AdminPage({ onBack }) {
             <span className="hide-mobile">Joined</span>
             <span className="hide-mobile">Last Seen</span>
             <span className="hide-mobile">2FA</span>
-            <span>Status</span>
-            <span>Actions</span>
+            <span>Status / Actions</span>
           </div>
 
           {loading ? (
@@ -343,54 +342,56 @@ export default function AdminPage({ onBack }) {
                 <span className={`status-badge hide-mobile ${u.twoFactorEnabled ? 'twofa-on' : 'twofa-off'}`}>
                   {u.twoFactorEnabled ? 'On' : 'Off'}
                 </span>
-                <span className={`status-badge ${u.banned ? 'banned' : 'active'}`}>
-                  {u.banned ? 'Suspended' : 'Active'}
-                </span>
-                <div className="actions">
-                  {String(u._id) !== String(user?._id) && (
-                    <>
-                      <button
-                        className={`action-btn ${u.banned ? 'unban' : 'ban'}`}
-                        onClick={() => handleBan(u)}
-                        title={u.banned ? 'Unsuspend' : 'Suspend'}
-                      >
-                        {u.banned ? (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                            <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        ) : (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
-                            <path d="M4.93 4.93l14.14 14.14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                          </svg>
-                        )}
-                      </button>
-                      <button
-                        className="action-btn reset"
-                        onClick={() => { setResetPassword(u); setNewPassword(''); }}
-                        title="Reset password"
-                      >
-                        🔑
-                      </button>
-                      <button
-                        className="action-btn reset"
-                        onClick={() => setReset2faUser(u)}
-                        title="Reset 2FA"
-                      >
-                        🔐
-                      </button>
-                      <button
-                        className="action-btn delete"
-                        onClick={() => setConfirmDelete(u)}
-                        title="Delete user"
-                      >
-                        🗑
-                      </button>
-                    </>
-                  )}
-                  {String(u._id) === String(user?._id) && (
-                    <span className="you-badge">You</span>
-                  )}
+                <div className="table-row-meta">
+                  <span className={`status-badge ${u.banned ? 'banned' : 'active'}`}>
+                    {u.banned ? 'Suspended' : 'Active'}
+                  </span>
+                  <div className="actions">
+                    {String(u._id) !== String(user?._id) && (
+                      <>
+                        <button
+                          className={`action-btn ${u.banned ? 'unban' : 'ban'}`}
+                          onClick={() => handleBan(u)}
+                          title={u.banned ? 'Unsuspend' : 'Suspend'}
+                        >
+                          {u.banned ? (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                              <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          ) : (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+                              <path d="M4.93 4.93l14.14 14.14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          className="action-btn reset"
+                          onClick={() => { setResetPassword(u); setNewPassword(''); }}
+                          title="Reset password"
+                        >
+                          🔑
+                        </button>
+                        <button
+                          className="action-btn reset"
+                          onClick={() => setReset2faUser(u)}
+                          title="Reset 2FA"
+                        >
+                          🔐
+                        </button>
+                        <button
+                          className="action-btn delete"
+                          onClick={() => setConfirmDelete(u)}
+                          title="Delete user"
+                        >
+                          🗑
+                        </button>
+                      </>
+                    )}
+                    {String(u._id) === String(user?._id) && (
+                      <span className="you-badge">You</span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
@@ -594,7 +595,7 @@ export default function AdminPage({ onBack }) {
           text-transform: uppercase; letter-spacing: 0.05em;
         }
         @media (max-width: 768px) {
-          .table-header { grid-template-columns: 2fr 1fr 1.5fr; }
+          .table-header { grid-template-columns: 2fr 2fr; }
           .hide-mobile { display: none; }
         }
         .table-loading {
@@ -603,7 +604,7 @@ export default function AdminPage({ onBack }) {
         }
         .table-row {
           display: grid;
-          grid-template-columns: 2fr 2fr 1fr 1fr 0.7fr 1fr 1.5fr;
+          grid-template-columns: 2fr 2fr 1fr 1fr 0.7fr 2.5fr;
           padding: 12px 16px; align-items: center;
           border-bottom: 1px solid var(--border);
           transition: background var(--transition);
@@ -611,8 +612,9 @@ export default function AdminPage({ onBack }) {
         .table-row:last-child { border-bottom: none; }
         .table-row:hover { background: var(--bg-3); }
         .table-row.banned { opacity: 0.6; }
+        .table-row-meta { display: contents; }
         @media (max-width: 768px) {
-          .table-row { grid-template-columns: 2fr 1fr 1.5fr; }
+          .table-row { grid-template-columns: 2fr 2fr; }
         }
         .user-cell { display: flex; align-items: center; gap: 10px; }
         .avatar-online-wrap { position: relative; flex-shrink: 0; }
@@ -770,6 +772,34 @@ export default function AdminPage({ onBack }) {
           transition: all var(--transition);
         }
         .confirm-delete-btn:hover { opacity: 0.85; }
+
+        /* ── Mobile overrides ──────────────────────────────────────── */
+        @media (max-width: 600px) {
+          .admin-header { padding: 12px 14px; }
+          .admin-content { padding: 12px; gap: 12px; }
+          .stat-value { font-size: 20px; }
+          .stat-card { padding: 12px; }
+
+          /* Switch table to card layout — one card per user */
+          .table-header { display: none; }
+          .table-row {
+            display: flex; flex-direction: column;
+            gap: 8px; padding: 12px 14px;
+            grid-template-columns: unset;
+          }
+          .hide-mobile { display: none; }
+          .user-cell { flex-direction: row; }
+          .table-row-meta {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+          }
+          .actions { flex-wrap: wrap; }
+          .action-btn { width: 34px; height: 34px; }
+
+          .settings-item { padding: 12px 14px; gap: 12px; }
+          .invite-row { padding: 10px 14px; flex-wrap: wrap; }
+          .audit-row { padding: 8px 14px; font-size: 12px; }
+          .audit-time { margin-left: 0; width: 100%; }
+        }
       `}</style>
     </div>
   );
