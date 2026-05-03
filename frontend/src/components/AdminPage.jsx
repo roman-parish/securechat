@@ -236,21 +236,105 @@ export default function AdminPage({ onBack }) {
 
           {/* ════ STATS ════ */}
           {activeTab === 'stats' && (
-            <div className="ap-stats">
-              {stats ? [
-                { v: stats.totalUsers,              l: 'Total Users' },
-                { v: stats.totalMessages,           l: 'Messages Sent' },
-                { v: stats.totalConversations,      l: 'Conversations' },
-                { v: stats.activeToday,             l: 'Active Today' },
-                { v: stats.newUsersThisWeek,        l: 'New This Week' },
-                { v: formatBytes(stats.storageBytes), l: 'Storage Used' },
-              ].map(({ v, l }) => (
-                <div key={l} className="ap-stat">
-                  <span className="ap-stat-val">{v}</span>
-                  <span className="ap-stat-lbl">{l}</span>
+            stats ? (
+              <>
+                <div className="ap-stat-section-label">Activity</div>
+                <div className="ap-stat-grid">
+                  <div className="ap-stat-card" style={{'--c':'var(--accent)','--cd':'var(--accent-dim)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M3 21v-2a5 5 0 015-5h4a5 5 0 015 5v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.totalUsers}</div>
+                    <div className="ap-stat-lbl">Total Users</div>
+                  </div>
+                  <div className="ap-stat-card" style={{'--c':'var(--green)','--cd':'var(--green-dim)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.activeToday}</div>
+                    <div className="ap-stat-lbl">Active Today</div>
+                  </div>
+                  <div className="ap-stat-card" style={{'--c':'#f59e0b','--cd':'rgba(245,158,11,0.15)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.newUsersThisWeek}</div>
+                    <div className="ap-stat-lbl">New This Week</div>
+                  </div>
+                  <div className="ap-stat-card" style={{'--c':'var(--red)','--cd':'var(--red-dim)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.bannedUsers}</div>
+                    <div className="ap-stat-lbl">Suspended</div>
+                  </div>
                 </div>
-              )) : <div className="ap-empty">Loading…</div>}
-            </div>
+
+                <div className="ap-stat-section-label">Messages</div>
+                <div className="ap-stat-grid">
+                  <div className="ap-stat-card" style={{'--c':'var(--accent)','--cd':'var(--accent-dim)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.totalMessages.toLocaleString()}</div>
+                    <div className="ap-stat-lbl">Total Messages</div>
+                  </div>
+                  <div className="ap-stat-card" style={{'--c':'var(--green)','--cd':'var(--green-dim)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.messagesLast24h.toLocaleString()}</div>
+                    <div className="ap-stat-lbl">Last 24 Hours</div>
+                  </div>
+                  <div className="ap-stat-card" style={{'--c':'#f59e0b','--cd':'rgba(245,158,11,0.15)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.totalAttachments.toLocaleString()}</div>
+                    <div className="ap-stat-lbl">Attachments</div>
+                  </div>
+                  <div className="ap-stat-card" style={{'--c':'#8b5cf6','--cd':'rgba(139,92,246,0.15)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.totalMessages > 0 ? (stats.totalMessages / Math.max(stats.totalUsers, 1)).toFixed(1) : '0'}</div>
+                    <div className="ap-stat-lbl">Msgs / User</div>
+                  </div>
+                </div>
+
+                <div className="ap-stat-section-label">Conversations</div>
+                <div className="ap-stat-grid">
+                  <div className="ap-stat-card" style={{'--c':'var(--accent)','--cd':'var(--accent-dim)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.groupChats}</div>
+                    <div className="ap-stat-lbl">Group Chats</div>
+                  </div>
+                  <div className="ap-stat-card" style={{'--c':'var(--green)','--cd':'var(--green-dim)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.42-4.03 8-9 8a9.86 9.86 0 01-4-.83L3 20l1.9-3.8A7.93 7.93 0 013 12c0-4.42 4.03-8 9-8s9 3.58 9 8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.directChats}</div>
+                    <div className="ap-stat-lbl">Direct Chats</div>
+                  </div>
+                  <div className="ap-stat-card" style={{'--c':'#8b5cf6','--cd':'rgba(139,92,246,0.15)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{stats.twoFaUsers}</div>
+                    <div className="ap-stat-lbl">2FA Enabled</div>
+                  </div>
+                  <div className="ap-stat-card" style={{'--c':'#f59e0b','--cd':'rgba(245,158,11,0.15)'}}>
+                    <div className="ap-stat-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+                    </div>
+                    <div className="ap-stat-val">{formatBytes(stats.storageBytes)}</div>
+                    <div className="ap-stat-lbl">Storage Used</div>
+                  </div>
+                </div>
+              </>
+            ) : <div className="ap-empty">Loading…</div>
           )}
 
           {/* ════ SETTINGS ════ */}
@@ -385,6 +469,13 @@ export default function AdminPage({ onBack }) {
       {/* ── Bottom tab bar ── */}
       <div className="ap-tab-bar">
         {[
+          { id: 'users', label: 'Users', icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/>
+              <path d="M3 21v-2a5 5 0 015-5h4a5 5 0 015 5v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          )},
           { id: 'stats', label: 'Stats', icon: (
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -394,13 +485,6 @@ export default function AdminPage({ onBack }) {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
               <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="1.8"/>
-            </svg>
-          )},
-          { id: 'users', label: 'Users', icon: (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/>
-              <path d="M3 21v-2a5 5 0 015-5h4a5 5 0 015 5v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-              <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
             </svg>
           )},
           { id: 'logs', label: 'Logs', icon: (

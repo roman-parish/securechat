@@ -39,20 +39,36 @@ router.use(authenticate, requireAdmin);
 router.get('/stats', async (req, res) => {
   try {
     const now = new Date();
-    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+    const oneDayAgo  = new Date(now - 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
-    const [totalUsers, totalMessages, totalConversations, activeToday, newUsersThisWeek, storageResult] = await Promise.all([
+    const [
+      totalUsers,
+      totalMessages,
+      totalConversations,
+      activeToday,
+      newUsersThisWeek,
+      storageResult,
+      messagesLast24h,
+      bannedUsers,
+      twoFaUsers,
+      totalAttachments,
+      groupChats,
+    ] = await Promise.all([
       User.countDocuments(),
       Message.countDocuments({ type: { $ne: 'deleted' } }),
       Conversation.countDocuments(),
       User.countDocuments({ lastSeen: { $gte: oneDayAgo } }),
       User.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
-      // Sum of all attachment sizes in bytes
       Message.aggregate([
         { $match: { 'attachment.size': { $exists: true } } },
         { $group: { _id: null, total: { $sum: '$attachment.size' } } },
       ]),
+      Message.countDocuments({ createdAt: { $gte: oneDayAgo }, type: { $ne: 'deleted' } }),
+      User.countDocuments({ banned: true }),
+      User.countDocuments({ twoFactorEnabled: true }),
+      Message.countDocuments({ 'attachment.url': { $exists: true } }),
+      Conversation.countDocuments({ isGroup: true }),
     ]);
 
     const storageBytes = storageResult[0]?.total || 0;
@@ -64,6 +80,12 @@ router.get('/stats', async (req, res) => {
       activeToday,
       newUsersThisWeek,
       storageBytes,
+      messagesLast24h,
+      bannedUsers,
+      twoFaUsers,
+      totalAttachments,
+      groupChats,
+      directChats: Math.max(0, totalConversations - groupChats),
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch stats' });
