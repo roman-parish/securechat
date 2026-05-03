@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1] — 2026-05-03
+
+### Bug Fixes
+
+- **Admin panel data not loading** — `ADMIN_USERNAMES` was passed as a frontend build arg but not to the backend container, causing all admin API calls to return 403. The env var is now correctly passed to both services in `docker-compose.yml`.
+
+---
+
 ## [1.2.0] — 2026-05-03
 
 ### New Features
