@@ -59,6 +59,10 @@ const conversationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     until: { type: Date, default: null }, // null = muted indefinitely
   }],
+  archivedBy: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
   invitations: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

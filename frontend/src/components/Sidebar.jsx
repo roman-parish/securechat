@@ -17,11 +17,12 @@ import { format } from 'date-fns';
 
 export default function Sidebar({ onSelectConversation, activeConversationId: activeConvIdProp, onRemoveActive, onOpenAdmin }) {
   const { user, logout } = useAuth();
-  const { conversations, activeConversationId, onlineUsers, unreadCounts, loading, removeConversation, typingMap, invitations, removeInvitation } = useChat();
+  const { conversations, archivedConversations, activeConversationId, onlineUsers, unreadCounts, loading, removeConversation, archiveConversation, unarchiveConversation, typingMap, invitations, removeInvitation } = useChat();
   const { connected } = useSocket();
   const [search, setSearch] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const { updateConversation } = useChat();
 
   const handleMuteToggle = useCallback(async (convId, currentlyMuted) => {
@@ -137,10 +138,42 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
                 typingUsers={typingMap[String(conv._id)] || []}
                 onClick={() => onSelectConversation(conv._id)}
                 onRemove={() => removeConversation(conv._id)}
+                onArchive={() => archiveConversation(conv._id)}
                 onMuteToggle={handleMuteToggle}
               />
             ))
         }
+
+        {/* Archived section */}
+        {archivedConversations.length > 0 && (
+          <>
+            <button className="archived-toggle" onClick={() => setShowArchived(s => !s)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Archived ({archivedConversations.length})
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ marginLeft: 'auto', transform: showArchived ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {showArchived && archivedConversations.map(conv => (
+              <ConvItem
+                key={conv._id}
+                conv={conv}
+                user={user}
+                active={conv._id === activeConversationId}
+                onlineUsers={onlineUsers}
+                unread={unreadCounts[String(conv._id)] || 0}
+                typingUsers={typingMap[String(conv._id)] || []}
+                onClick={() => onSelectConversation(conv._id)}
+                onRemove={() => removeConversation(conv._id)}
+                onUnarchive={() => unarchiveConversation(conv._id)}
+                onMuteToggle={handleMuteToggle}
+                isArchived
+              />
+            ))}
+          </>
+        )}
       </div>
 
       {showNewChat && <NewChatModal onClose={() => setShowNewChat(false)} />}
@@ -177,6 +210,13 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
           flex: 1; overflow-y: auto; padding: 8px;
           padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
         }
+        .archived-toggle {
+          display: flex; align-items: center; gap: 7px;
+          width: 100%; padding: 8px 12px; margin-top: 4px;
+          font-size: 12px; font-weight: 500; color: var(--text-3);
+          border-radius: var(--radius); transition: all var(--transition);
+        }
+        .archived-toggle:hover { background: var(--bg-3); color: var(--text-1); }
         .empty-list {
           display: flex; flex-direction: column; align-items: center;
           gap: 8px; padding: 40px 20px;
@@ -206,7 +246,7 @@ function convPreview(conv, currentUser, unread) {
   return '';
 }
 
-function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onMuteToggle }) {
+function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onArchive, onUnarchive, onMuteToggle, isArchived }) {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const menuRef = useRef(null);
@@ -312,6 +352,21 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
             </svg>
             {isMuted ? 'Unmute' : 'Mute'}
           </button>
+          {isArchived ? (
+            <button className="menu-btn-normal" onClick={() => { setShowMenu(false); onUnarchive(); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Unarchive
+            </button>
+          ) : (
+            <button className="menu-btn-normal" onClick={() => { setShowMenu(false); onArchive(); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Archive
+            </button>
+          )}
           <button onClick={() => { setShowMenu(false); onRemove(); }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

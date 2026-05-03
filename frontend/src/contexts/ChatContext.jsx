@@ -16,6 +16,7 @@ export function ChatProvider({ children }) {
   const { socket } = useSocket();
   const { user: authUser, setUser: setAuthUser } = useAuth();
   const [conversations, setConversations] = useState([]);
+  const [archivedConversations, setArchivedConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [onlineListLoaded, setOnlineListLoaded] = useState(false);
@@ -35,8 +36,12 @@ export function ChatProvider({ children }) {
 
   const loadConversations = useCallback(async () => {
     try {
-      const data = await apiFetch('/conversations');
-      setConversations(data);
+      const [active, archived] = await Promise.all([
+        apiFetch('/conversations'),
+        apiFetch('/conversations?archived=true'),
+      ]);
+      setConversations(active);
+      setArchivedConversations(archived);
     } catch (err) {
       console.error('Failed to load conversations:', err);
     } finally {
@@ -103,6 +108,21 @@ export function ChatProvider({ children }) {
 
     const onMessageNew = (message) => {
       const msgConvId = String(message.conversationId);
+
+      // Move out of archive if it was archived — new message unarchives it
+      setArchivedConversations(prev => {
+        const archivedConv = prev.find(c => String(c._id) === msgConvId);
+        if (archivedConv) {
+          const updated = { ...archivedConv, lastMessage: message, lastActivity: message.createdAt };
+          setConversations(p =>
+            p.some(c => String(c._id) === msgConvId) ? p
+              : [updated, ...p].sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity))
+          );
+          return prev.filter(c => String(c._id) !== msgConvId);
+        }
+        return prev;
+      });
+
       setConversations(prev => {
         const exists = prev.some(c => String(c._id) === msgConvId);
         if (!exists) {
@@ -209,13 +229,42 @@ export function ChatProvider({ children }) {
     setInvitations(prev => prev.filter(i => String(i._id) !== String(invId))),
   []);
 
+  const archiveConversation = useCallback(async (id) => {
+    const strId = String(id);
+    try {
+      await apiFetch(`/conversations/${strId}/archive`, { method: 'POST' });
+      setConversations(prev => {
+        const conv = prev.find(c => String(c._id) === strId);
+        if (conv) setArchivedConversations(p => [conv, ...p]);
+        return prev.filter(c => String(c._id) !== strId);
+      });
+    } catch (err) {
+      console.error('Failed to archive conversation:', err);
+    }
+  }, []);
+
+  const unarchiveConversation = useCallback(async (id) => {
+    const strId = String(id);
+    try {
+      await apiFetch(`/conversations/${strId}/unarchive`, { method: 'POST' });
+      setArchivedConversations(prev => {
+        const conv = prev.find(c => String(c._id) === strId);
+        if (conv) setConversations(p => [conv, ...p]);
+        return prev.filter(c => String(c._id) !== strId);
+      });
+    } catch (err) {
+      console.error('Failed to unarchive conversation:', err);
+    }
+  }, []);
+
   const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
 
   return (
     <ChatContext.Provider value={{
-      conversations, activeConversationId, setActiveConversation,
+      conversations, archivedConversations, activeConversationId, setActiveConversation,
       onlineUsers, onlineListLoaded, typingMap, unreadCounts, totalUnread, loading,
       loadConversations, addConversation, removeConversation, updateConversation,
+      archiveConversation, unarchiveConversation,
       invitations, removeInvitation,
     }}>
       {children}

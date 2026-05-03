@@ -92,8 +92,9 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
     await Conversation.findByIdAndUpdate(conversation._id, {
       lastMessage: message._id,
       lastActivity: new Date(),
-      // Un-hide for all participants when a new message arrives
+      // Un-hide and un-archive for all participants when a new message arrives
       $set: { hiddenFor: [] },
+      $pull: { archivedBy: { $in: conversation.participants.map(p => p._id) } },
     });
 
     broadcastToConv(req.io, conversation._id, conversation.participants, 'message:new', message);

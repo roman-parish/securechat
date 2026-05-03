@@ -16,10 +16,18 @@ const router = Router();
 // Get all conversations for current user
 router.get('/', authenticate, async (req, res) => {
   try {
-    const conversations = await Conversation.find({
+    const archived = req.query.archived === 'true';
+    const query = {
       participants: req.user.userId,
       hiddenFor: { $ne: req.user.userId },
-    })
+    };
+    if (archived) {
+      query.archivedBy = req.user.userId;
+    } else {
+      query.archivedBy = { $ne: req.user.userId };
+    }
+
+    const conversations = await Conversation.find(query)
       .populate('participants', 'username displayName avatar publicKey lastSeen bio')
       .populate('lastMessage')
       .sort({ lastActivity: -1 });
@@ -27,6 +35,34 @@ router.get('/', authenticate, async (req, res) => {
     res.json(conversations);
   } catch {
     res.status(500).json({ error: 'Failed to get conversations' });
+  }
+});
+
+// Archive a conversation
+router.post('/:conversationId/archive', authenticate, async (req, res) => {
+  try {
+    const conv = await Conversation.findOne({ _id: req.params.conversationId, participants: req.user.userId });
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    if (!conv.archivedBy.includes(req.user.userId)) {
+      conv.archivedBy.push(req.user.userId);
+      await conv.save();
+    }
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to archive conversation' });
+  }
+});
+
+// Unarchive a conversation
+router.post('/:conversationId/unarchive', authenticate, async (req, res) => {
+  try {
+    const conv = await Conversation.findOne({ _id: req.params.conversationId, participants: req.user.userId });
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    conv.archivedBy = conv.archivedBy.filter(id => String(id) !== String(req.user.userId));
+    await conv.save();
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to unarchive conversation' });
   }
 });
 
