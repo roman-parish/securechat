@@ -1,8 +1,10 @@
 # SecureChat
 
-> End-to-end encrypted messaging — built for privacy.
+> End-to-end encrypted messaging — self-hosted, built for privacy.
 
-A self-hosted, fully encrypted messaging PWA. Messages are encrypted on your device before sending. The server only ever stores ciphertext — nobody but you and your contacts can read your messages.
+SecureChat is a self-hosted messaging app where every message and file is encrypted on your device before it ever leaves. The server stores only ciphertext — nobody but you and your contacts can read your conversations, not even the server operator.
+
+Run it on your own server in minutes with Docker. Invite friends via time-limited links, manage users from the admin panel, and install it as a PWA on any device.
 
 ## Screenshots
 
@@ -60,7 +62,7 @@ A self-hosted, fully encrypted messaging PWA. Messages are encrypted on your dev
 - 🌙 **Light/dark mode** — per-user preference saved locally
 
 ### Platform
-- 📱 **PWA** — installable on iOS and Android, works offline
+- 📱 **PWA** — installable on iOS (Safari → Share → Add to Home Screen) and Android (Chrome → Install App); works offline
 - 🛡️ **Admin panel** — user management, ban/suspend, reset passwords, 2FA reset, usage stats
 - 📋 **Audit log** — full log of admin actions with timestamps
 - 🔗 **Invite links** — time-limited single-use invite links with optional email delivery
@@ -93,9 +95,10 @@ A self-hosted, fully encrypted messaging PWA. Messages are encrypted on your dev
 
 ### Requirements
 - Docker & Docker Compose
-- A Linux server (Ubuntu 22.04 recommended)
+- A Linux server (Ubuntu 22.04+ recommended)
+- A domain name pointing at your server (optional, but required for Let's Encrypt SSL and push notifications on iOS)
 
-### First time setup
+### 1. Clone and run setup
 
 ```bash
 git clone https://github.com/roman-parish/securechat.git
@@ -103,20 +106,69 @@ cd securechat
 ./setup.sh
 ```
 
+For a real domain with automatic Let's Encrypt SSL:
+
+```bash
+./setup.sh --domain=yourdomain.com
+```
+
 `setup.sh` will automatically:
-- Generate JWT secrets
+- Generate secure JWT secrets, MongoDB password, and Redis password
 - Generate VAPID keys for push notifications
-- Obtain a Let's Encrypt SSL certificate (pass `--domain yourdomain.com`)
-- Start all containers
+- Create a TLS certificate (Let's Encrypt if `--domain` is set, self-signed otherwise)
+- Build and start all containers
+
+> Without `--domain`, your browser will show a certificate warning. Click **Advanced → Proceed** to continue. Re-run with `--domain` when you have a domain pointed at the server.
+
+### 2. First login — set up your admin account
+
+After setup, open the app in your browser and **register your account**. Then:
+
+1. Open `.env` on the server and set `ADMIN_USERNAMES=yourusername`
+2. Restart the backend to pick up the change:
+   ```bash
+   docker compose up -d backend
+   ```
+3. Reload the app — you'll see an **Admin** button in the sidebar
+
+### 3. Optional — configure email and push notifications
+
+These are optional but unlock password reset, login alerts, and push notifications:
+
+**Email (via [Resend](https://resend.com)):**
+```env
+RESEND_API_KEY=re_your_api_key_here
+EMAIL_FROM=SecureChat <noreply@yourdomain.com>
+```
+Required for: password reset emails, login alerts, 2FA disable notifications, invite link delivery.
+
+**Push notifications:**
+```env
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_EMAIL=admin@yourdomain.com
+```
+`setup.sh` generates VAPID keys automatically. Push notifications require HTTPS with a real domain (not a self-signed cert) to work on iOS.
+
+After updating `.env`, restart the backend: `docker compose up -d backend`
 
 ### Deploying updates
 
 ```bash
-git pull
-./deploy.sh
+git pull && ./deploy.sh
 ```
 
-Or just push to `main` — GitHub Actions auto-deploys to your server.
+### Automated deploys with GitHub Actions
+
+The included workflow (`.github/workflows/deploy.yml`) runs tests and deploys to your server on every push to `main`. To enable it, add these secrets to your GitHub repository (**Settings → Secrets and variables → Actions**):
+
+| Secret | Value |
+|---|---|
+| `SERVER_HOST` | Your server's IP or domain |
+| `SERVER_USER` | SSH username (e.g. `root` or `ubuntu`) |
+| `SERVER_SSH_KEY` | Private SSH key with access to the server |
+
+The server must have the repo cloned at `~/securechat` and a valid `.env` file in place before the first deploy runs.
 
 ## Configuration
 
