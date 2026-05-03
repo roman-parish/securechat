@@ -33,6 +33,7 @@ export default function AdminPage({ onBack }) {
   const [resetPassword, setResetPassword] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [reset2faUser, setReset2faUser] = useState(null);
+  const [registrationOpen, setRegistrationOpen] = useState(true);
 
   const loadStats = useCallback(async () => {
     try {
@@ -55,7 +56,23 @@ export default function AdminPage({ onBack }) {
   useEffect(() => {
     loadStats();
     loadUsers();
+    apiFetch('/admin/settings').then(d => setRegistrationOpen(d.registrationOpen)).catch(() => {});
   }, [loadStats, loadUsers]);
+
+  const handleToggleRegistration = async () => {
+    const next = !registrationOpen;
+    try {
+      const data = await apiFetch('/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ registrationOpen: next }),
+      });
+      setRegistrationOpen(data.registrationOpen);
+      setActionMsg(`Registration ${data.registrationOpen ? 'opened' : 'closed'}`);
+      setTimeout(() => setActionMsg(''), 3000);
+    } catch (err) {
+      setActionMsg('Error: ' + err.message);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => loadUsers(search), 300);
@@ -171,6 +188,23 @@ export default function AdminPage({ onBack }) {
           </>
         )}
 
+        {/* Settings */}
+        <div className="settings-row">
+          <div className="settings-item">
+            <div>
+              <span className="settings-label">Open Registration</span>
+              <span className="settings-hint">Allow new users to create accounts</span>
+            </div>
+            <button
+              className={`toggle-btn ${registrationOpen ? 'on' : 'off'}`}
+              onClick={handleToggleRegistration}
+              title={registrationOpen ? 'Click to close registration' : 'Click to open registration'}
+            >
+              <span className="toggle-knob" />
+            </button>
+          </div>
+        </div>
+
         {/* Search */}
         <div className="search-bar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -195,6 +229,7 @@ export default function AdminPage({ onBack }) {
             <span className="hide-mobile">Email</span>
             <span className="hide-mobile">Joined</span>
             <span className="hide-mobile">Last Seen</span>
+            <span className="hide-mobile">2FA</span>
             <span>Status</span>
             <span>Actions</span>
           </div>
@@ -222,6 +257,9 @@ export default function AdminPage({ onBack }) {
                 </span>
                 <span className="hide-mobile date">
                   {u.lastSeen ? formatDistanceToNow(new Date(u.lastSeen), { addSuffix: true }) : '—'}
+                </span>
+                <span className={`status-badge hide-mobile ${u.twoFactorEnabled ? 'twofa-on' : 'twofa-off'}`}>
+                  {u.twoFactorEnabled ? 'On' : 'Off'}
                 </span>
                 <span className={`status-badge ${u.banned ? 'banned' : 'active'}`}>
                   {u.banned ? 'Suspended' : 'Active'}
@@ -392,7 +430,7 @@ export default function AdminPage({ onBack }) {
         }
         .table-header {
           display: grid;
-          grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1.5fr;
+          grid-template-columns: 2fr 2fr 1fr 1fr 0.7fr 1fr 1.5fr;
           padding: 10px 16px; background: var(--bg-3);
           border-bottom: 1px solid var(--border);
           font-size: 11px; font-weight: 600; color: var(--text-3);
@@ -408,7 +446,7 @@ export default function AdminPage({ onBack }) {
         }
         .table-row {
           display: grid;
-          grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1.5fr;
+          grid-template-columns: 2fr 2fr 1fr 1fr 0.7fr 1fr 1.5fr;
           padding: 12px 16px; align-items: center;
           border-bottom: 1px solid var(--border);
           transition: background var(--transition);
@@ -437,6 +475,33 @@ export default function AdminPage({ onBack }) {
         }
         .status-badge.active { background: rgba(61,214,140,0.1); color: var(--green); }
         .status-badge.banned { background: var(--red-dim); color: var(--red); }
+        .status-badge.twofa-on { background: rgba(99,102,241,0.12); color: var(--accent); }
+        .status-badge.twofa-off { background: var(--bg-3); color: var(--text-3); }
+        .settings-row {
+          background: var(--bg-2); border: 1px solid var(--border);
+          border-radius: var(--radius); overflow: hidden;
+        }
+        .settings-item {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 14px 16px;
+        }
+        .settings-label { display: block; font-size: 14px; font-weight: 500; color: var(--text-0); }
+        .settings-hint { display: block; font-size: 12px; color: var(--text-3); margin-top: 2px; }
+        .toggle-btn {
+          width: 44px; height: 24px; border-radius: 12px;
+          position: relative; flex-shrink: 0;
+          transition: background 0.2s;
+          cursor: pointer;
+        }
+        .toggle-btn.on { background: var(--accent); }
+        .toggle-btn.off { background: var(--bg-4); }
+        .toggle-knob {
+          position: absolute; top: 3px;
+          width: 18px; height: 18px; border-radius: 50%;
+          background: white; transition: left 0.2s;
+        }
+        .toggle-btn.on .toggle-knob { left: 23px; }
+        .toggle-btn.off .toggle-knob { left: 3px; }
         .actions { display: flex; align-items: center; gap: 6px; }
         .action-btn {
           width: 30px; height: 30px;

@@ -10,6 +10,7 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
+import Settings from '../models/Settings.js';
 import bcrypt from 'bcryptjs';
 
 const router = Router();
@@ -65,7 +66,7 @@ router.get('/users', async (req, res) => {
       : {};
 
     const users = await User.find(query)
-      .select('username email displayName avatar lastSeen createdAt banned')
+      .select('username email displayName avatar lastSeen createdAt banned twoFactorEnabled')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -161,6 +162,34 @@ router.delete('/users/:userId', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// GET /api/admin/settings
+router.get('/settings', async (req, res) => {
+  try {
+    const settings = await Settings.findOne() || { registrationOpen: true };
+    res.json({ registrationOpen: settings.registrationOpen });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// PUT /api/admin/settings
+router.put('/settings', async (req, res) => {
+  try {
+    const { registrationOpen } = req.body;
+    if (typeof registrationOpen !== 'boolean') {
+      return res.status(400).json({ error: 'registrationOpen must be a boolean' });
+    }
+    const settings = await Settings.findOneAndUpdate(
+      {},
+      { registrationOpen },
+      { upsert: true, new: true }
+    );
+    res.json({ registrationOpen: settings.registrationOpen });
+  } catch {
+    res.status(500).json({ error: 'Failed to update settings' });
   }
 });
 

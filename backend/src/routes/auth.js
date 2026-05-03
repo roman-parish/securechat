@@ -10,6 +10,7 @@ import { randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
+import Settings from '../models/Settings.js';
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import PushSubscription from '../models/PushSubscription.js';
@@ -60,6 +61,11 @@ router.post('/register', [
 
   const { username, email, password } = req.body;
   try {
+    const settings = await Settings.findOne();
+    if (settings && settings.registrationOpen === false) {
+      return res.status(403).json({ error: 'Registration is currently closed' });
+    }
+
     const existing = await User.findOne({ $or: [{ username }, { email }] });
     if (existing) return res.status(409).json({ error: 'Username or email already taken' });
 
