@@ -11,6 +11,7 @@ import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import Settings from '../models/Settings.js';
+import Invite from '../models/Invite.js';
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import PushSubscription from '../models/PushSubscription.js';
@@ -50,6 +51,18 @@ function generateTokens(user) {
   return { accessToken, refreshToken, refreshJti };
 }
 
+// Public — validate an invite token
+router.get('/invite/:token', async (req, res) => {
+  try {
+    const tokenHash = createHash('sha256').update(req.params.token).digest('hex');
+    const invite = await Invite.findOne({ tokenHash, usedAt: null, expiresAt: { $gt: new Date() } });
+    if (!invite) return res.status(404).json({ valid: false });
+    res.json({ valid: true, email: invite.email, expiresAt: invite.expiresAt });
+  } catch {
+    res.status(500).json({ valid: false });
+  }
+});
+
 // Public — check if registration is open
 router.get('/registration-status', async (req, res) => {
   try {
@@ -69,10 +82,17 @@ router.post('/register', [
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { username, email, password } = req.body;
+  const { username, email, password, inviteToken } = req.body;
   try {
     const settings = await Settings.findOne();
-    if (settings && settings.registrationOpen === false) {
+    const registrationOpen = settings ? settings.registrationOpen : true;
+
+    let invite = null;
+    if (inviteToken) {
+      const tokenHash = createHash('sha256').update(inviteToken).digest('hex');
+      invite = await Invite.findOne({ tokenHash, usedAt: null, expiresAt: { $gt: new Date() } });
+      if (!invite) return res.status(403).json({ error: 'Invite link is invalid or expired' });
+    } else if (!registrationOpen) {
       return res.status(403).json({ error: 'Registration is currently closed' });
     }
 
@@ -85,6 +105,12 @@ router.post('/register', [
     const { accessToken, refreshToken, refreshJti } = generateTokens(user);
     user.refreshTokens.push({ jti: refreshJti, userAgent: req.headers['user-agent'], ip: req.ip, createdAt: new Date(), lastUsed: new Date() });
     await user.save();
+
+    if (invite) {
+      invite.usedAt = new Date();
+      invite.usedBy = user._id;
+      await invite.save();
+    }
 
     res.status(201).json({ user, accessToken, refreshToken });
   } catch (err) {

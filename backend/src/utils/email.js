@@ -82,6 +82,29 @@ export async function sendAccountDeletedNotification({ to, displayName }) {
   });
 }
 
+export async function sendInviteEmail({ to, inviteUrl, displayName, expiresAt }) {
+  const expiry = new Date(expiresAt).toUTCString();
+  await send({
+    to,
+    subject: "You've been invited to SecureChat",
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="margin:0 0 16px">You're invited to SecureChat</h2>
+        ${displayName ? `<p>Hi ${displayName},</p>` : ''}
+        <p>You've been invited to join SecureChat — end-to-end encrypted messaging.</p>
+        <div style="margin:24px 0;text-align:center">
+          <a href="${inviteUrl}" style="background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
+            Accept Invitation
+          </a>
+        </div>
+        <p style="color:#666;font-size:13px">This invitation expires on ${expiry}. It can only be used once.</p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
+        <p style="font-size:12px;color:#999">SecureChat — End-to-end encrypted messaging</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendTwoFactorDisabledNotification({ to, displayName, time }) {
   await send({
     to,

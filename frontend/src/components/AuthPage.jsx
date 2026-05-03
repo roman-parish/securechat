@@ -33,16 +33,32 @@ export default function AuthPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotStatus, setForgotStatus] = useState('idle'); // idle | loading | sent
   const [registrationOpen, setRegistrationOpen] = useState(true);
+  const [inviteToken, setInviteToken] = useState(null);
   const { login, completeTwoFactorLogin, register } = useAuth();
 
   useEffect(() => {
-    fetch('/api/auth/registration-status')
-      .then(r => r.json())
-      .then(d => {
-        setRegistrationOpen(d.registrationOpen);
-        if (!d.registrationOpen) setMode('login');
-      })
-      .catch(() => {});
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('invite');
+    if (token) {
+      fetch(`/api/auth/invite/${token}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.valid) {
+            setInviteToken(token);
+            setMode('register');
+            if (d.email) setForm(f => ({ ...f, email: d.email }));
+          }
+        })
+        .catch(() => {});
+    } else {
+      fetch('/api/auth/registration-status')
+        .then(r => r.json())
+        .then(d => {
+          setRegistrationOpen(d.registrationOpen);
+          if (!d.registrationOpen) setMode('login');
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const handleForgotPassword = async (e) => {
@@ -80,7 +96,7 @@ export default function AuthPage() {
           setLoading(false);
           return;
         }
-        await register(form);
+        await register({ ...form, inviteToken: inviteToken || undefined });
       }
     } catch (err) {
       if (isSslOrNetworkError(err)) {

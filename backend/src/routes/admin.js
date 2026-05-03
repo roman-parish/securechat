@@ -11,6 +11,9 @@ import User from '../models/User.js';
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import Settings from '../models/Settings.js';
+import Invite from '../models/Invite.js';
+import { sendInviteEmail } from '../utils/email.js';
+import { randomBytes, createHash } from 'crypto';
 import bcrypt from 'bcryptjs';
 
 const router = Router();
@@ -162,6 +165,56 @@ router.delete('/users/:userId', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// GET /api/admin/invites
+router.get('/invites', async (req, res) => {
+  try {
+    const invites = await Invite.find({ usedAt: null, expiresAt: { $gt: new Date() } })
+      .populate('createdBy', 'username displayName')
+      .sort({ createdAt: -1 });
+    res.json({ invites });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch invites' });
+  }
+});
+
+// POST /api/admin/invites
+router.post('/invites', async (req, res) => {
+  try {
+    const { email, expiryHours = 24 } = req.body;
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
+
+    const invite = await Invite.create({
+      tokenHash,
+      email: email || null,
+      createdBy: req.user.userId,
+      expiresAt,
+    });
+
+    const clientUrl = process.env.CLIENT_URL || 'https://securechat.w5rcp.com';
+    const inviteUrl = `${clientUrl}/?invite=${token}`;
+
+    if (email) {
+      sendInviteEmail({ to: email, inviteUrl, expiresAt });
+    }
+
+    res.json({ invite: { ...invite.toObject(), token }, inviteUrl });
+  } catch {
+    res.status(500).json({ error: 'Failed to create invite' });
+  }
+});
+
+// DELETE /api/admin/invites/:id
+router.delete('/invites/:id', async (req, res) => {
+  try {
+    await Invite.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to revoke invite' });
   }
 });
 

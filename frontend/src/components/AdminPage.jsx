@@ -34,6 +34,12 @@ export default function AdminPage({ onBack }) {
   const [newPassword, setNewPassword] = useState('');
   const [reset2faUser, setReset2faUser] = useState(null);
   const [registrationOpen, setRegistrationOpen] = useState(true);
+  const [invites, setInvites] = useState([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteExpiry, setInviteExpiry] = useState('24');
+  const [inviteResult, setInviteResult] = useState(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
 
   const loadStats = useCallback(async () => {
     try {
@@ -53,11 +59,45 @@ export default function AdminPage({ onBack }) {
     }
   }, []);
 
+  const loadInvites = useCallback(async () => {
+    try {
+      const data = await apiFetch('/admin/invites');
+      setInvites(data.invites);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     loadStats();
     loadUsers();
+    loadInvites();
     apiFetch('/admin/settings').then(d => setRegistrationOpen(d.registrationOpen)).catch(() => {});
-  }, [loadStats, loadUsers]);
+  }, [loadStats, loadUsers, loadInvites]);
+
+  const handleCreateInvite = async () => {
+    setInviteLoading(true);
+    try {
+      const data = await apiFetch('/admin/invites', {
+        method: 'POST',
+        body: JSON.stringify({ email: inviteEmail || undefined, expiryHours: Number(inviteExpiry) }),
+      });
+      setInviteResult(data.inviteUrl);
+      loadInvites();
+    } catch (err) {
+      setActionMsg('Error: ' + err.message);
+      setShowInviteModal(false);
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleRevokeInvite = async (id) => {
+    try {
+      await apiFetch(`/admin/invites/${id}`, { method: 'DELETE' });
+      setInvites(prev => prev.filter(i => i._id !== id));
+    } catch (err) {
+      setActionMsg('Error: ' + err.message);
+    }
+  };
 
   const handleToggleRegistration = async () => {
     const next = !registrationOpen;
@@ -205,6 +245,33 @@ export default function AdminPage({ onBack }) {
           </div>
         </div>
 
+        {/* Invites */}
+        <div className="settings-row">
+          <div className="settings-item" style={{ borderBottom: invites.length > 0 ? '1px solid var(--border)' : 'none' }}>
+            <div>
+              <span className="settings-label">Invite Links</span>
+              <span className="settings-hint">{invites.length} active invite{invites.length !== 1 ? 's' : ''}</span>
+            </div>
+            <button className="auth-submit" style={{ width: 'auto', padding: '8px 16px', fontSize: 13, marginTop: 0 }}
+              onClick={() => { setInviteEmail(''); setInviteExpiry('24'); setInviteResult(null); setShowInviteModal(true); }}>
+              Create invite
+            </button>
+          </div>
+          {invites.map(invite => (
+            <div key={invite._id} className="invite-row">
+              <div>
+                <span className="invite-email">{invite.email || 'No email — link only'}</span>
+                <span className="invite-expiry">Expires {formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: true })}</span>
+              </div>
+              <button className="action-btn delete" style={{ flexShrink: 0 }} onClick={() => handleRevokeInvite(invite._id)} title="Revoke">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+
         {/* Search */}
         <div className="search-bar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -315,6 +382,52 @@ export default function AdminPage({ onBack }) {
           )}
         </div>
       </div>
+
+      {/* Create invite modal */}
+      {showInviteModal && !inviteResult && (
+        <div className="confirm-overlay" onClick={() => setShowInviteModal(false)}>
+          <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+            <h3>Create invite link</h3>
+            <p>Generate a single-use link. Optionally send it by email.</p>
+            <input
+              type="email" placeholder="Email address (optional)"
+              value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 12px', fontSize: 14, color: 'var(--text-0)', boxSizing: 'border-box' }}
+            />
+            <select value={inviteExpiry} onChange={e => setInviteExpiry(e.target.value)}
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 12px', fontSize: 14, color: 'var(--text-0)', boxSizing: 'border-box' }}>
+              <option value="24">Expires in 24 hours</option>
+              <option value="72">Expires in 3 days</option>
+              <option value="168">Expires in 7 days</option>
+              <option value="720">Expires in 30 days</option>
+            </select>
+            <div className="confirm-actions">
+              <button className="cancel-btn" onClick={() => setShowInviteModal(false)}>Cancel</button>
+              <button className="confirm-delete-btn" style={{ background: 'var(--accent)' }} disabled={inviteLoading} onClick={handleCreateInvite}>
+                {inviteLoading ? 'Creating…' : inviteEmail ? 'Create & send email' : 'Create link'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite result modal */}
+      {showInviteModal && inviteResult && (
+        <div className="confirm-overlay" onClick={() => { setShowInviteModal(false); setInviteResult(null); }}>
+          <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+            <h3>Invite link created</h3>
+            {inviteEmail && <p>An email has been sent to <strong>{inviteEmail}</strong>.</p>}
+            <p style={{ fontSize: 13, color: 'var(--text-2)' }}>Copy and share this link — it can only be used once:</p>
+            <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 12px', fontSize: 12, color: 'var(--text-1)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+              {inviteResult}
+            </div>
+            <div className="confirm-actions">
+              <button className="cancel-btn" onClick={() => navigator.clipboard.writeText(inviteResult)}>Copy link</button>
+              <button className="confirm-delete-btn" style={{ background: 'var(--accent)' }} onClick={() => { setShowInviteModal(false); setInviteResult(null); }}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reset password modal */}
       {resetPassword && (
@@ -502,6 +615,12 @@ export default function AdminPage({ onBack }) {
         }
         .toggle-btn.on .toggle-knob { left: 23px; }
         .toggle-btn.off .toggle-knob { left: 3px; }
+        .invite-row {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 10px 16px; border-top: 1px solid var(--border); gap: 12px;
+        }
+        .invite-email { display: block; font-size: 13px; color: var(--text-1); }
+        .invite-expiry { display: block; font-size: 12px; color: var(--text-3); margin-top: 2px; }
         .actions { display: flex; align-items: center; gap: 6px; }
         .action-btn {
           width: 30px; height: 30px;

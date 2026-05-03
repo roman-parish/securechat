@@ -95,11 +95,11 @@ export function AuthProvider({ children }) {
     setPendingKeyMaterial(null);
   }, [pendingKeyMaterial, user]);
 
-  const register = useCallback(async ({ username, email, password }) => {
+  const register = useCallback(async ({ username, email, password, inviteToken }) => {
     // Step 1: Create the account (no keys yet — we need the real user ID first)
     const data = await apiFetch('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, email, password }),
+      body: JSON.stringify({ username, email, password, inviteToken }),
     });
 
     setTokens(data.accessToken, data.refreshToken);
