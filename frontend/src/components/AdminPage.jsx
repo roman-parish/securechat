@@ -12,6 +12,17 @@ import { useChat } from '../contexts/ChatContext.jsx';
 import Avatar from './Avatar.jsx';
 import { formatDistanceToNow } from 'date-fns';
 
+const ACTION_LABELS = {
+  'user.ban': 'Suspended',
+  'user.unban': 'Unsuspended',
+  'user.delete': 'Deleted user',
+  'user.password_reset': 'Reset password',
+  'user.reset_2fa': 'Reset 2FA',
+  'invite.create': 'Created invite',
+  'invite.revoke': 'Revoked invite',
+  'settings.registration_toggle': 'Registration',
+};
+
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
   if (bytes < 1024) return `${bytes} B`;
@@ -40,6 +51,8 @@ export default function AdminPage({ onBack }) {
   const [inviteExpiry, setInviteExpiry] = useState('24');
   const [inviteResult, setInviteResult] = useState(null);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   const loadStats = useCallback(async () => {
     try {
@@ -71,6 +84,8 @@ export default function AdminPage({ onBack }) {
     loadUsers();
     loadInvites();
     apiFetch('/admin/settings').then(d => setRegistrationOpen(d.registrationOpen)).catch(() => {});
+    setAuditLoading(true);
+    apiFetch('/admin/audit').then(d => setAuditLogs(d.logs)).catch(() => {}).finally(() => setAuditLoading(false));
   }, [loadStats, loadUsers, loadInvites]);
 
   const handleCreateInvite = async () => {
@@ -381,6 +396,38 @@ export default function AdminPage({ onBack }) {
             ))
           )}
         </div>
+
+        {/* Audit Log */}
+        <div className="audit-section">
+          <div className="audit-header">
+            <span className="audit-title">Audit Log</span>
+            <span className="audit-count">{auditLogs.length} entries</span>
+          </div>
+          {auditLoading ? (
+            <div className="audit-empty">Loading…</div>
+          ) : auditLogs.length === 0 ? (
+            <div className="audit-empty">No activity recorded yet</div>
+          ) : (
+            auditLogs.map(log => (
+              <div key={log._id} className="audit-row">
+                <span className={`audit-badge audit-${log.action.split('.')[1]}`}>
+                  {ACTION_LABELS[log.action] || log.action}
+                </span>
+                <span className="audit-actor">{log.performedByUsername}</span>
+                {log.targetUsername && (
+                  <span className="audit-target">→ {log.targetUsername}</span>
+                )}
+                {log.action === 'invite.create' && log.metadata?.email && (
+                  <span className="audit-target">→ {log.metadata.email}</span>
+                )}
+                {log.action === 'settings.registration_toggle' && (
+                  <span className="audit-target">{log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>
+                )}
+                <span className="audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Create invite modal */}
@@ -615,6 +662,38 @@ export default function AdminPage({ onBack }) {
         }
         .toggle-btn.on .toggle-knob { left: 23px; }
         .toggle-btn.off .toggle-knob { left: 3px; }
+        .audit-section {
+          background: var(--bg-2); border: 1px solid var(--border);
+          border-radius: var(--radius); overflow: hidden;
+        }
+        .audit-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 12px 16px; background: var(--bg-3);
+          border-bottom: 1px solid var(--border);
+        }
+        .audit-title { font-size: 13px; font-weight: 600; color: var(--text-0); }
+        .audit-count { font-size: 12px; color: var(--text-3); }
+        .audit-empty { padding: 24px; text-align: center; font-size: 13px; color: var(--text-3); }
+        .audit-row {
+          display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+          padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px;
+        }
+        .audit-row:last-child { border-bottom: none; }
+        .audit-badge {
+          padding: 2px 8px; border-radius: var(--radius-full);
+          font-size: 11px; font-weight: 600; flex-shrink: 0;
+        }
+        .audit-ban { background: var(--red-dim); color: var(--red); }
+        .audit-unban { background: rgba(61,214,140,0.1); color: var(--green); }
+        .audit-delete { background: var(--red-dim); color: var(--red); }
+        .audit-password_reset { background: rgba(99,102,241,0.12); color: var(--accent); }
+        .audit-reset_2fa { background: rgba(99,102,241,0.12); color: var(--accent); }
+        .audit-create { background: rgba(61,214,140,0.1); color: var(--green); }
+        .audit-revoke { background: var(--red-dim); color: var(--red); }
+        .audit-registration_toggle { background: var(--bg-3); color: var(--text-2); }
+        .audit-actor { font-weight: 500; color: var(--text-0); }
+        .audit-target { color: var(--text-2); }
+        .audit-time { margin-left: auto; font-size: 12px; color: var(--text-3); flex-shrink: 0; }
         .invite-row {
           display: flex; align-items: center; justify-content: space-between;
           padding: 10px 16px; border-top: 1px solid var(--border); gap: 12px;

@@ -12,9 +12,23 @@ import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import Settings from '../models/Settings.js';
 import Invite from '../models/Invite.js';
+import AuditLog from '../models/AuditLog.js';
 import { sendInviteEmail } from '../utils/email.js';
 import { randomBytes, createHash } from 'crypto';
 import bcrypt from 'bcryptjs';
+
+async function audit(req, action, targetUser = null, metadata = {}) {
+  try {
+    await AuditLog.create({
+      action,
+      performedBy: req.user.userId,
+      performedByUsername: req.user.username || 'admin',
+      targetUser: targetUser?._id || null,
+      targetUsername: targetUser?.username || null,
+      metadata,
+    });
+  } catch {}
+}
 
 const router = Router();
 
@@ -97,6 +111,7 @@ router.put('/users/:userId/ban', async (req, res) => {
       await User.findByIdAndUpdate(user._id, { $set: { refreshTokens: [] } });
     }
 
+    await audit(req, user.banned ? 'user.ban' : 'user.unban', user);
     res.json({ banned: user.banned });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update ban status' });
@@ -118,6 +133,7 @@ router.put('/users/:userId/reset-password', async (req, res) => {
     user.refreshTokens = []; // force logout all sessions
     await user.save();
 
+    await audit(req, 'user.password_reset', user);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to reset password' });
@@ -132,6 +148,7 @@ router.put('/users/:userId/reset-2fa', async (req, res) => {
     user.twoFactorEnabled = false;
     user.twoFactorSecret = null;
     await user.save();
+    await audit(req, 'user.reset_2fa', user);
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed to reset 2FA' });
@@ -159,7 +176,7 @@ router.delete('/users/:userId', async (req, res) => {
     // Delete any remaining messages sent by user in other convos
     await Message.deleteMany({ sender: user._id });
 
-    // Delete the user
+    await audit(req, 'user.delete', user);
     await User.findByIdAndDelete(user._id);
 
     res.json({ success: true });
@@ -202,6 +219,7 @@ router.post('/invites', async (req, res) => {
       sendInviteEmail({ to: email, inviteUrl, expiresAt });
     }
 
+    await audit(req, 'invite.create', null, { email: email || null, expiryHours, inviteId: invite._id });
     res.json({ invite: { ...invite.toObject(), token }, inviteUrl });
   } catch {
     res.status(500).json({ error: 'Failed to create invite' });
@@ -211,10 +229,27 @@ router.post('/invites', async (req, res) => {
 // DELETE /api/admin/invites/:id
 router.delete('/invites/:id', async (req, res) => {
   try {
+    const invite = await Invite.findById(req.params.id);
     await Invite.findByIdAndDelete(req.params.id);
+    await audit(req, 'invite.revoke', null, { email: invite?.email || null, inviteId: req.params.id });
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed to revoke invite' });
+  }
+});
+
+// GET /api/admin/audit
+router.get('/audit', async (req, res) => {
+  try {
+    const { page = 1, limit = 50 } = req.query;
+    const logs = await AuditLog.find()
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+    const total = await AuditLog.countDocuments();
+    res.json({ logs, total });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch audit log' });
   }
 });
 
@@ -240,6 +275,7 @@ router.put('/settings', async (req, res) => {
       { registrationOpen },
       { upsert: true, new: true }
     );
+    await audit(req, 'settings.registration_toggle', null, { registrationOpen });
     res.json({ registrationOpen: settings.registrationOpen });
   } catch {
     res.status(500).json({ error: 'Failed to update settings' });
