@@ -309,7 +309,7 @@ export default function AdminPage({ onBack }) {
 
         {flash && <div className="ap-flash">{flash}</div>}
 
-        <div className="ap-group">
+        <div className="ap-group ap-group-scroll">
           {loading ? (
             <div className="ap-empty">Loading…</div>
           ) : users.length === 0 ? (
