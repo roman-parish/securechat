@@ -206,7 +206,7 @@ export default function AdminPage({ onBack }) {
           </svg>
           Admin Panel
         </div>
-        <div style={{ width: 120 }} />
+        <div style={{ width: 100, flexShrink: 1 }} />
       </div>
 
       <div className="admin-content">
@@ -308,10 +308,10 @@ export default function AdminPage({ onBack }) {
         <div className="user-table">
           <div className="table-header">
             <span>User</span>
-            <span className="hide-mobile">Email</span>
-            <span className="hide-mobile">Joined</span>
-            <span className="hide-mobile">Last Seen</span>
-            <span className="hide-mobile">2FA</span>
+            <span className="col-hide">Email</span>
+            <span className="col-hide">Joined</span>
+            <span className="col-hide">Last Seen</span>
+            <span className="col-hide">2FA</span>
             <span>Status / Actions</span>
           </div>
 
@@ -332,14 +332,14 @@ export default function AdminPage({ onBack }) {
                     <span className="handle">@{u.username}</span>
                   </div>
                 </div>
-                <span className="hide-mobile email">{u.email}</span>
-                <span className="hide-mobile date">
+                <span className="col-hide email">{u.email}</span>
+                <span className="col-hide date">
                   {u.createdAt ? formatDistanceToNow(new Date(u.createdAt), { addSuffix: true }) : '—'}
                 </span>
-                <span className="hide-mobile date">
+                <span className="col-hide date">
                   {u.lastSeen ? formatDistanceToNow(new Date(u.lastSeen), { addSuffix: true }) : '—'}
                 </span>
-                <span className={`status-badge hide-mobile ${u.twoFactorEnabled ? 'twofa-on' : 'twofa-off'}`}>
+                <span className={`status-badge col-hide ${u.twoFactorEnabled ? 'twofa-on' : 'twofa-off'}`}>
                   {u.twoFactorEnabled ? 'On' : 'Off'}
                 </span>
                 <div className="table-row-meta">
@@ -529,19 +529,21 @@ export default function AdminPage({ onBack }) {
       )}
 
       <style>{`
+        /* ── Page shell ─────────────────────────────────────────────── */
         .admin-page {
           display: flex; flex-direction: column;
           height: 100dvh; background: var(--bg-0); overflow: hidden;
         }
         .admin-header {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 16px 24px; border-bottom: 1px solid var(--border);
-          background: var(--bg-1); flex-shrink: 0;
+          padding: 14px 20px; border-bottom: 1px solid var(--border);
+          background: var(--bg-1); flex-shrink: 0; gap: 12px;
         }
         .back-btn {
-          display: flex; align-items: center; gap: 8px;
+          display: flex; align-items: center; gap: 6px;
           font-size: 14px; color: var(--text-2); padding: 8px 12px;
           border-radius: var(--radius); transition: all var(--transition);
+          flex-shrink: 0;
         }
         .back-btn:hover { background: var(--bg-3); color: var(--text-0); }
         .admin-title {
@@ -551,21 +553,62 @@ export default function AdminPage({ onBack }) {
         .admin-content {
           flex: 1; min-height: 0; overflow-y: auto;
           -webkit-overflow-scrolling: touch;
-          padding: 24px;
-          display: flex; flex-direction: column; gap: 20px;
+          padding: 20px;
+          display: flex; flex-direction: column; gap: 16px;
         }
+
+        /* ── Stats ──────────────────────────────────────────────────── */
         .stats-row {
-          display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+          display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
         }
-        @media (max-width: 900px) { .stats-row { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 600px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 900px) { .stats-row { grid-template-columns: repeat(6, 1fr); } }
         .stat-card {
           background: var(--bg-2); border: 1px solid var(--border);
-          border-radius: var(--radius); padding: 16px;
+          border-radius: var(--radius); padding: 14px 12px;
           display: flex; flex-direction: column; gap: 4px;
         }
-        .stat-value { font-size: 28px; font-weight: 700; color: var(--text-0); }
-        .stat-label { font-size: 12px; color: var(--text-3); }
+        .stat-value { font-size: 22px; font-weight: 700; color: var(--text-0); line-height: 1.1; }
+        .stat-label { font-size: 11px; color: var(--text-3); }
+
+        /* ── Settings / Invites ─────────────────────────────────────── */
+        .settings-row {
+          background: var(--bg-2); border: 1px solid var(--border);
+          border-radius: var(--radius); overflow: hidden;
+        }
+        .settings-item {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 14px 16px; gap: 16px;
+        }
+        .settings-label { display: block; font-size: 14px; font-weight: 500; color: var(--text-0); }
+        .settings-hint { display: block; font-size: 12px; color: var(--text-3); margin-top: 2px; }
+        .toggle-btn {
+          width: 44px; height: 24px; border-radius: 12px;
+          position: relative; flex-shrink: 0; cursor: pointer;
+          transition: background 0.2s;
+        }
+        .toggle-btn.on { background: var(--accent); }
+        .toggle-btn.off { background: var(--bg-4); }
+        .toggle-knob {
+          position: absolute; top: 3px;
+          width: 18px; height: 18px; border-radius: 50%;
+          background: white; transition: left 0.2s;
+        }
+        .toggle-btn.on .toggle-knob { left: 23px; }
+        .toggle-btn.off .toggle-knob { left: 3px; }
+        .invite-create-btn {
+          padding: 8px 14px; background: var(--accent); color: white;
+          border-radius: var(--radius); font-size: 13px; font-weight: 500;
+          transition: all var(--transition); flex-shrink: 0; white-space: nowrap;
+        }
+        .invite-create-btn:hover { background: var(--accent-light); }
+        .invite-row {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 10px 16px; border-top: 1px solid var(--border); gap: 12px;
+        }
+        .invite-email { display: block; font-size: 13px; color: var(--text-1); }
+        .invite-expiry { display: block; font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+        /* ── Search bar ─────────────────────────────────────────────── */
         .search-bar {
           display: flex; align-items: center; gap: 10px;
           background: var(--bg-2); border: 1px solid var(--border);
@@ -573,7 +616,7 @@ export default function AdminPage({ onBack }) {
         }
         .search-bar input {
           flex: 1; background: none; border: none;
-          font-size: 14px; color: var(--text-0);
+          font-size: 14px; color: var(--text-0); min-width: 0;
         }
         .search-bar input::placeholder { color: var(--text-3); }
         .user-count { font-size: 12px; color: var(--text-3); flex-shrink: 0; }
@@ -582,6 +625,8 @@ export default function AdminPage({ onBack }) {
           border-radius: var(--radius); padding: 10px 14px;
           font-size: 13px; color: var(--accent);
         }
+
+        /* ── User table — desktop ───────────────────────────────────── */
         .user-table {
           background: var(--bg-2); border: 1px solid var(--border);
           border-radius: var(--radius); overflow: hidden;
@@ -594,17 +639,13 @@ export default function AdminPage({ onBack }) {
           font-size: 11px; font-weight: 600; color: var(--text-3);
           text-transform: uppercase; letter-spacing: 0.05em;
         }
-        @media (max-width: 768px) {
-          .table-header { grid-template-columns: 2fr 2fr; }
-          .hide-mobile { display: none; }
-        }
         .table-loading {
           padding: 32px; text-align: center;
           color: var(--text-3); font-size: 14px;
         }
         .table-row {
           display: grid;
-          grid-template-columns: 2fr 2fr 1fr 1fr 0.7fr 2.5fr;
+          grid-template-columns: 2fr 2fr 1fr 1fr 0.7fr 1fr 1.5fr;
           padding: 12px 16px; align-items: center;
           border-bottom: 1px solid var(--border);
           transition: background var(--transition);
@@ -612,123 +653,67 @@ export default function AdminPage({ onBack }) {
         .table-row:last-child { border-bottom: none; }
         .table-row:hover { background: var(--bg-3); }
         .table-row.banned { opacity: 0.6; }
+        /* table-row-meta is transparent on desktop — its children are direct grid items */
         .table-row-meta { display: contents; }
-        @media (max-width: 768px) {
-          .table-row { grid-template-columns: 2fr 2fr; }
+
+        /* ── User table — tablet (hide detail cols) ─────────────────── */
+        @media (max-width: 860px) {
+          .table-header { grid-template-columns: 2fr 1fr 1.5fr; }
+          .table-row { grid-template-columns: 2fr 1fr 1.5fr; }
+          .col-hide { display: none; }
         }
-        .user-cell { display: flex; align-items: center; gap: 10px; }
+
+        /* ── User table — mobile (card layout) ──────────────────────── */
+        @media (max-width: 600px) {
+          .table-header { display: none; }
+          .table-row {
+            display: flex; flex-direction: column;
+            align-items: stretch; gap: 10px;
+            padding: 14px;
+          }
+          .table-row-meta {
+            display: flex; align-items: center;
+            gap: 8px; flex-wrap: wrap;
+          }
+          .col-hide { display: none; }
+        }
+
+        /* ── User cell ──────────────────────────────────────────────── */
+        .user-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .user-cell > div { min-width: 0; }
         .avatar-online-wrap { position: relative; flex-shrink: 0; }
         .online-dot {
           position: absolute; bottom: 1px; right: 1px;
           width: 9px; height: 9px; border-radius: 50%;
           background: var(--green); border: 2px solid var(--bg-2);
         }
-        .username { display: block; font-size: 14px; font-weight: 500; color: var(--text-0); }
-        .handle { display: block; font-size: 12px; color: var(--text-3); }
-        .email { font-size: 13px; color: var(--text-2); }
+        .username {
+          display: block; font-size: 14px; font-weight: 500; color: var(--text-0);
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .handle {
+          display: block; font-size: 12px; color: var(--text-3);
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .email { font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .date { font-size: 12px; color: var(--text-3); }
+
+        /* ── Badges & actions ───────────────────────────────────────── */
         .status-badge {
           display: inline-flex; align-items: center;
           padding: 3px 8px; border-radius: var(--radius-full);
-          font-size: 11px; font-weight: 600; width: fit-content;
+          font-size: 11px; font-weight: 600; width: fit-content; flex-shrink: 0;
         }
         .status-badge.active { background: rgba(61,214,140,0.1); color: var(--green); }
         .status-badge.banned { background: var(--red-dim); color: var(--red); }
         .status-badge.twofa-on { background: rgba(99,102,241,0.12); color: var(--accent); }
         .status-badge.twofa-off { background: var(--bg-3); color: var(--text-3); }
-        .settings-row {
-          background: var(--bg-2); border: 1px solid var(--border);
-          border-radius: var(--radius); overflow: hidden;
-        }
-        .settings-item {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 14px 16px;
-        }
-        .settings-label { display: block; font-size: 14px; font-weight: 500; color: var(--text-0); }
-        .settings-hint { display: block; font-size: 12px; color: var(--text-3); margin-top: 2px; }
-        .toggle-btn {
-          width: 44px; height: 24px; border-radius: 12px;
-          position: relative; flex-shrink: 0;
-          transition: background 0.2s;
-          cursor: pointer;
-        }
-        .toggle-btn.on { background: var(--accent); }
-        .toggle-btn.off { background: var(--bg-4); }
-        .toggle-knob {
-          position: absolute; top: 3px;
-          width: 18px; height: 18px; border-radius: 50%;
-          background: white; transition: left 0.2s;
-        }
-        .toggle-btn.on .toggle-knob { left: 23px; }
-        .toggle-btn.off .toggle-knob { left: 3px; }
-        .audit-section {
-          background: var(--bg-2); border: 1px solid var(--border);
-          border-radius: var(--radius); overflow: hidden;
-        }
-        .audit-header {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 16px; background: var(--bg-3);
-          border-bottom: 1px solid var(--border);
-        }
-        .audit-title { font-size: 13px; font-weight: 600; color: var(--text-0); }
-        .audit-count { font-size: 12px; color: var(--text-3); }
-        .audit-empty { padding: 24px; text-align: center; font-size: 13px; color: var(--text-3); }
-        .audit-row {
-          display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-          padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px;
-        }
-        .audit-row:last-child { border-bottom: none; }
-        .audit-badge {
-          padding: 2px 8px; border-radius: var(--radius-full);
-          font-size: 11px; font-weight: 600; flex-shrink: 0;
-        }
-        .audit-ban { background: var(--red-dim); color: var(--red); }
-        .audit-unban { background: rgba(61,214,140,0.1); color: var(--green); }
-        .audit-delete { background: var(--red-dim); color: var(--red); }
-        .audit-password_reset { background: rgba(99,102,241,0.12); color: var(--accent); }
-        .audit-reset_2fa { background: rgba(99,102,241,0.12); color: var(--accent); }
-        .audit-create { background: rgba(61,214,140,0.1); color: var(--green); }
-        .audit-revoke { background: var(--red-dim); color: var(--red); }
-        .audit-registration_toggle { background: var(--bg-3); color: var(--text-2); }
-        .audit-actor { font-weight: 500; color: var(--text-0); }
-        .audit-target { color: var(--text-2); }
-        .audit-time { margin-left: auto; font-size: 12px; color: var(--text-3); flex-shrink: 0; }
-        .invite-create-btn {
-          padding: 7px 14px; background: var(--accent); color: white;
-          border-radius: var(--radius); font-size: 13px; font-weight: 500;
-          transition: all var(--transition); flex-shrink: 0;
-        }
-        .invite-create-btn:hover { background: var(--accent-light); }
-        .modal-input {
-          width: 100%; background: var(--bg-3); border: 1px solid var(--border);
-          border-radius: var(--radius); padding: 10px 12px;
-          font-size: 14px; color: var(--text-0); box-sizing: border-box;
-          transition: border-color var(--transition);
-        }
-        .modal-input:focus { border-color: var(--accent); }
-        .modal-input::placeholder { color: var(--text-3); }
-        .modal-select {
-          width: 100%; background: var(--bg-3); border: 1px solid var(--border);
-          border-radius: var(--radius); padding: 10px 12px;
-          font-size: 14px; color: var(--text-0); box-sizing: border-box;
-          cursor: pointer; appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-          background-repeat: no-repeat; background-position: right 12px center;
-          padding-right: 32px;
-        }
-        .modal-select option { background: var(--bg-3); color: var(--text-0); }
-        .invite-row {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 10px 16px; border-top: 1px solid var(--border); gap: 12px;
-        }
-        .invite-email { display: block; font-size: 13px; color: var(--text-1); }
-        .invite-expiry { display: block; font-size: 12px; color: var(--text-3); margin-top: 2px; }
-        .actions { display: flex; align-items: center; gap: 6px; }
+        .actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
         .action-btn {
-          width: 30px; height: 30px;
+          width: 32px; height: 32px;
           display: flex; align-items: center; justify-content: center;
           border-radius: var(--radius-sm); transition: all var(--transition);
-          font-size: 15px;
+          font-size: 15px; flex-shrink: 0;
         }
         .action-btn.ban { background: var(--red-dim); color: var(--red); }
         .action-btn.ban:hover { background: var(--red); color: white; }
@@ -743,62 +728,110 @@ export default function AdminPage({ onBack }) {
           background: var(--accent-dim); padding: 3px 8px;
           border-radius: var(--radius-full);
         }
+
+        /* ── Audit log ──────────────────────────────────────────────── */
+        .audit-section {
+          background: var(--bg-2); border: 1px solid var(--border);
+          border-radius: var(--radius); overflow: hidden;
+        }
+        .audit-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 12px 16px; background: var(--bg-3);
+          border-bottom: 1px solid var(--border);
+        }
+        .audit-title { font-size: 13px; font-weight: 600; color: var(--text-0); }
+        .audit-count { font-size: 12px; color: var(--text-3); }
+        .audit-empty { padding: 24px; text-align: center; font-size: 13px; color: var(--text-3); }
+        .audit-row {
+          display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap;
+          padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px;
+        }
+        .audit-row:last-child { border-bottom: none; }
+        .audit-badge {
+          padding: 2px 8px; border-radius: var(--radius-full);
+          font-size: 11px; font-weight: 600; flex-shrink: 0; margin-top: 1px;
+        }
+        .audit-ban { background: var(--red-dim); color: var(--red); }
+        .audit-unban { background: rgba(61,214,140,0.1); color: var(--green); }
+        .audit-delete { background: var(--red-dim); color: var(--red); }
+        .audit-password_reset { background: rgba(99,102,241,0.12); color: var(--accent); }
+        .audit-reset_2fa { background: rgba(99,102,241,0.12); color: var(--accent); }
+        .audit-create { background: rgba(61,214,140,0.1); color: var(--green); }
+        .audit-revoke { background: var(--red-dim); color: var(--red); }
+        .audit-registration_toggle { background: var(--bg-3); color: var(--text-2); }
+        .audit-actor { font-weight: 500; color: var(--text-0); }
+        .audit-target { color: var(--text-2); }
+        .audit-time { margin-left: auto; font-size: 12px; color: var(--text-3); flex-shrink: 0; }
+        @media (max-width: 600px) {
+          .audit-time { margin-left: 0; width: 100%; margin-top: 2px; }
+        }
+
+        /* ── Modals ─────────────────────────────────────────────────── */
+        .modal-input {
+          width: 100%; background: var(--bg-3); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 10px 12px;
+          font-size: 16px; color: var(--text-0); box-sizing: border-box;
+          transition: border-color var(--transition);
+        }
+        .modal-input:focus { border-color: var(--accent); }
+        .modal-input::placeholder { color: var(--text-3); }
+        .modal-select {
+          width: 100%; background: var(--bg-3); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 10px 12px;
+          font-size: 16px; color: var(--text-0); box-sizing: border-box;
+          cursor: pointer; appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+          background-repeat: no-repeat; background-position: right 12px center;
+          padding-right: 32px;
+        }
+        .modal-select option { background: var(--bg-3); color: var(--text-0); }
         .confirm-overlay {
           position: fixed; inset: 0; z-index: 200;
           background: rgba(0,0,0,0.7);
-          display: flex; align-items: center; justify-content: center;
-          padding: 24px;
+          display: flex; align-items: flex-end; justify-content: center;
+          padding: 0;
+        }
+        @media (min-width: 500px) {
+          .confirm-overlay { align-items: center; padding: 24px; }
         }
         .confirm-modal {
           background: var(--bg-2); border: 1px solid var(--border);
-          border-radius: var(--radius-xl); padding: 28px;
-          max-width: 360px; width: 100%;
+          border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+          padding: 24px 20px;
+          padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+          width: 100%;
           display: flex; flex-direction: column; gap: 12px;
+        }
+        @media (min-width: 500px) {
+          .confirm-modal {
+            border-radius: var(--radius-xl);
+            max-width: 400px; padding: 28px;
+          }
         }
         .confirm-modal h3 { font-size: 16px; font-weight: 600; color: var(--text-0); }
         .confirm-modal p { font-size: 14px; color: var(--text-2); line-height: 1.6; }
         .confirm-actions { display: flex; gap: 10px; margin-top: 4px; }
         .cancel-btn {
-          flex: 1; padding: 10px; border-radius: var(--radius);
+          flex: 1; padding: 12px; border-radius: var(--radius);
           background: var(--bg-3); color: var(--text-1);
-          font-size: 14px; font-weight: 500;
+          font-size: 15px; font-weight: 500;
           transition: all var(--transition);
         }
         .cancel-btn:hover { background: var(--bg-4); }
         .confirm-delete-btn {
-          flex: 1; padding: 10px; border-radius: var(--radius);
+          flex: 1; padding: 12px; border-radius: var(--radius);
           background: var(--red); color: white;
-          font-size: 14px; font-weight: 500;
+          font-size: 15px; font-weight: 500;
           transition: all var(--transition);
         }
         .confirm-delete-btn:hover { opacity: 0.85; }
 
-        /* ── Mobile overrides ──────────────────────────────────────── */
+        /* ── Small mobile extras ────────────────────────────────────── */
         @media (max-width: 600px) {
           .admin-header { padding: 12px 14px; }
           .admin-content { padding: 12px; gap: 12px; }
-          .stat-value { font-size: 20px; }
-          .stat-card { padding: 12px; }
-
-          /* Switch table to card layout — one card per user */
-          .table-header { display: none; }
-          .table-row {
-            display: flex; flex-direction: column;
-            gap: 8px; padding: 12px 14px;
-            grid-template-columns: unset;
-          }
-          .hide-mobile { display: none; }
-          .user-cell { flex-direction: row; }
-          .table-row-meta {
-            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-          }
-          .actions { flex-wrap: wrap; }
-          .action-btn { width: 34px; height: 34px; }
-
-          .settings-item { padding: 12px 14px; gap: 12px; }
-          .invite-row { padding: 10px 14px; flex-wrap: wrap; }
-          .audit-row { padding: 8px 14px; font-size: 12px; }
-          .audit-time { margin-left: 0; width: 100%; }
+          .settings-item { padding: 12px 14px; }
+          .invite-row { padding: 10px 14px; }
         }
       `}</style>
     </div>
