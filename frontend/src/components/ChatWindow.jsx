@@ -580,6 +580,8 @@ export default function ChatWindow({ conversationId, onBack }) {
       : otherUser?.displayName || otherUser?.username || 'Unknown'
     : '';
   const isOtherOnline = otherUser && onlineUsers.has(String(otherUser._id));
+  const iBlockedThem = otherUser && user?.blockedUsers?.some(id => String(id) === String(otherUser._id));
+  const isBlocked = iBlockedThem; // we only know our own block list client-side
 
   // Search filter
   const searchResults = searchQuery
@@ -808,6 +810,20 @@ export default function ChatWindow({ conversationId, onBack }) {
         </div>
       )}
 
+      {/* Blocked banner */}
+      {isBlocked && (
+        <div style={{
+          padding: '10px 16px', background: 'var(--red-dim)',
+          borderTop: '1px solid rgba(255,87,87,0.2)',
+          fontSize: 13, color: 'var(--red)', textAlign: 'center',
+        }}>
+          You have blocked this user. <button style={{ color: 'var(--accent)', fontWeight: 500 }} onClick={async () => {
+            await apiFetch(`/users/${otherUser._id}/block`, { method: 'DELETE' });
+            window.location.reload();
+          }}>Unblock</button>
+        </div>
+      )}
+
       {/* Edit banner */}
       {editingMsg && (
         <div className="context-bar edit-bar">
@@ -871,7 +887,7 @@ export default function ChatWindow({ conversationId, onBack }) {
       )}
 
       {/* Input */}
-      {!isRecording && (
+      {!isRecording && !isBlocked && (
       <form className="chat-input-bar" onSubmit={sendMessage}>
         <div className="input-wrapper">
           <textarea

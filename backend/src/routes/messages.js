@@ -71,8 +71,21 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
     const conversation = await Conversation.findOne({
       _id: req.params.conversationId,
       participants: req.user.userId,
-    }).populate('participants', 'username displayName publicKey');
+    }).populate('participants', 'username displayName publicKey blockedUsers');
     if (!conversation) return res.status(403).json({ error: 'Access denied' });
+
+    // Block enforcement for direct conversations
+    if (conversation.type === 'direct') {
+      const other = conversation.participants.find(p => String(p._id) !== String(req.user.userId));
+      if (other) {
+        const blockedByOther = other.blockedUsers?.some(id => String(id) === String(req.user.userId));
+        const iBlockedThem = await User.findById(req.user.userId).select('blockedUsers')
+          .then(u => u?.blockedUsers?.some(id => String(id) === String(other._id)));
+        if (blockedByOther || iBlockedThem) {
+          return res.status(403).json({ error: 'Messaging is not available in this conversation' });
+        }
+      }
+    }
 
     const message = new Message({
       conversationId: conversation._id,

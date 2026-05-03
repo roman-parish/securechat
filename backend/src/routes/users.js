@@ -29,15 +29,18 @@ router.get('/search', authenticate, async (req, res) => {
   if (!q || q.length < 2) return res.status(400).json({ error: 'Query too short' });
 
   try {
+    const me = await User.findById(req.user.userId).select('blockedUsers');
+    const blocked = me?.blockedUsers || [];
+
     const users = await User.find({
       $or: [
         { username: { $regex: q, $options: 'i' } },
         { displayName: { $regex: q, $options: 'i' } },
       ],
-      _id: { $ne: req.user.userId },
+      _id: { $ne: req.user.userId, $nin: blocked },
+      blockedUsers: { $ne: req.user.userId },
     }).limit(20).select('username displayName avatar publicKey lastSeen');
 
-    // Add online status
     const usersWithStatus = await Promise.all(users.map(async (user) => {
       const online = await isUserOnline(user._id);
       return { ...user.toObject(), isOnline: online };
@@ -95,6 +98,37 @@ router.get('/me/profile', authenticate, async (req, res) => {
     res.json(user);
   } catch {
     res.status(500).json({ error: 'Failed to get profile' });
+  }
+});
+
+// Get blocked users list
+router.get('/me/blocked', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).populate('blockedUsers', 'username displayName avatar');
+    res.json(user?.blockedUsers || []);
+  } catch {
+    res.status(500).json({ error: 'Failed to get blocked users' });
+  }
+});
+
+// Block a user
+router.post('/:userId/block', authenticate, async (req, res) => {
+  if (req.params.userId === req.user.userId) return res.status(400).json({ error: 'Cannot block yourself' });
+  try {
+    await User.findByIdAndUpdate(req.user.userId, { $addToSet: { blockedUsers: req.params.userId } });
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to block user' });
+  }
+});
+
+// Unblock a user
+router.delete('/:userId/block', authenticate, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user.userId, { $pull: { blockedUsers: req.params.userId } });
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to unblock user' });
   }
 });
 

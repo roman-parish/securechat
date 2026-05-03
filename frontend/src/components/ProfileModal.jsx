@@ -62,6 +62,8 @@ export default function ProfileModal({ onClose }) {
   const pushSupported = isPushSupported();
   const [isPrivate, setIsPrivate] = useState(false);
   useEffect(() => { isPrivateMode().then(setIsPrivate); }, []);
+  const [blockedUsers, setBlockedUsers] = useState(null);
+  const [unblocking, setUnblocking] = useState(null);
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -153,6 +155,20 @@ export default function ProfileModal({ onClose }) {
       .catch(() => setSessions([]))
       .finally(() => setSessionsLoading(false));
   }, [tab, sessions]);
+
+  useEffect(() => {
+    if (tab !== 'security' || blockedUsers !== null) return;
+    apiFetch('/users/me/blocked').then(setBlockedUsers).catch(() => setBlockedUsers([]));
+  }, [tab, blockedUsers]);
+
+  const handleUnblock = async (userId) => {
+    setUnblocking(userId);
+    try {
+      await apiFetch(`/users/${userId}/block`, { method: 'DELETE' });
+      setBlockedUsers(prev => prev.filter(u => String(u._id) !== String(userId)));
+    } catch {}
+    setUnblocking(null);
+  };
 
   const handleRevokeSession = async (jti) => {
     setRevokingJti(jti);
@@ -604,6 +620,32 @@ export default function ProfileModal({ onClose }) {
                       </div>
                     );
                   })
+                )}
+              </div>
+
+              {/* Blocked users */}
+              <div className="sessions-section">
+                <p className="sessions-label">Blocked Users</p>
+                {blockedUsers === null ? (
+                  <div className="sessions-loading">Loading…</div>
+                ) : blockedUsers.length === 0 ? (
+                  <div className="sessions-loading">No blocked users</div>
+                ) : (
+                  blockedUsers.map(u => (
+                    <div key={u._id} className="session-row">
+                      <div className="session-info" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span className="session-device">{u.displayName || u.username}</span>
+                        <span className="session-meta">@{u.username}</span>
+                      </div>
+                      <button
+                        className="session-revoke-btn"
+                        onClick={() => handleUnblock(u._id)}
+                        disabled={unblocking === String(u._id)}
+                      >
+                        {unblocking === String(u._id) ? '…' : 'Unblock'}
+                      </button>
+                    </div>
+                  ))
                 )}
               </div>
 

@@ -229,6 +229,14 @@ export function ChatProvider({ children }) {
     setInvitations(prev => prev.filter(i => String(i._id) !== String(invId))),
   []);
 
+  const blockUser = useCallback(async (userId) => {
+    await apiFetch(`/users/${userId}/block`, { method: 'POST' });
+  }, []);
+
+  const unblockUser = useCallback(async (userId) => {
+    await apiFetch(`/users/${userId}/block`, { method: 'DELETE' });
+  }, []);
+
   const archiveConversation = useCallback(async (id) => {
     const strId = String(id);
     try {
@@ -265,6 +273,7 @@ export function ChatProvider({ children }) {
       onlineUsers, onlineListLoaded, typingMap, unreadCounts, totalUnread, loading,
       loadConversations, addConversation, removeConversation, updateConversation,
       archiveConversation, unarchiveConversation,
+      blockUser, unblockUser,
       invitations, removeInvitation,
     }}>
       {children}

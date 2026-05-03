@@ -51,6 +51,8 @@ const userSchema = new mongoose.Schema({
     default: [],
   },
 
+  blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: [] }],
+
   lastSeen: { type: Date, default: Date.now },
   banned: { type: Boolean, default: false },
   refreshTokens: {

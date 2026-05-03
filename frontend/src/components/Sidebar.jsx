@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 
 export default function Sidebar({ onSelectConversation, activeConversationId: activeConvIdProp, onRemoveActive, onOpenAdmin }) {
   const { user, logout } = useAuth();
-  const { conversations, archivedConversations, activeConversationId, onlineUsers, unreadCounts, loading, removeConversation, archiveConversation, unarchiveConversation, typingMap, invitations, removeInvitation } = useChat();
+  const { conversations, archivedConversations, activeConversationId, onlineUsers, unreadCounts, loading, removeConversation, archiveConversation, unarchiveConversation, blockUser, typingMap, invitations, removeInvitation } = useChat();
   const { connected } = useSocket();
   const [search, setSearch] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -139,6 +139,7 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
                 onClick={() => onSelectConversation(conv._id)}
                 onRemove={() => removeConversation(conv._id)}
                 onArchive={() => archiveConversation(conv._id)}
+                onBlock={async (userId) => { await blockUser(userId); removeConversation(conv._id); }}
                 onMuteToggle={handleMuteToggle}
               />
             ))
@@ -246,7 +247,7 @@ function convPreview(conv, currentUser, unread) {
   return '';
 }
 
-function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onArchive, onUnarchive, onMuteToggle, isArchived }) {
+function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onArchive, onUnarchive, onBlock, onMuteToggle, isArchived }) {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const menuRef = useRef(null);
@@ -367,6 +368,18 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
               Archive
             </button>
           )}
+          {conv.type === 'direct' && !isArchived && (() => {
+            const other = conv.participants?.find(p => String(p._id) !== String(user?._id));
+            return other ? (
+              <button onClick={() => { setShowMenu(false); onBlock(other._id); }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M4.93 4.93l14.14 14.14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                Block user
+              </button>
+            ) : null;
+          })()}
           <button onClick={() => { setShowMenu(false); onRemove(); }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
