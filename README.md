@@ -120,21 +120,68 @@ Or just push to `main` — GitHub Actions auto-deploys to your server.
 
 ## Configuration
 
-Copy `.env.example` to `.env` and configure:
+Copy `.env.example` to `.env` and fill in your values. The full reference:
 
 ```env
-# Admin users (comma-separated usernames)
-ADMIN_USERNAMES=yourname
+# ── Database ────────────────────────────────────────────────────────────────
+MONGO_USER=admin
+MONGO_PASSWORD=change_this_mongo_password
 
-# VAPID email for push notifications
+# ── Redis ───────────────────────────────────────────────────────────────────
+REDIS_PASSWORD=change_this_redis_password
+
+# ── JWT Secrets (generate with: openssl rand -hex 64) ───────────────────────
+JWT_SECRET=change_this_jwt_secret_in_production
+JWT_REFRESH_SECRET=change_this_refresh_secret_in_production
+
+# ── Web Push / VAPID (generate with: npx web-push generate-vapid-keys) ──────
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
 VAPID_EMAIL=admin@yourdomain.com
+
+# ── Email — Resend (https://resend.com) ─────────────────────────────────────
+# Required for: login alerts, password reset, 2FA notifications, invite emails
+RESEND_API_KEY=re_your_api_key_here
+EMAIL_FROM=SecureChat <noreply@yourdomain.com>
+
+# ── App URL ─────────────────────────────────────────────────────────────────
+# Used for CORS, push notification links, and password reset emails
+CLIENT_URL=https://yourdomain.com
+
+# ── Ports ───────────────────────────────────────────────────────────────────
+HTTP_PORT=80
+HTTPS_PORT=443
+
+# ── Admin ───────────────────────────────────────────────────────────────────
+# Comma-separated usernames that have access to the admin panel
+# Controls both the admin button in the UI and the backend admin API
+ADMIN_USERNAMES=yourusername
+
+# ── Node environment ────────────────────────────────────────────────────────
+NODE_ENV=production
 ```
 
-**Never commit your `.env` file.**
+> **Never commit your `.env` file.** All secrets should be generated fresh — never use the placeholder values in production.
+
+### Required vs optional
+
+| Variable | Required | Notes |
+|---|---|---|
+| `MONGO_PASSWORD` | Yes | Change from default before first run |
+| `REDIS_PASSWORD` | Yes | Change from default before first run |
+| `JWT_SECRET` | Yes | `openssl rand -hex 64` |
+| `JWT_REFRESH_SECRET` | Yes | `openssl rand -hex 64` |
+| `CLIENT_URL` | Yes | Must match your domain for CORS and email links |
+| `ADMIN_USERNAMES` | Yes | At least one username required to access admin panel |
+| `VAPID_*` | Optional | Required for push notifications |
+| `RESEND_API_KEY` | Optional | Required for email notifications and password reset |
+| `EMAIL_FROM` | Optional | Required alongside `RESEND_API_KEY` |
 
 ## Admin Panel
 
-Users listed in `ADMIN_USERNAMES` see an admin button in the sidebar. The admin panel provides:
+Users listed in `ADMIN_USERNAMES` see an admin button in the sidebar. The variable controls both the UI button and the backend API — both frontend and backend read it from `.env`.
+
+The admin panel provides:
 - User statistics (total users, messages, active today, storage used)
 - User management (view, search, suspend, delete, reset password, reset 2FA)
 - 2FA status visible per user
