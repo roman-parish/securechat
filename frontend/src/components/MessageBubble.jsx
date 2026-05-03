@@ -6,6 +6,7 @@
  * https://github.com/roman-parish/securechat
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { apiFetch } from '../utils/api.js';
 import { decryptFile } from '../utils/crypto.js';
@@ -171,6 +172,15 @@ function replyPreviewText(replyTo, plaintext) {
 
 export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId }) {
   const [lightbox, setLightbox] = useState(null);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    // Dismiss keyboard on mobile when lightbox opens
+    document.activeElement?.blur();
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [lightbox]);
+
   const [showActions, setShowActions] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -421,7 +431,7 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
         )}
       </div>
 
-      {lightbox && (
+      {lightbox && createPortal(
         <div className="lightbox-overlay" onClick={() => setLightbox(null)}>
           <button className="lightbox-back" onClick={() => setLightbox(null)}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -447,7 +457,8 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
             </svg>
             Save Image
           </a>
-        </div>
+        </div>,
+        document.body
       )}
 
       {copied && <div className="copied-toast">Copied!</div>}
