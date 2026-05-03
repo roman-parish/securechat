@@ -50,6 +50,16 @@ function generateTokens(user) {
   return { accessToken, refreshToken, refreshJti };
 }
 
+// Public — check if registration is open
+router.get('/registration-status', async (req, res) => {
+  try {
+    const settings = await Settings.findOne();
+    res.json({ registrationOpen: settings ? settings.registrationOpen : true });
+  } catch {
+    res.json({ registrationOpen: true });
+  }
+});
+
 // Register — step 1: create account, get user ID back
 router.post('/register', [
   body('username').trim().isLength({ min: 3, max: 30 }).matches(/^[a-zA-Z0-9_]+$/),

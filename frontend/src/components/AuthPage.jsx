@@ -5,7 +5,7 @@
  *
  * https://github.com/roman-parish/securechat
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
 function isSslOrNetworkError(err) {
@@ -32,7 +32,18 @@ export default function AuthPage() {
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotStatus, setForgotStatus] = useState('idle'); // idle | loading | sent
+  const [registrationOpen, setRegistrationOpen] = useState(true);
   const { login, completeTwoFactorLogin, register } = useAuth();
+
+  useEffect(() => {
+    fetch('/api/auth/registration-status')
+      .then(r => r.json())
+      .then(d => {
+        setRegistrationOpen(d.registrationOpen);
+        if (!d.registrationOpen) setMode('login');
+      })
+      .catch(() => {});
+  }, []);
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
@@ -230,14 +241,16 @@ export default function AuthPage() {
               </>
             ) : (
             <>
-            <div className="auth-tabs">
-              <button className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setError(''); }}>
-                Sign in
-              </button>
-              <button className={mode === 'register' ? 'active' : ''} onClick={() => { setMode('register'); setError(''); }}>
-                Create account
-              </button>
-            </div>
+            {registrationOpen && (
+              <div className="auth-tabs">
+                <button className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setError(''); }}>
+                  Sign in
+                </button>
+                <button className={mode === 'register' ? 'active' : ''} onClick={() => { setMode('register'); setError(''); }}>
+                  Create account
+                </button>
+              </div>
+            )}
 
             <form className="auth-form" onSubmit={handleSubmit}>
               <div className="field">
