@@ -92,6 +92,8 @@ export default function AdminPage({ onBack }) {
   const { user } = useAuth();
   const { onlineUsers } = useChat();
 
+  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'audit'
+
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
@@ -288,94 +290,119 @@ export default function AdminPage({ onBack }) {
           ))}
         </div>
 
-        {/* ── Users section ── */}
-        <div className="ap-group-label">Users</div>
-
-        {/* Search */}
-        <div className="ap-search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
-            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
-            <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          <input
-            type="search"
-            placeholder="Search users…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="ap-search-input"
-          />
-          {total > 0 && <span className="ap-count">{total}</span>}
-        </div>
-
         {flash && <div className="ap-flash">{flash}</div>}
 
-        <div className="ap-group ap-group-scroll">
-          {loading ? (
-            <div className="ap-empty">Loading…</div>
-          ) : users.length === 0 ? (
-            <div className="ap-empty">No users found</div>
-          ) : users.map((u, idx) => (
-            <div key={u._id}>
-              {idx > 0 && <div className="ap-sep" />}
-              <div className={`ap-user-row${u.banned ? ' banned' : ''}`}>
-                {/* Avatar */}
-                <div className="ap-avatar-wrap">
-                  <Avatar user={u} size={42} />
-                  {onlineUsers.has(String(u._id)) && <span className="ap-dot" />}
-                </div>
-                {/* Identity */}
-                <div className="ap-user-info">
-                  <div className="ap-user-name">{u.displayName || u.username}</div>
-                  <div className="ap-user-sub">
-                    @{u.username}
-                    {u.email && <span className="ap-user-email">&nbsp;· {u.email}</span>}
+        {/* ── Users tab ── */}
+        {activeTab === 'users' && (
+          <>
+            <div className="ap-search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+                <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              <input
+                type="search"
+                placeholder="Search users…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="ap-search-input"
+              />
+              {total > 0 && <span className="ap-count">{total}</span>}
+            </div>
+
+            <div className="ap-group ap-group-scroll">
+              {loading ? (
+                <div className="ap-empty">Loading…</div>
+              ) : users.length === 0 ? (
+                <div className="ap-empty">No users found</div>
+              ) : users.map((u, idx) => (
+                <div key={u._id}>
+                  {idx > 0 && <div className="ap-sep" />}
+                  <div className={`ap-user-row${u.banned ? ' banned' : ''}`}>
+                    <div className="ap-avatar-wrap">
+                      <Avatar user={u} size={42} />
+                      {onlineUsers.has(String(u._id)) && <span className="ap-dot" />}
+                    </div>
+                    <div className="ap-user-info">
+                      <div className="ap-user-name">{u.displayName || u.username}</div>
+                      <div className="ap-user-sub">
+                        @{u.username}
+                        {u.email && <span className="ap-user-email">&nbsp;· {u.email}</span>}
+                      </div>
+                    </div>
+                    <div className="ap-user-end">
+                      {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
+                      <span className={`ap-badge ${u.banned ? 'red' : 'green'}`}>{u.banned ? 'Suspended' : 'Active'}</span>
+                      {isMe(u)
+                        ? <span className="ap-you">You</span>
+                        : (
+                          <button className="ap-menu-btn" onClick={() => setMenuUser(u)} aria-label="User actions">
+                            <IconDots />
+                          </button>
+                        )
+                      }
+                    </div>
                   </div>
                 </div>
-                {/* Right: badges + ··· button in one row */}
-                <div className="ap-user-end">
-                  {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
-                  <span className={`ap-badge ${u.banned ? 'red' : 'green'}`}>{u.banned ? 'Suspended' : 'Active'}</span>
-                  {isMe(u)
-                    ? <span className="ap-you">You</span>
-                    : (
-                      <button className="ap-menu-btn" onClick={() => setMenuUser(u)} aria-label="User actions">
-                        <IconDots />
-                      </button>
-                    )
-                  }
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ── Audit log tab ── */}
+        {activeTab === 'audit' && (
+          <div className="ap-group ap-group-scroll">
+            {auditLoading ? (
+              <div className="ap-empty">Loading…</div>
+            ) : auditLogs.length === 0 ? (
+              <div className="ap-empty">No activity yet</div>
+            ) : auditLogs.map((log, idx) => (
+              <div key={log._id}>
+                {idx > 0 && <div className="ap-sep" />}
+                <div className="ap-audit">
+                  <span className={`ap-badge audit-${log.action.split('.')[1]}`}>
+                    {ACTION_LABELS[log.action] || log.action}
+                  </span>
+                  <span className="ap-audit-who">
+                    {log.performedByUsername}
+                    {log.targetUsername && <span className="ap-audit-target"> → {log.targetUsername}</span>}
+                    {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
+                    {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
+                  </span>
+                  <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Audit log ── */}
-        <div className="ap-group-label">Audit Log</div>
-        <div className="ap-group ap-group-scroll">
-          {auditLoading ? (
-            <div className="ap-empty">Loading…</div>
-          ) : auditLogs.length === 0 ? (
-            <div className="ap-empty">No activity yet</div>
-          ) : auditLogs.map((log, idx) => (
-            <div key={log._id}>
-              {idx > 0 && <div className="ap-sep" />}
-              <div className="ap-audit">
-                <span className={`ap-badge audit-${log.action.split('.')[1]}`}>
-                  {ACTION_LABELS[log.action] || log.action}
-                </span>
-                <span className="ap-audit-who">
-                  {log.performedByUsername}
-                  {log.targetUsername && <span className="ap-audit-target"> → {log.targetUsername}</span>}
-                  {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
-                  {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
-                </span>
-                <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
       </div>{/* /ap-content */}
+
+      {/* ── Bottom tab bar ── */}
+      <div className="ap-tab-bar">
+        <button
+          className={`ap-tab ${activeTab === 'users' ? 'active' : ''}`}
+          onClick={() => setActiveTab('users')}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/>
+            <path d="M3 21v-2a5 5 0 015-5h4a5 5 0 015 5v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+          Users {total > 0 && <span className="ap-tab-count">{total}</span>}
+        </button>
+        <button
+          className={`ap-tab ${activeTab === 'audit' ? 'active' : ''}`}
+          onClick={() => setActiveTab('audit')}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.8"/>
+            <path d="M9 12h6M9 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+          Audit Log {auditLogs.length > 0 && <span className="ap-tab-count">{auditLogs.length}</span>}
+        </button>
+      </div>
 
       {/* ════════════════════════════════
           Modals / sheets
@@ -532,13 +559,36 @@ export default function AdminPage({ onBack }) {
         @media(hover:hover){.ap-back:hover{background:var(--bg-3);color:var(--text-0);}}
         .ap-title { font-size: 17px; font-weight: 700; color: var(--text-0); }
 
-        /* Content area — natural flow, no flex tricks needed */
+        /* Content area */
         .ap-content {
-          padding: 20px 16px;
-          padding-bottom: max(48px, env(safe-area-inset-bottom, 48px));
+          padding: 20px 16px 24px;
           display: flex; flex-direction: column; gap: 8px;
           max-width: 860px; margin: 0 auto; width: 100%;
           box-sizing: border-box;
+        }
+
+        /* Sticky bottom tab bar */
+        .ap-tab-bar {
+          position: sticky; bottom: 0; z-index: 10;
+          display: flex;
+          background: var(--bg-1);
+          border-top: 1px solid var(--border);
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .ap-tab {
+          flex: 1; display: flex; align-items: center; justify-content: center;
+          gap: 6px; padding: 14px 16px;
+          font-size: 14px; font-weight: 500; color: var(--text-3);
+          transition: all var(--transition);
+        }
+        .ap-tab.active { color: var(--accent); }
+        .ap-tab-count {
+          font-size: 11px; font-weight: 700;
+          background: var(--bg-3); color: var(--text-3);
+          padding: 2px 7px; border-radius: 20px;
+        }
+        .ap-tab.active .ap-tab-count {
+          background: var(--accent-dim); color: var(--accent);
         }
 
         /* Stats: 2-col on phones, 3-col on ≥480px, 6-col on ≥900px */
