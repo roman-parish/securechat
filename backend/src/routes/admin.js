@@ -212,7 +212,7 @@ router.post('/invites', async (req, res) => {
       expiresAt,
     });
 
-    const clientUrl = process.env.CLIENT_URL || 'https://securechat.w5rcp.com';
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost';
     const inviteUrl = `${clientUrl}/?invite=${token}`;
 
     if (email) {

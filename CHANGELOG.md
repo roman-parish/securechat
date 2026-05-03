@@ -29,7 +29,7 @@
 - Forgot password screen now matches the login screen look and feel
 - 2FA trust-device checkbox no longer overflows outside the auth card
 - Invite button and expiry dropdown in admin panel now match app styling
-- From address for emails updated to `securechat@securechat.w5rcp.com`
+- Configurable from address for emails via `EMAIL_FROM` environment variable
 
 ---
 

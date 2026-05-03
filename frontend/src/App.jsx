@@ -27,8 +27,8 @@ function AppInner() {
   if (!user) return <AuthPage />;
 
   // Check admin access
-  const admins = (import.meta.env.VITE_ADMIN_USERNAMES || 'w5rcp')
-    .split(',').map(u => u.trim().toLowerCase());
+  const admins = (import.meta.env.VITE_ADMIN_USERNAMES || '')
+    .split(',').map(u => u.trim().toLowerCase()).filter(Boolean);
   const isAdmin = admins.includes(user.username?.toLowerCase());
 
   return (

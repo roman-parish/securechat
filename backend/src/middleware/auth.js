@@ -24,9 +24,10 @@ export function authenticate(req, res, next) {
 }
 
 export function requireAdmin(req, res, next) {
-  const admins = (process.env.ADMIN_USERNAMES || 'w5rcp')
+  const admins = (process.env.ADMIN_USERNAMES || '')
     .split(',')
-    .map(u => u.trim().toLowerCase());
+    .map(u => u.trim().toLowerCase())
+    .filter(Boolean);
   if (!admins.includes(req.user?.username?.toLowerCase())) {
     return res.status(403).json({ error: 'Admin access required' });
   }
