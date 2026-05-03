@@ -237,103 +237,42 @@ export default function AdminPage({ onBack }) {
           {/* ════ STATS ════ */}
           {activeTab === 'stats' && (
             stats ? (
-              <>
-                <div className="ap-stat-section-label">Activity</div>
-                <div className="ap-stat-grid">
-                  <div className="ap-stat-card" style={{'--c':'var(--accent)','--cd':'var(--accent-dim)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M3 21v-2a5 5 0 015-5h4a5 5 0 015 5v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              <div className="ap-stat-grid">
+                {[
+                  { val: stats.totalUsers,       fmt:'n', lbl:'Users',        col:'#6c63ff', dim:'rgba(108,99,255,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M3 21v-2a5 5 0 015-5h4a5 5 0 015 5v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                  { val: stats.activeToday,      fmt:'n', lbl:'Active Today', col:'#22c55e', dim:'rgba(34,197,94,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                  { val: stats.newUsersThisWeek, fmt:'n', lbl:'New / Week',   col:'#f59e0b', dim:'rgba(245,158,11,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg> },
+                  { val: stats.bannedUsers,      fmt:'n', lbl:'Suspended',    col:'#ef4444', dim:'rgba(239,68,68,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                  { val: stats.totalMessages,    fmt:'n', lbl:'Messages',     col:'#6c63ff', dim:'rgba(108,99,255,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg> },
+                  { val: stats.messagesLast24h,  fmt:'n', lbl:'Msgs 24h',     col:'#22c55e', dim:'rgba(34,197,94,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 8v4l2 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/></svg> },
+                  { val: stats.totalAttachments, fmt:'n', lbl:'Attachments',  col:'#f59e0b', dim:'rgba(245,158,11,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                  { val: stats.totalMessages > 0 ? (stats.totalMessages / Math.max(stats.totalUsers,1)).toFixed(1) : '0', fmt:'s', lbl:'Msgs / User', col:'#8b5cf6', dim:'rgba(139,92,246,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+                  { val: stats.groupChats,       fmt:'n', lbl:'Group Chats',  col:'#3b82f6', dim:'rgba(59,130,246,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                  { val: stats.directChats,      fmt:'n', lbl:'Direct Chats', col:'#14b8a6', dim:'rgba(20,184,166,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.42-4.03 8-9 8a9.86 9.86 0 01-4-.83L3 20l1.9-3.8A7.93 7.93 0 013 12c0-4.42 4.03-8 9-8s9 3.58 9 8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+                  { val: stats.twoFaUsers,       fmt:'n', lbl:'2FA Enabled',  col:'#8b5cf6', dim:'rgba(139,92,246,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+                  { val: formatBytes(stats.storageBytes), fmt:'s', lbl:'Storage', col:'#f59e0b', dim:'rgba(245,158,11,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg> },
+                ].map(({ val, fmt, lbl, col, dim, icon }) => (
+                  <div key={lbl} className="ap-stat-card" style={{'--sc':col,'--scd':dim}}>
+                    <div className="ap-sc-top">
+                      <span className="ap-sc-lbl">{lbl}</span>
+                      <div className="ap-sc-icon">{icon}</div>
                     </div>
-                    <div className="ap-stat-val">{stats.totalUsers}</div>
-                    <div className="ap-stat-lbl">Total Users</div>
+                    <div className="ap-sc-val">{fmt === 'n' ? Number(val).toLocaleString() : val}</div>
                   </div>
-                  <div className="ap-stat-card" style={{'--c':'var(--green)','--cd':'var(--green-dim)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{stats.activeToday}</div>
-                    <div className="ap-stat-lbl">Active Today</div>
-                  </div>
-                  <div className="ap-stat-card" style={{'--c':'#f59e0b','--cd':'rgba(245,158,11,0.15)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{stats.newUsersThisWeek}</div>
-                    <div className="ap-stat-lbl">New This Week</div>
-                  </div>
-                  <div className="ap-stat-card" style={{'--c':'var(--red)','--cd':'var(--red-dim)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{stats.bannedUsers}</div>
-                    <div className="ap-stat-lbl">Suspended</div>
-                  </div>
-                </div>
-
-                <div className="ap-stat-section-label">Messages</div>
-                <div className="ap-stat-grid">
-                  <div className="ap-stat-card" style={{'--c':'var(--accent)','--cd':'var(--accent-dim)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{stats.totalMessages.toLocaleString()}</div>
-                    <div className="ap-stat-lbl">Total Messages</div>
-                  </div>
-                  <div className="ap-stat-card" style={{'--c':'var(--green)','--cd':'var(--green-dim)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{stats.messagesLast24h.toLocaleString()}</div>
-                    <div className="ap-stat-lbl">Last 24 Hours</div>
-                  </div>
-                  <div className="ap-stat-card" style={{'--c':'#f59e0b','--cd':'rgba(245,158,11,0.15)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{stats.totalAttachments.toLocaleString()}</div>
-                    <div className="ap-stat-lbl">Attachments</div>
-                  </div>
-                  <div className="ap-stat-card" style={{'--c':'#8b5cf6','--cd':'rgba(139,92,246,0.15)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{stats.totalMessages > 0 ? (stats.totalMessages / Math.max(stats.totalUsers, 1)).toFixed(1) : '0'}</div>
-                    <div className="ap-stat-lbl">Msgs / User</div>
-                  </div>
-                </div>
-
-                <div className="ap-stat-section-label">Conversations</div>
-                <div className="ap-stat-grid">
-                  <div className="ap-stat-card" style={{'--c':'var(--accent)','--cd':'var(--accent-dim)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{stats.groupChats}</div>
-                    <div className="ap-stat-lbl">Group Chats</div>
-                  </div>
-                  <div className="ap-stat-card" style={{'--c':'var(--green)','--cd':'var(--green-dim)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.42-4.03 8-9 8a9.86 9.86 0 01-4-.83L3 20l1.9-3.8A7.93 7.93 0 013 12c0-4.42 4.03-8 9-8s9 3.58 9 8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{stats.directChats}</div>
-                    <div className="ap-stat-lbl">Direct Chats</div>
-                  </div>
-                  <div className="ap-stat-card" style={{'--c':'#8b5cf6','--cd':'rgba(139,92,246,0.15)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{stats.twoFaUsers}</div>
-                    <div className="ap-stat-lbl">2FA Enabled</div>
-                  </div>
-                  <div className="ap-stat-card" style={{'--c':'#f59e0b','--cd':'rgba(245,158,11,0.15)'}}>
-                    <div className="ap-stat-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
-                    </div>
-                    <div className="ap-stat-val">{formatBytes(stats.storageBytes)}</div>
-                    <div className="ap-stat-lbl">Storage Used</div>
-                  </div>
-                </div>
-              </>
+                ))}
+              </div>
             ) : <div className="ap-empty">Loading…</div>
           )}
 
@@ -694,27 +633,34 @@ export default function AdminPage({ onBack }) {
         .ap-tab.active { color: var(--accent); }
         .ap-tab span { line-height: 1; }
 
-        /* Stats: 2-col on phones, 3-col on ≥480px, 6-col on ≥900px */
-        .ap-stats {
-          display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-          margin-bottom: 8px;
+        /* Stats grid */
+        .ap-stat-grid {
+          display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
         }
-        @media(min-width:480px){.ap-stats{grid-template-columns:repeat(3,1fr);}}
-        @media(min-width:900px){.ap-stats{grid-template-columns:repeat(6,1fr);}}
-        .ap-stat {
+        @media(min-width:600px){.ap-stat-grid{grid-template-columns:repeat(3,1fr);}}
+        @media(min-width:900px){.ap-stat-grid{grid-template-columns:repeat(4,1fr);}}
+        .ap-stat-card {
           background: var(--bg-2); border: 1px solid var(--border);
-          border-radius: 12px; padding: 14px 14px;
-          display: flex; flex-direction: column; gap: 4px;
-          min-width: 0;
+          border-radius: 16px; padding: 14px;
+          display: flex; flex-direction: column; gap: 10px;
         }
-        .ap-stat-val { font-size: 22px; font-weight: 700; color: var(--text-0); line-height: 1; }
-        .ap-stat-lbl { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        /* Section label */
-        .ap-group-label {
-          font-size: 11px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: 0.08em; color: var(--text-3);
-          padding: 10px 4px 2px;
+        .ap-sc-top {
+          display: flex; align-items: flex-start; justify-content: space-between; gap: 6px;
+        }
+        .ap-sc-lbl {
+          font-size: 11px; font-weight: 600; text-transform: uppercase;
+          letter-spacing: 0.06em; color: var(--text-3); line-height: 1.3;
+          flex: 1; min-width: 0;
+        }
+        .ap-sc-icon {
+          width: 32px; height: 32px; border-radius: 8px;
+          background: var(--scd); color: var(--sc);
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .ap-sc-val {
+          font-size: 26px; font-weight: 700; color: var(--text-0);
+          line-height: 1; letter-spacing: -0.01em;
         }
 
         /* Grouped card */
