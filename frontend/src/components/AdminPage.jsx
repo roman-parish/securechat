@@ -530,7 +530,7 @@ export default function AdminPage({ onBack }) {
       <style>{`
         .admin-page {
           display: flex; flex-direction: column;
-          height: 100%; background: var(--bg-0); overflow: hidden;
+          height: 100dvh; background: var(--bg-0); overflow: hidden;
         }
         .admin-header {
           display: flex; align-items: center; justify-content: space-between;
@@ -548,7 +548,9 @@ export default function AdminPage({ onBack }) {
           font-size: 16px; font-weight: 600; color: var(--text-0);
         }
         .admin-content {
-          flex: 1; overflow-y: auto; padding: 24px;
+          flex: 1; min-height: 0; overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          padding: 24px;
           display: flex; flex-direction: column; gap: 20px;
         }
         .stats-row {
