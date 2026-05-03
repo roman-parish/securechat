@@ -32,13 +32,13 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-function Modal({ onClose, children }) {
+/* Bottom-sheet modal — portals to document.body */
+function Sheet({ onClose, children }) {
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
-
   return createPortal(
     <div className="ap-overlay" onClick={onClose}>
       <div className="ap-sheet" onClick={e => e.stopPropagation()}>
@@ -49,50 +49,92 @@ function Modal({ onClose, children }) {
   );
 }
 
+/* SVG icons */
+const IconBan = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/>
+    <line x1="5.1" y1="5.1" x2="18.9" y2="18.9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+);
+const IconCheck = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IconKey = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <circle cx="7.5" cy="15.5" r="4.5" stroke="currentColor" strokeWidth="1.8"/>
+    <path d="M10.5 12.5L20 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+    <path d="M17 6l2 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+);
+const IconShield = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+    <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IconTrash = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M10 11v5M14 11v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+);
+const IconDots = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
+    <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+    <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
+  </svg>
+);
+
 export default function AdminPage({ onBack }) {
   const { user } = useAuth();
   const { onlineUsers } = useChat();
+
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [actionMsg, setActionMsg] = useState('');
+  const [flash, setFlash] = useState('');
+
+  /* User action state */
+  const [menuUser, setMenuUser] = useState(null);          // which user has the ··· menu open
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [resetPassword, setResetPassword] = useState(null);
+  const [resetPwUser, setResetPwUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [reset2faUser, setReset2faUser] = useState(null);
+
+  /* Settings */
   const [registrationOpen, setRegistrationOpen] = useState(true);
+
+  /* Invites */
   const [invites, setInvites] = useState([]);
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteExpiry, setInviteExpiry] = useState('24');
   const [inviteResult, setInviteResult] = useState(null);
   const [inviteLoading, setInviteLoading] = useState(false);
+
+  /* Audit */
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
-  const loadStats = useCallback(async () => {
-    try { setStats(await apiFetch('/admin/stats')); } catch {}
-  }, []);
+  /* ── Data loading ── */
+  const loadStats   = useCallback(async () => { try { setStats(await apiFetch('/admin/stats')); } catch {} }, []);
+  const loadInvites = useCallback(async () => { try { setInvites((await apiFetch('/admin/invites')).invites); } catch {} }, []);
 
   const loadUsers = useCallback(async (q = '') => {
     setLoading(true);
     try {
-      const data = await apiFetch(`/admin/users?search=${encodeURIComponent(q)}&limit=100`);
-      setUsers(data.users);
-      setTotal(data.total);
+      const d = await apiFetch(`/admin/users?search=${encodeURIComponent(q)}&limit=100`);
+      setUsers(d.users); setTotal(d.total);
     } catch {} finally { setLoading(false); }
   }, []);
 
-  const loadInvites = useCallback(async () => {
-    try { setInvites((await apiFetch('/admin/invites')).invites); } catch {}
-  }, []);
-
   useEffect(() => {
-    loadStats();
-    loadUsers();
-    loadInvites();
+    loadStats(); loadUsers(); loadInvites();
     apiFetch('/admin/settings').then(d => setRegistrationOpen(d.registrationOpen)).catch(() => {});
     setAuditLoading(true);
     apiFetch('/admin/audit').then(d => setAuditLogs(d.logs)).catch(() => {}).finally(() => setAuditLoading(false));
@@ -103,23 +145,24 @@ export default function AdminPage({ onBack }) {
     return () => clearTimeout(t);
   }, [search, loadUsers]);
 
-  const flash = (msg) => { setActionMsg(msg); setTimeout(() => setActionMsg(''), 3500); };
+  /* ── Flash helper ── */
+  const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(''), 3500); };
 
+  /* ── Action handlers ── */
   const handleToggleRegistration = async () => {
     try {
       const d = await apiFetch('/admin/settings', { method: 'PUT', body: JSON.stringify({ registrationOpen: !registrationOpen }) });
       setRegistrationOpen(d.registrationOpen);
-      flash(`Registration ${d.registrationOpen ? 'opened' : 'closed'}`);
-    } catch (e) { flash('Error: ' + e.message); }
+      showFlash(`Registration ${d.registrationOpen ? 'opened' : 'closed'}`);
+    } catch (e) { showFlash('Error: ' + e.message); }
   };
 
   const handleCreateInvite = async () => {
     setInviteLoading(true);
     try {
       const d = await apiFetch('/admin/invites', { method: 'POST', body: JSON.stringify({ email: inviteEmail || undefined, expiryHours: Number(inviteExpiry) }) });
-      setInviteResult(d.inviteUrl);
-      loadInvites();
-    } catch (e) { flash('Error: ' + e.message); setShowInviteModal(false); }
+      setInviteResult(d.inviteUrl); loadInvites();
+    } catch (e) { showFlash('Error: ' + e.message); setShowInviteForm(false); }
     finally { setInviteLoading(false); }
   };
 
@@ -127,42 +170,42 @@ export default function AdminPage({ onBack }) {
     try {
       await apiFetch(`/admin/invites/${id}`, { method: 'DELETE' });
       setInvites(prev => prev.filter(i => i._id !== id));
-    } catch (e) { flash('Error: ' + e.message); }
+    } catch (e) { showFlash('Error: ' + e.message); }
   };
 
   const handleBan = async (u) => {
+    setMenuUser(null);
     try {
       const res = await apiFetch(`/admin/users/${u._id}/ban`, { method: 'PUT' });
       setUsers(prev => prev.map(x => x._id === u._id ? { ...x, banned: res.banned } : x));
-      flash(`${u.username} ${res.banned ? 'suspended' : 'unsuspended'}`);
-    } catch (e) { flash('Error: ' + e.message); }
+      showFlash(`${u.username} ${res.banned ? 'suspended' : 'unsuspended'}`);
+    } catch (e) { showFlash('Error: ' + e.message); }
   };
 
   const handleResetPassword = async () => {
-    if (!newPassword || newPassword.length < 8) { flash('Password must be at least 8 characters'); return; }
+    if (!newPassword || newPassword.length < 8) { showFlash('Password must be at least 8 characters'); return; }
     try {
-      await apiFetch(`/admin/users/${resetPassword._id}/reset-password`, { method: 'PUT', body: JSON.stringify({ newPassword }) });
-      flash(`Password reset for ${resetPassword.username}`);
-      setResetPassword(null); setNewPassword('');
-    } catch (e) { flash('Error: ' + e.message); }
+      await apiFetch(`/admin/users/${resetPwUser._id}/reset-password`, { method: 'PUT', body: JSON.stringify({ newPassword }) });
+      showFlash(`Password reset for ${resetPwUser.username}`);
+      setResetPwUser(null); setNewPassword('');
+    } catch (e) { showFlash('Error: ' + e.message); }
   };
 
   const handleReset2fa = async () => {
     try {
       await apiFetch(`/admin/users/${reset2faUser._id}/reset-2fa`, { method: 'PUT' });
-      flash(`2FA reset for ${reset2faUser.username}`);
+      showFlash(`2FA reset for ${reset2faUser.username}`);
       setReset2faUser(null);
-    } catch (e) { flash('Error: ' + e.message); }
+    } catch (e) { showFlash('Error: ' + e.message); }
   };
 
   const handleDelete = async (u) => {
     try {
       await apiFetch(`/admin/users/${u._id}`, { method: 'DELETE' });
       setUsers(prev => prev.filter(x => x._id !== u._id));
-      setTotal(t => t - 1);
-      setConfirmDelete(null);
-      flash(`${u.username} deleted`);
-    } catch (e) { flash('Error: ' + e.message); }
+      setTotal(t => t - 1); setConfirmDelete(null);
+      showFlash(`${u.username} deleted`);
+    } catch (e) { showFlash('Error: ' + e.message); }
   };
 
   const isMe = (u) => String(u._id) === String(user?._id);
@@ -172,28 +215,28 @@ export default function AdminPage({ onBack }) {
 
       {/* ── Header ── */}
       <div className="ap-header">
-        <button className="ap-back" onClick={onBack}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <button className="ap-back" onClick={onBack} aria-label="Back">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <span className="ap-title">Admin Panel</span>
+        <span className="ap-title">Admin</span>
         <div style={{ width: 44 }} />
       </div>
 
-      {/* ── Scrollable body ── */}
+      {/* ── Body ── */}
       <div className="ap-body">
 
         {/* Stats */}
         {stats && (
           <div className="ap-stats">
             {[
-              { v: stats.totalUsers,         l: 'Total Users' },
-              { v: stats.totalMessages,      l: 'Messages' },
-              { v: stats.totalConversations, l: 'Conversations' },
-              { v: stats.activeToday,        l: 'Active Today' },
-              { v: stats.newUsersThisWeek,   l: 'New This Week' },
-              { v: formatBytes(stats.storageBytes), l: 'Storage Used' },
+              { v: stats.totalUsers,              l: 'Users' },
+              { v: stats.totalMessages,           l: 'Messages' },
+              { v: stats.totalConversations,      l: 'Chats' },
+              { v: stats.activeToday,             l: 'Active Today' },
+              { v: stats.newUsersThisWeek,        l: 'New This Week' },
+              { v: formatBytes(stats.storageBytes), l: 'Storage' },
             ].map(({ v, l }) => (
               <div key={l} className="ap-stat">
                 <span className="ap-stat-val">{v}</span>
@@ -203,57 +246,60 @@ export default function AdminPage({ onBack }) {
           </div>
         )}
 
-        {/* Registration toggle */}
-        <div className="ap-section-label">Settings</div>
-        <div className="ap-card">
-          <div className="ap-setting-row">
-            <div className="ap-setting-text">
-              <span className="ap-setting-title">Open Registration</span>
-              <span className="ap-setting-sub">Allow new users to sign up</span>
+        {/* ── Settings section ── */}
+        <div className="ap-group-label">Settings</div>
+        <div className="ap-group">
+
+          {/* Registration toggle */}
+          <div className="ap-row">
+            <div className="ap-row-text">
+              <div className="ap-row-title">Open Registration</div>
+              <div className="ap-row-sub">Allow new users to sign up</div>
             </div>
             <button
-              className={`ap-toggle ${registrationOpen ? 'on' : 'off'}`}
+              className={`ap-toggle ${registrationOpen ? 'on' : ''}`}
               onClick={handleToggleRegistration}
-              aria-label={registrationOpen ? 'Close registration' : 'Open registration'}
+              aria-label="Toggle registration"
             >
               <span className="ap-toggle-knob" />
             </button>
           </div>
-        </div>
 
-        {/* Invite links */}
-        <div className="ap-card">
-          <div className="ap-setting-row">
-            <div className="ap-setting-text">
-              <span className="ap-setting-title">Invite Links</span>
-              <span className="ap-setting-sub">{invites.length} active invite{invites.length !== 1 ? 's' : ''}</span>
+          <div className="ap-sep" />
+
+          {/* Invite links */}
+          <div className="ap-row">
+            <div className="ap-row-text">
+              <div className="ap-row-title">Invite Links</div>
+              <div className="ap-row-sub">{invites.length} active</div>
             </div>
-            <button className="ap-btn-accent ap-btn-sm" onClick={() => { setInviteEmail(''); setInviteExpiry('24'); setInviteResult(null); setShowInviteModal(true); }}>
+            <button className="ap-pill-btn" onClick={() => { setInviteEmail(''); setInviteExpiry('24'); setInviteResult(null); setShowInviteForm(true); }}>
               + Create
             </button>
           </div>
-          {invites.length > 0 && (
-            <div className="ap-divider" />
-          )}
-          {invites.map(inv => (
-            <div key={inv._id} className="ap-invite-row">
-              <div className="ap-invite-info">
-                <span className="ap-invite-label">{inv.email || 'No email — link only'}</span>
-                <span className="ap-invite-exp">Expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}</span>
+
+          {invites.map((inv, i) => (
+            <div key={inv._id}>
+              <div className="ap-sep" />
+              <div className="ap-row ap-row-sm">
+                <div className="ap-row-text">
+                  <div className="ap-row-title ap-mono">{inv.email || 'No email — link only'}</div>
+                  <div className="ap-row-sub">Expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}</div>
+                </div>
+                <button className="ap-ghost-btn" onClick={() => handleRevokeInvite(inv._id)}>Revoke</button>
               </div>
-              <button className="ap-revoke-btn" onClick={() => handleRevokeInvite(inv._id)}>
-                Revoke
-              </button>
             </div>
           ))}
         </div>
 
-        {/* User list */}
-        <div className="ap-section-label">Users</div>
+        {/* ── Users section ── */}
+        <div className="ap-group-label">Users</div>
+
+        {/* Search */}
         <div className="ap-search">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" className="ap-search-icon">
-            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8"/>
-            <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+            <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
           <input
             type="search"
@@ -262,99 +308,132 @@ export default function AdminPage({ onBack }) {
             onChange={e => setSearch(e.target.value)}
             className="ap-search-input"
           />
-          {total > 0 && <span className="ap-search-count">{total}</span>}
+          {total > 0 && <span className="ap-count">{total}</span>}
         </div>
 
-        {actionMsg && <div className="ap-flash">{actionMsg}</div>}
+        {flash && <div className="ap-flash">{flash}</div>}
 
-        <div className="ap-card ap-user-list">
+        <div className="ap-group">
           {loading ? (
             <div className="ap-empty">Loading…</div>
           ) : users.length === 0 ? (
             <div className="ap-empty">No users found</div>
-          ) : users.map(u => (
-            <div key={u._id} className={`ap-user${u.banned ? ' ap-user-banned' : ''}`}>
-
-              {/* Top row: avatar + identity */}
-              <div className="ap-user-top">
+          ) : users.map((u, idx) => (
+            <div key={u._id}>
+              {idx > 0 && <div className="ap-sep" />}
+              <div className={`ap-user-row${u.banned ? ' banned' : ''}`}>
+                {/* Avatar */}
                 <div className="ap-avatar-wrap">
-                  <Avatar user={u} size={44} />
-                  {onlineUsers.has(String(u._id)) && <span className="ap-online-dot" />}
+                  <Avatar user={u} size={42} />
+                  {onlineUsers.has(String(u._id)) && <span className="ap-dot" />}
                 </div>
-                <div className="ap-user-identity">
-                  <span className="ap-user-name">{u.displayName || u.username}</span>
-                  <span className="ap-user-handle">@{u.username}</span>
-                  {u.email && <span className="ap-user-email">{u.email}</span>}
-                </div>
-              </div>
-
-              {/* Bottom row: badges + actions */}
-              <div className="ap-user-bottom">
-                <div className="ap-badges">
-                  <span className={`ap-badge ${u.banned ? 'red' : 'green'}`}>
-                    {u.banned ? 'Suspended' : 'Active'}
-                  </span>
-                  {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
-                </div>
-                {isMe(u) ? (
-                  <span className="ap-you-tag">You</span>
-                ) : (
-                  <div className="ap-actions">
-                    <button
-                      className={`ap-action-btn ${u.banned ? 'green' : 'orange'}`}
-                      onClick={() => handleBan(u)}
-                      title={u.banned ? 'Unsuspend' : 'Suspend'}
-                    >
-                      {u.banned ? 'Unsuspend' : 'Suspend'}
-                    </button>
-                    <button className="ap-action-btn muted" onClick={() => { setResetPassword(u); setNewPassword(''); }} title="Reset password">
-                      🔑
-                    </button>
-                    <button className="ap-action-btn muted" onClick={() => setReset2faUser(u)} title="Reset 2FA">
-                      🔐
-                    </button>
-                    <button className="ap-action-btn red" onClick={() => setConfirmDelete(u)} title="Delete user">
-                      🗑
-                    </button>
+                {/* Identity */}
+                <div className="ap-user-info">
+                  <div className="ap-user-name">{u.displayName || u.username}</div>
+                  <div className="ap-user-sub">
+                    @{u.username}
+                    {u.email && <span className="ap-user-email">&nbsp;· {u.email}</span>}
                   </div>
-                )}
+                </div>
+                {/* Right: badge + action */}
+                <div className="ap-user-end">
+                  <div className="ap-badges">
+                    <span className={`ap-badge ${u.banned ? 'red' : 'green'}`}>{u.banned ? 'Suspended' : 'Active'}</span>
+                    {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
+                  </div>
+                  {isMe(u)
+                    ? <span className="ap-you">You</span>
+                    : (
+                      <button className="ap-menu-btn" onClick={() => setMenuUser(u)} aria-label="User actions">
+                        <IconDots />
+                      </button>
+                    )
+                  }
+                </div>
               </div>
-
             </div>
           ))}
         </div>
 
-        {/* Audit log */}
-        <div className="ap-section-label">Audit Log</div>
-        <div className="ap-card ap-user-list">
+        {/* ── Audit log ── */}
+        <div className="ap-group-label">Audit Log</div>
+        <div className="ap-group">
           {auditLoading ? (
             <div className="ap-empty">Loading…</div>
           ) : auditLogs.length === 0 ? (
             <div className="ap-empty">No activity yet</div>
-          ) : auditLogs.map(log => (
-            <div key={log._id} className="ap-audit-row">
-              <span className={`ap-badge audit-${log.action.split('.')[1]}`}>
-                {ACTION_LABELS[log.action] || log.action}
-              </span>
-              <div className="ap-audit-detail">
-                <span className="ap-audit-actor">{log.performedByUsername}</span>
-                {log.targetUsername && <span className="ap-audit-target"> → {log.targetUsername}</span>}
-                {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
-                {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
+          ) : auditLogs.map((log, idx) => (
+            <div key={log._id}>
+              {idx > 0 && <div className="ap-sep" />}
+              <div className="ap-audit">
+                <span className={`ap-badge audit-${log.action.split('.')[1]}`}>
+                  {ACTION_LABELS[log.action] || log.action}
+                </span>
+                <span className="ap-audit-who">
+                  {log.performedByUsername}
+                  {log.targetUsername && <span className="ap-audit-target"> → {log.targetUsername}</span>}
+                  {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
+                  {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
+                </span>
+                <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
               </div>
-              <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
             </div>
           ))}
         </div>
 
-      </div>{/* end ap-body */}
+      </div>{/* /ap-body */}
 
-      {/* ── Modals ── */}
+      {/* ════════════════════════════════
+          Modals / sheets
+          ════════════════════════════════ */}
 
-      {showInviteModal && !inviteResult && (
-        <Modal onClose={() => setShowInviteModal(false)}>
-          <h3 className="ap-modal-title">Create invite link</h3>
-          <p className="ap-modal-sub">Single-use link. Optionally send by email.</p>
+      {/* User action menu */}
+      {menuUser && (
+        <Sheet onClose={() => setMenuUser(null)}>
+          <div className="ap-sheet-header">
+            <span className="ap-sheet-title">@{menuUser.username}</span>
+          </div>
+          <div className="ap-actions-list">
+            <button
+              className={`ap-action-item ${menuUser.banned ? 'green' : 'orange'}`}
+              onClick={() => handleBan(menuUser)}
+            >
+              <span className="ap-action-icon">{menuUser.banned ? <IconCheck /> : <IconBan />}</span>
+              <span className="ap-action-label">{menuUser.banned ? 'Unsuspend user' : 'Suspend user'}</span>
+            </button>
+            <button
+              className="ap-action-item"
+              onClick={() => { setMenuUser(null); setResetPwUser(menuUser); setNewPassword(''); }}
+            >
+              <span className="ap-action-icon"><IconKey /></span>
+              <span className="ap-action-label">Reset password</span>
+            </button>
+            <button
+              className="ap-action-item"
+              onClick={() => { setMenuUser(null); setReset2faUser(menuUser); }}
+            >
+              <span className="ap-action-icon"><IconShield /></span>
+              <span className="ap-action-label">Reset 2FA</span>
+            </button>
+            <button
+              className="ap-action-item red"
+              onClick={() => { setMenuUser(null); setConfirmDelete(menuUser); }}
+            >
+              <span className="ap-action-icon"><IconTrash /></span>
+              <span className="ap-action-label">Delete user</span>
+            </button>
+          </div>
+          <button className="ap-cancel-btn" onClick={() => setMenuUser(null)}>Cancel</button>
+        </Sheet>
+      )}
+
+      {/* Create invite */}
+      {showInviteForm && !inviteResult && (
+        <Sheet onClose={() => setShowInviteForm(false)}>
+          <div className="ap-sheet-header">
+            <span className="ap-sheet-title">Create invite link</span>
+          </div>
+          <p className="ap-sheet-sub">Single-use link. Optionally send by email.</p>
           <input type="email" placeholder="Email (optional)" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} className="ap-input" />
           <select value={inviteExpiry} onChange={e => setInviteExpiry(e.target.value)} className="ap-select">
             <option value="24">Expires in 24 hours</option>
@@ -362,360 +441,341 @@ export default function AdminPage({ onBack }) {
             <option value="168">Expires in 7 days</option>
             <option value="720">Expires in 30 days</option>
           </select>
-          <div className="ap-modal-actions">
-            <button className="ap-modal-btn secondary" onClick={() => setShowInviteModal(false)}>Cancel</button>
-            <button className="ap-modal-btn accent" disabled={inviteLoading} onClick={handleCreateInvite}>
+          <div className="ap-sheet-btns">
+            <button className="ap-btn secondary" onClick={() => setShowInviteForm(false)}>Cancel</button>
+            <button className="ap-btn accent" disabled={inviteLoading} onClick={handleCreateInvite}>
               {inviteLoading ? 'Creating…' : inviteEmail ? 'Create & email' : 'Create link'}
             </button>
           </div>
-        </Modal>
+        </Sheet>
       )}
 
-      {showInviteModal && inviteResult && (
-        <Modal onClose={() => { setShowInviteModal(false); setInviteResult(null); }}>
-          <h3 className="ap-modal-title">Invite link created</h3>
-          {inviteEmail && <p className="ap-modal-sub">Email sent to <strong>{inviteEmail}</strong>.</p>}
-          <p className="ap-modal-sub">Share this link — single use only:</p>
-          <div className="ap-invite-url">{inviteResult}</div>
-          <div className="ap-modal-actions">
-            <button className="ap-modal-btn secondary" onClick={() => navigator.clipboard.writeText(inviteResult)}>Copy</button>
-            <button className="ap-modal-btn accent" onClick={() => { setShowInviteModal(false); setInviteResult(null); }}>Done</button>
+      {/* Show invite URL */}
+      {showInviteForm && inviteResult && (
+        <Sheet onClose={() => { setShowInviteForm(false); setInviteResult(null); }}>
+          <div className="ap-sheet-header">
+            <span className="ap-sheet-title">Invite link ready</span>
           </div>
-        </Modal>
+          {inviteEmail && <p className="ap-sheet-sub">Email sent to <strong>{inviteEmail}</strong>.</p>}
+          <p className="ap-sheet-sub">Copy and share — single use only:</p>
+          <div className="ap-code-box">{inviteResult}</div>
+          <div className="ap-sheet-btns">
+            <button className="ap-btn secondary" onClick={() => navigator.clipboard.writeText(inviteResult)}>Copy link</button>
+            <button className="ap-btn accent" onClick={() => { setShowInviteForm(false); setInviteResult(null); }}>Done</button>
+          </div>
+        </Sheet>
       )}
 
-      {resetPassword && (
-        <Modal onClose={() => setResetPassword(null)}>
-          <h3 className="ap-modal-title">Reset password</h3>
-          <p className="ap-modal-sub">Set a new password for <strong>{resetPassword.username}</strong>. This logs them out everywhere.</p>
+      {/* Reset password */}
+      {resetPwUser && (
+        <Sheet onClose={() => setResetPwUser(null)}>
+          <div className="ap-sheet-header">
+            <span className="ap-sheet-title">Reset password</span>
+          </div>
+          <p className="ap-sheet-sub">New password for <strong>@{resetPwUser.username}</strong>. Logs them out everywhere.</p>
           <input type="password" placeholder="New password (min 8 chars)" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="ap-input" autoFocus />
-          <div className="ap-modal-actions">
-            <button className="ap-modal-btn secondary" onClick={() => setResetPassword(null)}>Cancel</button>
-            <button className="ap-modal-btn accent" onClick={handleResetPassword}>Reset Password</button>
+          <div className="ap-sheet-btns">
+            <button className="ap-btn secondary" onClick={() => setResetPwUser(null)}>Cancel</button>
+            <button className="ap-btn accent" onClick={handleResetPassword}>Reset</button>
           </div>
-        </Modal>
+        </Sheet>
       )}
 
+      {/* Reset 2FA */}
       {reset2faUser && (
-        <Modal onClose={() => setReset2faUser(null)}>
-          <h3 className="ap-modal-title">Reset 2FA?</h3>
-          <p className="ap-modal-sub">Disables 2FA for <strong>{reset2faUser.username}</strong>. They can log in with password only until they re-enable it.</p>
-          <div className="ap-modal-actions">
-            <button className="ap-modal-btn secondary" onClick={() => setReset2faUser(null)}>Cancel</button>
-            <button className="ap-modal-btn accent" onClick={handleReset2fa}>Reset 2FA</button>
+        <Sheet onClose={() => setReset2faUser(null)}>
+          <div className="ap-sheet-header">
+            <span className="ap-sheet-title">Reset 2FA?</span>
           </div>
-        </Modal>
+          <p className="ap-sheet-sub">Disables 2FA for <strong>@{reset2faUser.username}</strong>. They can log in with password only until they re-enable it.</p>
+          <div className="ap-sheet-btns">
+            <button className="ap-btn secondary" onClick={() => setReset2faUser(null)}>Cancel</button>
+            <button className="ap-btn accent" onClick={handleReset2fa}>Reset 2FA</button>
+          </div>
+        </Sheet>
       )}
 
+      {/* Confirm delete */}
       {confirmDelete && (
-        <Modal onClose={() => setConfirmDelete(null)}>
-          <h3 className="ap-modal-title">Delete user?</h3>
-          <p className="ap-modal-sub">Permanently deletes <strong>{confirmDelete.username}</strong> and all their data. This cannot be undone.</p>
-          <div className="ap-modal-actions">
-            <button className="ap-modal-btn secondary" onClick={() => setConfirmDelete(null)}>Cancel</button>
-            <button className="ap-modal-btn danger" onClick={() => handleDelete(confirmDelete)}>Delete permanently</button>
+        <Sheet onClose={() => setConfirmDelete(null)}>
+          <div className="ap-sheet-header">
+            <span className="ap-sheet-title">Delete user?</span>
           </div>
-        </Modal>
+          <p className="ap-sheet-sub">Permanently deletes <strong>@{confirmDelete.username}</strong> and all their data. This cannot be undone.</p>
+          <div className="ap-sheet-btns">
+            <button className="ap-btn secondary" onClick={() => setConfirmDelete(null)}>Cancel</button>
+            <button className="ap-btn danger" onClick={() => handleDelete(confirmDelete)}>Delete permanently</button>
+          </div>
+        </Sheet>
       )}
 
+      {/* ══════════════ STYLES ══════════════ */}
       <style>{`
-        /* ── Shell ── */
+        /* Container */
         .ap {
           display: flex; flex-direction: column;
           flex: 1; min-height: 0; overflow: hidden;
-          background: var(--bg-0); font-size: 15px;
+          background: var(--bg-0);
         }
 
-        /* ── Header ── */
+        /* Header */
         .ap-header {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 0 8px; height: 54px; flex-shrink: 0;
+          height: 56px; padding: 0 8px; flex-shrink: 0;
           border-bottom: 1px solid var(--border);
           background: var(--bg-1);
         }
         .ap-back {
           width: 44px; height: 44px;
           display: flex; align-items: center; justify-content: center;
-          color: var(--text-2); border-radius: var(--radius);
-          transition: all var(--transition);
+          border-radius: 10px; color: var(--text-2);
+          transition: background var(--transition);
         }
         .ap-back:active { background: var(--bg-3); }
-        .ap-title {
-          font-size: 16px; font-weight: 600; color: var(--text-0);
-        }
+        @media(hover:hover){.ap-back:hover{background:var(--bg-3);color:var(--text-0);}}
+        .ap-title { font-size: 17px; font-weight: 700; color: var(--text-0); }
 
-        /* ── Scrollable body ── */
+        /* Scrollable body */
         .ap-body {
           flex: 1; min-height: 0;
           overflow-y: auto; -webkit-overflow-scrolling: touch;
           padding: 16px 14px;
-          padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
-          display: flex; flex-direction: column; gap: 8px;
+          padding-bottom: max(32px, env(safe-area-inset-bottom, 32px));
+          display: flex; flex-direction: column; gap: 6px;
         }
 
-        /* ── Section label ── */
-        .ap-section-label {
-          font-size: 12px; font-weight: 600; text-transform: uppercase;
-          letter-spacing: 0.06em; color: var(--text-3);
-          padding: 8px 4px 4px;
-        }
-
-        /* ── Stats ── */
+        /* Stats: 2-col on phones, 3-col on ≥480px, 6-col on ≥900px */
         .ap-stats {
-          display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
-          margin-bottom: 4px;
+          display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+          margin-bottom: 8px;
         }
-        @media (min-width: 480px) { .ap-stats { grid-template-columns: repeat(3, 1fr); } }
-        @media (min-width: 768px) { .ap-stats { grid-template-columns: repeat(6, 1fr); } }
+        @media(min-width:480px){.ap-stats{grid-template-columns:repeat(3,1fr);}}
+        @media(min-width:900px){.ap-stats{grid-template-columns:repeat(6,1fr);}}
         .ap-stat {
           background: var(--bg-2); border: 1px solid var(--border);
-          border-radius: var(--radius); padding: 14px 12px;
+          border-radius: 12px; padding: 14px 14px;
           display: flex; flex-direction: column; gap: 4px;
+          min-width: 0;
         }
-        .ap-stat-val {
-          font-size: 22px; font-weight: 700; color: var(--text-0); line-height: 1;
-        }
-        .ap-stat-lbl { font-size: 12px; color: var(--text-3); }
+        .ap-stat-val { font-size: 22px; font-weight: 700; color: var(--text-0); line-height: 1; }
+        .ap-stat-lbl { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* ── Card ── */
-        .ap-card {
+        /* Section label */
+        .ap-group-label {
+          font-size: 11px; font-weight: 700; text-transform: uppercase;
+          letter-spacing: 0.08em; color: var(--text-3);
+          padding: 10px 4px 2px;
+        }
+
+        /* Grouped card */
+        .ap-group {
           background: var(--bg-2); border: 1px solid var(--border);
-          border-radius: var(--radius); overflow: hidden;
+          border-radius: 14px; overflow: hidden;
         }
-        .ap-divider { height: 1px; background: var(--border); }
+        .ap-sep { height: 1px; background: var(--border); margin: 0 16px; }
 
-        /* ── Settings row ── */
-        .ap-setting-row {
-          display: flex; align-items: center; gap: 16px;
-          padding: 16px;
+        /* Setting row */
+        .ap-row {
+          display: flex; align-items: center; gap: 12px;
+          padding: 15px 16px;
         }
-        .ap-setting-text { flex: 1; min-width: 0; }
-        .ap-setting-title {
-          display: block; font-size: 15px; font-weight: 500; color: var(--text-0);
-        }
-        .ap-setting-sub {
-          display: block; font-size: 13px; color: var(--text-3); margin-top: 3px;
+        .ap-row-sm { padding: 12px 16px; }
+        .ap-row-text { flex: 1; min-width: 0; }
+        .ap-row-title { font-size: 15px; font-weight: 500; color: var(--text-0); }
+        .ap-row-sub { font-size: 13px; color: var(--text-3); margin-top: 2px; }
+        .ap-row-title.ap-mono {
+          font-family: var(--font-mono); font-size: 12px;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
 
-        /* ── Toggle ── */
+        /* Toggle switch */
         .ap-toggle {
-          width: 50px; height: 30px; border-radius: 15px;
-          position: relative; flex-shrink: 0; cursor: pointer;
-          transition: background 0.2s;
+          width: 52px; height: 32px; border-radius: 16px;
+          position: relative; flex-shrink: 0;
+          background: var(--bg-4); transition: background 0.2s;
         }
         .ap-toggle.on { background: var(--accent); }
-        .ap-toggle.off { background: var(--bg-4); }
         .ap-toggle-knob {
-          position: absolute; top: 4px;
-          width: 22px; height: 22px; border-radius: 50%;
-          background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          position: absolute; top: 4px; left: 4px;
+          width: 24px; height: 24px; border-radius: 50%;
+          background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.35);
           transition: left 0.2s;
         }
         .ap-toggle.on .ap-toggle-knob { left: 24px; }
-        .ap-toggle.off .ap-toggle-knob { left: 4px; }
 
-        /* ── Invite rows ── */
-        .ap-invite-row {
-          display: flex; align-items: center; gap: 12px;
-          padding: 14px 16px; border-top: 1px solid var(--border);
+        /* Small buttons */
+        .ap-pill-btn {
+          padding: 8px 16px; border-radius: 20px;
+          background: var(--accent); color: white;
+          font-size: 14px; font-weight: 600; flex-shrink: 0;
+          transition: opacity var(--transition);
         }
-        .ap-invite-info { flex: 1; min-width: 0; }
-        .ap-invite-label {
-          display: block; font-size: 14px; color: var(--text-1);
-          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-        .ap-invite-exp {
-          display: block; font-size: 12px; color: var(--text-3); margin-top: 3px;
-        }
-        .ap-revoke-btn {
-          padding: 8px 14px; border-radius: var(--radius);
+        .ap-pill-btn:active { opacity: 0.8; }
+        @media(hover:hover){.ap-pill-btn:hover{opacity:0.88;}}
+        .ap-ghost-btn {
+          padding: 7px 14px; border-radius: 8px;
           background: var(--bg-3); color: var(--text-2);
           font-size: 13px; font-weight: 500; flex-shrink: 0;
           transition: all var(--transition);
         }
-        .ap-revoke-btn:active { background: var(--red-dim); color: var(--red); }
+        .ap-ghost-btn:active { background: var(--red-dim); color: var(--red); }
+        @media(hover:hover){.ap-ghost-btn:hover{background:var(--red-dim);color:var(--red);}}
 
-        /* ── Search ── */
+        /* Search bar */
         .ap-search {
           display: flex; align-items: center; gap: 10px;
           background: var(--bg-2); border: 1px solid var(--border);
-          border-radius: var(--radius); padding: 12px 14px;
+          border-radius: 12px; padding: 12px 14px;
         }
-        .ap-search-icon { color: var(--text-3); flex-shrink: 0; }
         .ap-search-input {
           flex: 1; min-width: 0; background: none; border: none;
           font-size: 16px; color: var(--text-0);
         }
         .ap-search-input::placeholder { color: var(--text-3); }
-        .ap-search-count {
-          font-size: 12px; color: var(--text-3);
-          background: var(--bg-3); padding: 3px 8px;
-          border-radius: var(--radius-full); flex-shrink: 0;
+        .ap-count {
+          font-size: 12px; color: var(--text-3); flex-shrink: 0;
+          background: var(--bg-3); padding: 3px 9px; border-radius: 20px;
         }
 
-        /* ── Flash ── */
+        /* Flash */
         .ap-flash {
           background: var(--accent-dim); border: 1px solid var(--accent);
-          border-radius: var(--radius); padding: 12px 14px;
+          border-radius: 12px; padding: 12px 16px;
           font-size: 14px; color: var(--accent); text-align: center;
         }
 
-        /* ── User list ── */
-        .ap-user-list { padding: 0; }
-
-        /* ── User card — mobile first ── */
-        .ap-user {
-          padding: 14px 16px;
-          border-bottom: 1px solid var(--border);
-          display: flex; flex-direction: column; gap: 12px;
-        }
-        .ap-user:last-child { border-bottom: none; }
-        .ap-user-banned { opacity: 0.55; }
-
-        /* Top row: avatar + name */
-        .ap-user-top {
+        /* ── User row ── */
+        .ap-user-row {
           display: flex; align-items: center; gap: 12px;
+          padding: 14px 16px;
         }
+        .ap-user-row.banned { opacity: 0.5; }
+
         .ap-avatar-wrap { position: relative; flex-shrink: 0; }
-        .ap-online-dot {
-          position: absolute; bottom: 1px; right: 1px;
+        .ap-dot {
+          position: absolute; bottom: 0; right: 0;
           width: 11px; height: 11px; border-radius: 50%;
           background: var(--green); border: 2px solid var(--bg-2);
         }
-        .ap-user-identity { flex: 1; min-width: 0; }
+
+        .ap-user-info { flex: 1; min-width: 0; }
         .ap-user-name {
-          display: block; font-size: 15px; font-weight: 600; color: var(--text-0);
+          font-size: 15px; font-weight: 600; color: var(--text-0);
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .ap-user-handle {
-          display: block; font-size: 13px; color: var(--text-3); margin-top: 1px;
-        }
-        .ap-user-email {
-          display: block; font-size: 12px; color: var(--text-3); margin-top: 2px;
+        .ap-user-sub {
+          font-size: 12px; color: var(--text-3); margin-top: 2px;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
+        .ap-user-email { color: var(--text-3); }
 
-        /* Bottom row: badges + action buttons */
-        .ap-user-bottom {
-          display: flex; align-items: center; gap: 10px;
-          flex-wrap: wrap;
+        /* Right side of user row — stacks badges above menu btn */
+        .ap-user-end {
+          flex-shrink: 0;
+          display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
         }
-        .ap-badges {
-          display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
-        }
-        .ap-actions {
-          display: flex; gap: 6px; margin-left: auto;
-        }
-        .ap-you-tag {
-          margin-left: auto; font-size: 12px; color: var(--accent);
-          background: var(--accent-dim); padding: 4px 10px;
-          border-radius: var(--radius-full);
-        }
-
-        /* ── Action buttons — large tap targets ── */
-        .ap-action-btn {
-          min-width: 44px; height: 36px;
+        .ap-badges { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+        .ap-menu-btn {
+          width: 32px; height: 32px;
           display: flex; align-items: center; justify-content: center;
-          padding: 0 10px; border-radius: var(--radius-sm);
-          font-size: 13px; font-weight: 500; white-space: nowrap;
+          border-radius: 8px; color: var(--text-3);
+          background: var(--bg-3);
           transition: all var(--transition);
         }
-        .ap-action-btn.green { background: rgba(61,214,140,0.12); color: var(--green); }
-        .ap-action-btn.green:active { background: rgba(61,214,140,0.25); }
-        .ap-action-btn.orange { background: rgba(255,160,60,0.12); color: #f59e0b; }
-        .ap-action-btn.orange:active { background: rgba(255,160,60,0.25); }
-        .ap-action-btn.red { background: var(--bg-3); color: var(--text-3); }
-        .ap-action-btn.red:active { background: var(--red-dim); color: var(--red); }
-        .ap-action-btn.muted { background: var(--bg-3); color: var(--text-2); }
-        .ap-action-btn.muted:active { background: var(--accent-dim); color: var(--accent); }
+        .ap-menu-btn:active { background: var(--accent-dim); color: var(--accent); }
+        @media(hover:hover){.ap-menu-btn:hover{background:var(--accent-dim);color:var(--accent);}}
+        .ap-you {
+          font-size: 11px; color: var(--accent);
+          background: var(--accent-dim); padding: 3px 9px;
+          border-radius: 20px; font-weight: 600;
+        }
 
-        /* ── Badges ── */
+        /* Badges */
         .ap-badge {
           display: inline-flex; align-items: center;
-          padding: 3px 9px; border-radius: var(--radius-full);
-          font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+          padding: 3px 8px; border-radius: 20px;
+          font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+          white-space: nowrap;
         }
-        .ap-badge.green { background: rgba(61,214,140,0.12); color: var(--green); }
-        .ap-badge.red { background: var(--red-dim); color: var(--red); }
-        .ap-badge.purple { background: rgba(99,102,241,0.12); color: var(--accent); }
-        .ap-badge.audit-ban, .ap-badge.audit-delete, .ap-badge.audit-revoke { background: var(--red-dim); color: var(--red); }
-        .ap-badge.audit-unban, .ap-badge.audit-create { background: rgba(61,214,140,0.12); color: var(--green); }
-        .ap-badge.audit-password_reset, .ap-badge.audit-reset_2fa { background: rgba(99,102,241,0.12); color: var(--accent); }
-        .ap-badge.audit-registration_toggle { background: var(--bg-3); color: var(--text-2); }
+        .ap-badge.green  { background: var(--green-dim);               color: var(--green);  }
+        .ap-badge.red    { background: var(--red-dim);                  color: var(--red);    }
+        .ap-badge.purple { background: rgba(108,99,255,0.15);           color: var(--accent); }
+        .ap-badge.audit-ban,.ap-badge.audit-delete,.ap-badge.audit-revoke   { background: var(--red-dim);              color: var(--red);    }
+        .ap-badge.audit-unban,.ap-badge.audit-create                        { background: var(--green-dim);            color: var(--green);  }
+        .ap-badge.audit-password_reset,.ap-badge.audit-reset_2fa            { background: rgba(108,99,255,0.15);       color: var(--accent); }
+        .ap-badge.audit-registration_toggle                                 { background: var(--bg-3);                 color: var(--text-2); }
 
-        /* ── Empty state ── */
-        .ap-empty {
-          padding: 32px 16px; text-align: center;
-          font-size: 14px; color: var(--text-3);
+        /* Audit row */
+        .ap-audit {
+          display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px;
+          padding: 12px 16px;
         }
+        .ap-audit-who { font-size: 13px; color: var(--text-1); font-weight: 500; flex: 1; min-width: 0; }
+        .ap-audit-target { color: var(--text-3); font-weight: 400; }
+        .ap-audit-time { font-size: 11px; color: var(--text-3); flex-shrink: 0; white-space: nowrap; }
 
-        /* ── Audit log rows ── */
-        .ap-audit-row {
-          display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap;
-          padding: 12px 16px; border-bottom: 1px solid var(--border);
-        }
-        .ap-audit-row:last-child { border-bottom: none; }
-        .ap-audit-detail {
-          flex: 1; min-width: 0; font-size: 13px; color: var(--text-1);
-          padding-top: 2px;
-        }
-        .ap-audit-actor { font-weight: 600; color: var(--text-0); }
-        .ap-audit-target { color: var(--text-3); }
-        .ap-audit-time {
-          font-size: 11px; color: var(--text-3); flex-shrink: 0;
-          padding-top: 3px; white-space: nowrap;
-        }
+        /* Empty */
+        .ap-empty { padding: 32px 16px; text-align: center; font-size: 14px; color: var(--text-3); }
 
-        /* ── Small accent button ── */
-        .ap-btn-accent {
-          background: var(--accent); color: white;
-          border-radius: var(--radius); font-weight: 500;
-          transition: all var(--transition); white-space: nowrap; flex-shrink: 0;
-        }
-        .ap-btn-sm { padding: 8px 14px; font-size: 14px; }
-        .ap-btn-accent:active { opacity: 0.85; }
-
-        /* ── Modal overlay ── */
+        /* ── Bottom sheet (modal) ── */
         .ap-overlay {
-          position: fixed; inset: 0; z-index: 400;
+          position: fixed; inset: 0; z-index: 500;
           background: rgba(0,0,0,0.7);
-          display: flex; align-items: flex-end; justify-content: center;
+          display: flex; align-items: flex-end;
         }
-        @media (min-width: 520px) {
-          .ap-overlay { align-items: center; padding: 24px; }
+        @media(min-width:540px){
+          .ap-overlay { align-items: center; justify-content: center; padding: 24px; }
         }
-
-        /* ── Modal sheet ── */
         .ap-sheet {
-          background: var(--bg-2); border: 1px solid var(--border);
-          border-radius: 20px 20px 0 0;
-          width: 100%; max-height: 92dvh; overflow-y: auto;
-          padding: 28px 20px;
-          padding-bottom: max(28px, env(safe-area-inset-bottom, 28px));
-          display: flex; flex-direction: column; gap: 14px;
-          animation: apSlideUp 0.22s ease;
+          width: 100%; background: var(--bg-2);
+          border: 1px solid var(--border); border-radius: 20px 20px 0 0;
+          padding: 20px;
+          padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+          display: flex; flex-direction: column; gap: 12px;
+          max-height: 90dvh; overflow-y: auto;
+          animation: apUp 0.2s ease;
         }
-        @media (min-width: 520px) {
-          .ap-sheet {
-            border-radius: 16px; max-width: 440px;
-            max-height: unset; padding: 28px;
-          }
+        @media(min-width:540px){
+          .ap-sheet { border-radius: 18px; max-width: 420px; max-height: none; }
         }
-        @keyframes apSlideUp {
-          from { transform: translateY(24px); opacity: 0; }
-          to   { transform: translateY(0); opacity: 1; }
+        @keyframes apUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
         }
+        .ap-sheet-header { padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+        .ap-sheet-title  { font-size: 18px; font-weight: 700; color: var(--text-0); }
+        .ap-sheet-sub    { font-size: 14px; color: var(--text-2); line-height: 1.55; }
 
-        /* ── Modal content ── */
-        .ap-modal-title {
-          font-size: 18px; font-weight: 700; color: var(--text-0);
+        /* Action list in user menu */
+        .ap-actions-list { display: flex; flex-direction: column; gap: 4px; }
+        .ap-action-item {
+          display: flex; align-items: center; gap: 14px;
+          padding: 14px 16px; border-radius: 12px;
+          background: var(--bg-3);
+          transition: all var(--transition);
         }
-        .ap-modal-sub {
-          font-size: 14px; color: var(--text-2); line-height: 1.55;
+        .ap-action-item:active { filter: brightness(1.15); }
+        @media(hover:hover){.ap-action-item:hover{filter:brightness(1.1);}}
+        .ap-action-item.green  { background: var(--green-dim);         color: var(--green);  }
+        .ap-action-item.orange { background: rgba(255,160,60,0.12);    color: #f59e0b;       }
+        .ap-action-item.red    { background: var(--red-dim);           color: var(--red);    }
+        .ap-action-icon { flex-shrink: 0; display: flex; align-items: center; }
+        .ap-action-label { font-size: 16px; font-weight: 500; }
+
+        /* Cancel button */
+        .ap-cancel-btn {
+          width: 100%; padding: 15px; border-radius: 12px;
+          background: var(--bg-3); color: var(--text-2);
+          font-size: 16px; font-weight: 600;
+          transition: all var(--transition);
         }
+        .ap-cancel-btn:active { background: var(--bg-4); }
+        @media(hover:hover){.ap-cancel-btn:hover{background:var(--bg-4);}}
+
+        /* Form inputs */
         .ap-input {
           width: 100%; background: var(--bg-3); border: 1.5px solid var(--border);
-          border-radius: var(--radius); padding: 14px 16px;
+          border-radius: 12px; padding: 14px 16px;
           font-size: 16px; color: var(--text-0); box-sizing: border-box;
           transition: border-color var(--transition);
         }
@@ -723,51 +783,36 @@ export default function AdminPage({ onBack }) {
         .ap-input::placeholder { color: var(--text-3); }
         .ap-select {
           width: 100%; background: var(--bg-3); border: 1.5px solid var(--border);
-          border-radius: var(--radius); padding: 14px 16px;
+          border-radius: 12px; padding: 14px 40px 14px 16px;
           font-size: 16px; color: var(--text-0); box-sizing: border-box;
           cursor: pointer; appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23666' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 16px center;
-          padding-right: 42px;
         }
-        .ap-invite-url {
+        .ap-code-box {
           background: var(--bg-3); border: 1px solid var(--border);
-          border-radius: var(--radius); padding: 14px 16px;
-          font-size: 12px; color: var(--text-1);
-          word-break: break-all; font-family: monospace; line-height: 1.6;
+          border-radius: 12px; padding: 14px 16px;
+          font-size: 12px; font-family: var(--font-mono);
+          color: var(--text-1); word-break: break-all; line-height: 1.6;
         }
-        .ap-modal-actions {
-          display: flex; gap: 10px; margin-top: 4px;
-        }
-        .ap-modal-btn {
-          flex: 1; padding: 15px; border-radius: var(--radius);
-          font-size: 16px; font-weight: 600; transition: all var(--transition);
-        }
-        .ap-modal-btn.secondary { background: var(--bg-3); color: var(--text-1); }
-        .ap-modal-btn.secondary:active { background: var(--bg-4); }
-        .ap-modal-btn.accent { background: var(--accent); color: white; }
-        .ap-modal-btn.accent:active { opacity: 0.85; }
-        .ap-modal-btn.accent:disabled { opacity: 0.5; }
-        .ap-modal-btn.danger { background: var(--red); color: white; }
-        .ap-modal-btn.danger:active { opacity: 0.85; }
 
-        /* ── Desktop refinements ── */
-        @media (min-width: 640px) {
-          .ap-body { padding: 20px; gap: 10px; }
-          .ap-user { flex-direction: row; align-items: center; }
-          .ap-user-top { flex: 1; min-width: 0; }
-          .ap-user-bottom { margin-left: auto; flex-wrap: nowrap; }
-          .ap-actions { margin-left: 0; }
-          .ap-back:hover { background: var(--bg-3); color: var(--text-0); }
-          .ap-revoke-btn:hover { background: var(--red-dim); color: var(--red); }
-          .ap-action-btn.green:hover { background: rgba(61,214,140,0.25); }
-          .ap-action-btn.orange:hover { background: rgba(255,160,60,0.25); }
-          .ap-action-btn.red:hover { background: var(--red-dim); color: var(--red); }
-          .ap-action-btn.muted:hover { background: var(--accent-dim); color: var(--accent); }
-          .ap-modal-btn.secondary:hover { background: var(--bg-4); }
-          .ap-modal-btn.accent:hover { opacity: 0.9; }
-          .ap-btn-accent:hover { opacity: 0.9; }
+        /* Sheet action buttons */
+        .ap-sheet-btns { display: flex; gap: 10px; }
+        .ap-btn {
+          flex: 1; padding: 15px; border-radius: 12px;
+          font-size: 16px; font-weight: 600;
+          transition: all var(--transition);
         }
+        .ap-btn.secondary { background: var(--bg-3); color: var(--text-1); }
+        .ap-btn.secondary:active { background: var(--bg-4); }
+        @media(hover:hover){.ap-btn.secondary:hover{background:var(--bg-4);}}
+        .ap-btn.accent { background: var(--accent); color: white; }
+        .ap-btn.accent:active { opacity: 0.85; }
+        .ap-btn.accent:disabled { opacity: 0.45; }
+        @media(hover:hover){.ap-btn.accent:hover{opacity:0.88;}}
+        .ap-btn.danger { background: var(--red); color: white; }
+        .ap-btn.danger:active { opacity: 0.85; }
+        @media(hover:hover){.ap-btn.danger:hover{opacity:0.88;}}
       `}</style>
     </div>
   );
