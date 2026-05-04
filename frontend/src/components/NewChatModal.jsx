@@ -121,7 +121,6 @@ export default function NewChatModal({ onClose }) {
             placeholder="Group name…"
             value={groupName}
             onChange={e => setGroupName(e.target.value)}
-            autoFocus
           />
         )}
 
@@ -145,7 +144,6 @@ export default function NewChatModal({ onClose }) {
           placeholder="Search users…"
           value={search}
           onChange={e => handleSearch(e.target.value)}
-          autoFocus={tab === 'direct'}
         />
 
         {/* Results */}
