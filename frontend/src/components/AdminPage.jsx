@@ -225,7 +225,12 @@ export default function AdminPage({ onBack }) {
           </svg>
         </button>
         <span className="ap-title">{TAB_TITLES[activeTab]}</span>
-        <div style={{ width: 44 }} />
+        <div className="ap-admin-badge">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" fill="currentColor" opacity="0.9"/>
+          </svg>
+          Admin
+        </div>
       </div>
 
       {/* ── Page content (scrollable) ── */}
@@ -602,6 +607,14 @@ export default function AdminPage({ onBack }) {
         .ap-back:active { background: var(--bg-3); }
         @media(hover:hover){.ap-back:hover{background:var(--bg-3);color:var(--text-0);}}
         .ap-title { font-size: 17px; font-weight: 700; color: var(--text-0); }
+        .ap-admin-badge {
+          display: flex; align-items: center; gap: 4px;
+          background: var(--accent-dim); color: var(--accent);
+          border: 1px solid rgba(108,99,255,0.25);
+          border-radius: 20px; padding: 5px 10px 5px 8px;
+          font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+          flex-shrink: 0;
+        }
 
         /* Scrollable page area — grows to fill between header and tab bar */
         .ap-page {
