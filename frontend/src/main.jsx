@@ -79,8 +79,6 @@ if (document.readyState === 'complete') {
   document.body.removeChild(el);
   if (bsa > 0) {
     html.style.setProperty('--bsa', bsa + 'px');
-  } else if (window.navigator.standalone === true) {
-    html.style.setProperty('--bsa', '34px');
   }
 }());
 
