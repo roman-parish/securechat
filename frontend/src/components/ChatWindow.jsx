@@ -1008,7 +1008,7 @@ export default function ChatWindow({ conversationId, onBack }) {
       )}
 
       <style>{`
-        .chat-window { display: flex; flex-direction: column; height: 100%; overflow: hidden; position: relative; background: var(--bg-1); }
+        .chat-window { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; position: relative; background: var(--bg-1); }
         .user-profile-overlay {
           position: fixed; inset: 0; z-index: 100;
           background: rgba(0,0,0,0.6);
