@@ -87,7 +87,6 @@ html {
 
 body {
   height: 100%;
-  height: -webkit-fill-available;
   font-family: var(--font-sans);
   background: var(--bg-1);
   color: var(--text-0);
@@ -96,11 +95,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* --bsa: bottom safe area inset. Use env() directly — if it returns 0 in PWA
-   mode that means the viewport is already inset; forcing 34px creates a
-   double gap. JS in main.jsx overrides this only when env() returns > 0. */
+/* --bsa: bottom safe area inset used by all bottom-edge elements.
+   In standalone PWA mode, env() can return 0 on some iOS versions even
+   though the home indicator is present — fall back to 34px (standard height). */
 :root {
   --bsa: env(safe-area-inset-bottom, 0px);
+}
+@media (display-mode: standalone) {
+  :root {
+    --bsa: env(safe-area-inset-bottom, 34px);
+  }
 }
 
 #root {
@@ -108,11 +112,9 @@ body {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-1);
-  /* height:100% cascades from html { height:-webkit-fill-available } on iOS,
-     which includes the home indicator zone. 100dvh on iOS PWA excludes that
-     zone, leaving a ~34px gap at the bottom. Non-iOS gets 100% of the body
-     which is 100% of html which is 100% of the viewport — same as 100dvh. */
-  height: 100%;
+  /* height (not min-height) gives flex children a definite height so
+     height:100% / flex:1 chains resolve all the way to the viewport edge */
+  height: 100dvh;
   padding-top: env(safe-area-inset-top, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
