@@ -585,7 +585,6 @@ export default function AdminPage({ onBack }) {
           left: env(safe-area-inset-left, 0px);
           right: env(safe-area-inset-right, 0px);
           bottom: 0;
-          padding-bottom: env(safe-area-inset-bottom, 0px);
           display: flex; flex-direction: column;
           background: var(--bg-1);
           z-index: 1;
@@ -629,12 +628,12 @@ export default function AdminPage({ onBack }) {
           box-sizing: border-box;
         }
 
-        /* Bottom tab bar — flex item at base of .ap, safe area handled by .ap */
         .ap-tab-bar {
           flex-shrink: 0;
           display: flex;
           background: var(--bg-1);
           border-top: 1px solid var(--border);
+          padding-bottom: var(--bsa);
         }
         .ap-tab {
           flex: 1; display: flex; flex-direction: column;
