@@ -995,7 +995,7 @@ export default function ProfileModal({ onClose }) {
           display: flex;
           align-items: flex-end;
           justify-content: center;
-          padding-bottom: env(safe-area-inset-bottom);
+          padding-bottom: var(--bsa);
         }
         @media (min-width: 480px) {
           .modal-overlay { align-items: center; padding-bottom: 0; }
@@ -1222,7 +1222,7 @@ export default function ProfileModal({ onClose }) {
         .security-info-card p { font-size: 12px; color: var(--text-2); line-height: 1.6; margin: 0; }
         .modal-footer {
           padding: 12px 20px;
-          padding-bottom: max(12px, env(safe-area-inset-bottom));
+          padding-bottom: max(12px, var(--bsa));
           border-top: 1px solid var(--border);
           flex-shrink: 0; background: var(--bg-2);
           border-radius: 0 0 24px 24px;

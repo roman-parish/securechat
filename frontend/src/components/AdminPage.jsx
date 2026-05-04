@@ -634,7 +634,7 @@ export default function AdminPage({ onBack }) {
           display: flex;
           background: var(--bg-1);
           border-top: 1px solid var(--border);
-          padding-bottom: env(safe-area-inset-bottom, 0px);
+          padding-bottom: var(--bsa);
           position: relative;
         }
         /* Guarantee tab-bar background bleeds flush to the physical screen edge
@@ -643,7 +643,7 @@ export default function AdminPage({ onBack }) {
           content: '';
           position: fixed;
           bottom: 0; left: 0; right: 0;
-          height: env(safe-area-inset-bottom, 0px);
+          height: var(--bsa);
           background: var(--bg-1);
           pointer-events: none;
         }
@@ -864,7 +864,7 @@ export default function AdminPage({ onBack }) {
           width: 100%; background: var(--bg-2);
           border: 1px solid var(--border); border-radius: 20px 20px 0 0;
           padding: 20px;
-          padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+          padding-bottom: max(20px, var(--bsa));
           display: flex; flex-direction: column; gap: 12px;
           max-height: 90dvh; overflow-y: auto;
           animation: apUp 0.2s ease;

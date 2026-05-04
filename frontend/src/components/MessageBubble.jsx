@@ -610,7 +610,7 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
           image-rendering: auto;
         }
         .lightbox-download {
-          position: absolute; bottom: max(24px, env(safe-area-inset-bottom, 24px)); 
+          position: absolute; bottom: max(24px, var(--bsa));
           display: flex; align-items: center; gap: 8px;
           color: white; font-size: 14px; font-weight: 500;
           background: rgba(255,255,255,0.15); border-radius: var(--radius);

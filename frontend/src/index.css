@@ -92,6 +92,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* --bsa: bottom safe area inset used by all bottom-edge elements.
+   In standalone PWA mode, env() can return 0 on some iOS versions even
+   though the home indicator is present — fall back to 34px (standard height). */
+:root {
+  --bsa: env(safe-area-inset-bottom, 0px);
+}
+@media (display-mode: standalone) {
+  :root {
+    --bsa: env(safe-area-inset-bottom, 34px);
+  }
+}
+
 #root {
   display: flex;
   flex-direction: column;
