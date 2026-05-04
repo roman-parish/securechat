@@ -58,19 +58,31 @@ if (document.readyState === 'complete') {
   window.addEventListener('load', registerSW);
 }
 
-// Measure env(safe-area-inset-bottom) before rendering.
-// On some iOS versions, env() returns 0 in PWA standalone mode even when
-// the home indicator is present. Fall back to 34px in that case.
+// Run before React renders so iOS PWA sees the correct html background
+// colour in the safe-area zone from frame 1, not after React's useEffect.
 (function () {
+  const html = document.documentElement;
+
+  // 1. Apply saved theme immediately so html { background: var(--bg-1) }
+  //    resolves to the right colour before the first paint.
+  const theme = localStorage.getItem('theme') || 'dark';
+  html.setAttribute('data-theme', theme);
+
+  // 2. Sync the theme-color meta so the iOS status bar matches.
+  const metaTC = document.querySelector('meta[name="theme-color"]');
+  if (metaTC) metaTC.setAttribute('content', theme === 'light' ? '#f5f5fa' : '#0f0f13');
+
+  // 3. Measure env(safe-area-inset-bottom).  On some iOS PWA versions env()
+  //    returns 0 even when the home indicator is present; fall back to 34px.
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none';
   document.body.appendChild(el);
   const bsa = parseFloat(getComputedStyle(el).paddingBottom) || 0;
   document.body.removeChild(el);
   if (bsa > 0) {
-    document.documentElement.style.setProperty('--bsa', bsa + 'px');
+    html.style.setProperty('--bsa', bsa + 'px');
   } else if (window.navigator.standalone === true) {
-    document.documentElement.style.setProperty('--bsa', '34px');
+    html.style.setProperty('--bsa', '34px');
   }
 }());
 
