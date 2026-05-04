@@ -1180,6 +1180,16 @@ export default function ChatWindow({ conversationId, onBack }) {
           padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
           border-top: 1px solid var(--border);
           background: var(--bg-1); flex-shrink: 0;
+          position: relative;
+        }
+        .chat-input-bar::after {
+          content: '';
+          position: fixed;
+          bottom: 0; left: 0; right: 0;
+          height: env(safe-area-inset-bottom, 0px);
+          background: var(--bg-1);
+          pointer-events: none;
+          z-index: 1;
         }
         .input-wrapper {
           flex: 1; background: var(--bg-3); border-radius: var(--radius-lg);
