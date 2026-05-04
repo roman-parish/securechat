@@ -53,8 +53,9 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
         <div className="header-top">
           <div className="logo">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" fill="var(--accent)" opacity="0.25"/>
-              <path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" stroke="var(--accent)" strokeWidth="1.5" strokeLinejoin="round"/>
+              <rect x="3" y="11" width="18" height="11" rx="2" fill="var(--accent)" opacity="0.3"/>
+              <rect x="3" y="11" width="18" height="11" rx="2" stroke="var(--accent)" strokeWidth="1.5"/>
+              <path d="M7 11V7a5 5 0 0110 0v4" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
             <span>SecureChat</span>
             {!connected && <span className="offline-badge">offline</span>}
