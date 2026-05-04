@@ -53,9 +53,8 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
         <div className="header-top">
           <div className="logo">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="11" width="18" height="11" rx="2" fill="var(--accent)" opacity="0.3"/>
-              <rect x="3" y="11" width="18" height="11" rx="2" stroke="var(--accent)" strokeWidth="1.5"/>
-              <path d="M7 11V7a5 5 0 0110 0v4" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" fill="var(--accent)" opacity="0.25"/>
+              <path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" stroke="var(--accent)" strokeWidth="1.5" strokeLinejoin="round"/>
             </svg>
             <span>SecureChat</span>
             {!connected && <span className="offline-badge">offline</span>}
@@ -69,9 +68,7 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
             {onOpenAdmin && (
               <button className="icon-btn" onClick={onOpenAdmin} title="Admin panel">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L3 7l9 5 9-5-9-5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-                  <path d="M3 12l9 5 9-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M3 17l9 5 9-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
                 </svg>
               </button>
             )}
