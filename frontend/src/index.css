@@ -95,16 +95,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* --bsa: bottom safe area inset used by all bottom-edge elements.
-   In standalone PWA mode, env() can return 0 on some iOS versions even
-   though the home indicator is present — fall back to 34px (standard height). */
+/* --bsa: bottom safe area inset. Use env() directly — if it returns 0 in PWA
+   mode that means the viewport is already inset; forcing 34px creates a
+   double gap. JS in main.jsx overrides this only when env() returns > 0. */
 :root {
   --bsa: env(safe-area-inset-bottom, 0px);
-}
-@media (display-mode: standalone) {
-  :root {
-    --bsa: env(safe-area-inset-bottom, 34px);
-  }
 }
 
 #root {

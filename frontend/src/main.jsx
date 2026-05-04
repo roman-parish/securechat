@@ -77,10 +77,11 @@ if (document.readyState === 'complete') {
   document.body.appendChild(el);
   const bsa = parseFloat(getComputedStyle(el).paddingBottom) || 0;
   document.body.removeChild(el);
+  // Only override --bsa if env() returned a real value. If env() returns 0 in
+  // PWA mode the viewport is already inset at the safe-area boundary — forcing
+  // 34px on top of that creates a double gap. Trust env() in both cases.
   if (bsa > 0) {
     html.style.setProperty('--bsa', bsa + 'px');
-  } else if (window.navigator.standalone === true) {
-    html.style.setProperty('--bsa', '34px');
   }
 }());
 
