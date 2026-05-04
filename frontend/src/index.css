@@ -107,12 +107,17 @@ body {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-1);
-  /* height (not min-height) gives flex children a definite height so
-     height:100% / flex:1 chains resolve all the way to the viewport edge */
   height: 100dvh;
   padding-top: env(safe-area-inset-top, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
+}
+/* iOS PWA standalone: 100dvh excludes the home indicator zone (~34px gap).
+   -webkit-fill-available fills the actual full screen height including that
+   zone. Only applied in standalone mode — in Safari browser mode this value
+   shrinks when the URL bar is visible, which breaks the layout. */
+.pwa-standalone #root {
+  height: -webkit-fill-available;
 }
 /* Ensure the status bar background colour matches the app */
 html {

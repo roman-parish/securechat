@@ -70,8 +70,16 @@ if (document.readyState === 'complete') {
   const metaTC = document.querySelector('meta[name="theme-color"]');
   if (metaTC) metaTC.setAttribute('content', theme === 'light' ? '#f5f5fa' : '#0f0f13');
 
-  // 2. Measure env(safe-area-inset-bottom). On some iOS PWA versions env()
-  //    returns 0 even when the home indicator is present; fall back to 34px.
+  // 2. In iOS PWA standalone mode, 100dvh excludes the home indicator zone,
+  //    causing a ~34px gap at the bottom. Flag the html element so CSS can
+  //    switch #root to -webkit-fill-available, which correctly covers the
+  //    full screen. This must NOT apply in Safari browser mode because
+  //    -webkit-fill-available on html shrinks when the URL bar is visible.
+  if (window.navigator.standalone === true) {
+    html.classList.add('pwa-standalone');
+  }
+
+  // 3. Measure env(safe-area-inset-bottom) and propagate to --bsa.
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none';
   document.body.appendChild(el);
