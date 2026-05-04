@@ -635,16 +635,6 @@ export default function AdminPage({ onBack }) {
           border-top: 1px solid var(--border);
           padding-bottom: var(--bsa);
         }
-        @media (max-width: 768px) {
-          .ap-tab-bar {
-            position: fixed;
-            left: 0; right: 0; bottom: 0;
-            padding-bottom: env(safe-area-inset-bottom, 0px);
-          }
-          .ap-page {
-            padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
-          }
-        }
         .ap-tab {
           flex: 1; display: flex; flex-direction: column;
           align-items: center; justify-content: center;

@@ -1117,23 +1117,6 @@ export default function ChatWindow({ conversationId, onBack }) {
           display: flex; flex-direction: column;
           -webkit-overflow-scrolling: touch;
         }
-        @media (max-width: 768px) {
-          .messages-area {
-            padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-          }
-          .chat-input-bar {
-            position: fixed;
-            left: 0; right: 0; bottom: 0;
-            padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
-            z-index: 10;
-          }
-          .recording-bar {
-            position: fixed;
-            left: 0; right: 0; bottom: 0;
-            padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
-            z-index: 10;
-          }
-        }
         .msg-loading, .no-messages {
           display: flex; flex-direction: column; align-items: center;
           justify-content: center; flex: 1; gap: 12px;
