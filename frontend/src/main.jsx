@@ -58,6 +58,22 @@ if (document.readyState === 'complete') {
   window.addEventListener('load', registerSW);
 }
 
+// Measure env(safe-area-inset-bottom) before rendering.
+// On some iOS versions, env() returns 0 in PWA standalone mode even when
+// the home indicator is present. Fall back to 34px in that case.
+(function () {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none';
+  document.body.appendChild(el);
+  const bsa = parseFloat(getComputedStyle(el).paddingBottom) || 0;
+  document.body.removeChild(el);
+  if (bsa > 0) {
+    document.documentElement.style.setProperty('--bsa', bsa + 'px');
+  } else if (window.navigator.standalone === true) {
+    document.documentElement.style.setProperty('--bsa', '34px');
+  }
+}());
+
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
