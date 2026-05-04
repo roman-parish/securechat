@@ -70,18 +70,7 @@ if (document.readyState === 'complete') {
   const metaTC = document.querySelector('meta[name="theme-color"]');
   if (metaTC) metaTC.setAttribute('content', theme === 'light' ? '#f5f5fa' : '#0f0f13');
 
-  // 2. Drive #root height from window.innerHeight rather than CSS vh/dvh units.
-  //    Both 100vh and 100dvh have documented miscalculation bugs in iOS PWA
-  //    standalone mode (the "~59px chin gap"). window.innerHeight is always the
-  //    true usable viewport height and also updates correctly when the keyboard
-  //    shows/hides (preventing the "stuck viewport" resize bug).
-  function setAppHeight() {
-    html.style.setProperty('--app-height', window.innerHeight + 'px');
-  }
-  setAppHeight();
-  window.addEventListener('resize', setAppHeight);
-
-  // 3. Measure env(safe-area-inset-bottom). On some iOS PWA versions env()
+  // 2. Measure env(safe-area-inset-bottom). On some iOS PWA versions env()
   //    returns 0 even when the home indicator is present; fall back to 34px.
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none';

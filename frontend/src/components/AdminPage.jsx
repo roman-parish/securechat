@@ -585,6 +585,7 @@ export default function AdminPage({ onBack }) {
           left: env(safe-area-inset-left, 0px);
           right: env(safe-area-inset-right, 0px);
           bottom: 0;
+          padding-bottom: env(safe-area-inset-bottom, 0px);
           display: flex; flex-direction: column;
           background: var(--bg-1);
           z-index: 1;
@@ -628,24 +629,12 @@ export default function AdminPage({ onBack }) {
           box-sizing: border-box;
         }
 
-        /* Bottom tab bar — fixed height, always at screen bottom */
+        /* Bottom tab bar — flex item at base of .ap, safe area handled by .ap */
         .ap-tab-bar {
           flex-shrink: 0;
           display: flex;
           background: var(--bg-1);
           border-top: 1px solid var(--border);
-          padding-bottom: var(--bsa);
-          position: relative;
-        }
-        /* Guarantee tab-bar background bleeds flush to the physical screen edge
-           regardless of sub-pixel rendering gaps or env() resolution quirks */
-        .ap-tab-bar::after {
-          content: '';
-          position: fixed;
-          bottom: 0; left: 0; right: 0;
-          height: var(--bsa);
-          background: var(--bg-1);
-          pointer-events: none;
         }
         .ap-tab {
           flex: 1; display: flex; flex-direction: column;

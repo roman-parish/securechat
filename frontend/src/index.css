@@ -111,9 +111,9 @@ body {
   background: var(--bg-1);
   /* height (not min-height) gives flex children a definite height so
      height:100% / flex:1 chains resolve all the way to the viewport edge */
-  height: 100dvh; /* fallback before JS runs */
-  height: var(--app-height, 100dvh); /* JS-measured true viewport height */
+  height: 100dvh;
   padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
 }

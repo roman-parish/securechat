@@ -1177,19 +1177,8 @@ export default function ChatWindow({ conversationId, onBack }) {
         .chat-input-bar {
           display: flex; align-items: flex-end; gap: 10px;
           padding: 10px 14px;
-          padding-bottom: max(10px, var(--bsa));
           border-top: 1px solid var(--border);
           background: var(--bg-1); flex-shrink: 0;
-          position: relative;
-        }
-        .chat-input-bar::after {
-          content: '';
-          position: fixed;
-          bottom: 0; left: 0; right: 0;
-          height: var(--bsa);
-          background: var(--bg-1);
-          pointer-events: none;
-          z-index: 1;
         }
         .input-wrapper {
           flex: 1; background: var(--bg-3); border-radius: var(--radius-lg);
@@ -1224,7 +1213,6 @@ export default function ChatWindow({ conversationId, onBack }) {
         .recording-bar {
           display: flex; align-items: center; gap: 10px;
           padding: 10px 14px;
-          padding-bottom: max(10px, var(--bsa));
           border-top: 1px solid var(--border);
           background: var(--bg-1); flex-shrink: 0;
         }
