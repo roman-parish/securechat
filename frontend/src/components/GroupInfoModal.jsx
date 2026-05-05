@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { apiFetch } from '../utils/api.js';
 import Avatar from './Avatar.jsx';
 
-export default function GroupInfoModal({ conversation, onClose, onUpdated }) {
+export default function GroupInfoModal({ conversation, onClose, onUpdated, onDeleted }) {
   const { user } = useAuth();
   const [name, setName] = useState(conversation.name || '');
   const [saving, setSaving] = useState(false);
@@ -78,6 +78,16 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated }) {
       setMsg('Failed to save');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!confirm(`Delete "${conversation.name}"? This will permanently remove all messages for everyone.`)) return;
+    try {
+      await apiFetch(`/conversations/${conversation._id}/dissolve`, { method: 'DELETE' });
+      onDeleted?.();
+    } catch (err) {
+      setMsg(err.message || 'Failed to delete group');
     }
   };
 
@@ -194,6 +204,19 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated }) {
               )}
             </>
           )}
+        {isAdmin && (
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <button className="delete-group-btn" onClick={handleDeleteGroup}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              Delete Group
+            </button>
+          </div>
+        )}
         </div>
       </div>
 
@@ -222,6 +245,13 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated }) {
         }
         .close-btn:hover { background: var(--bg-4); color: var(--text-0); }
         .modal-body { padding: 18px 20px; overflow-y: auto; }
+        .delete-group-btn {
+          display: flex; align-items: center; gap: 8px;
+          width: 100%; padding: 10px 12px; border-radius: var(--radius);
+          color: var(--red); font-size: 14px; font-weight: 500;
+          background: var(--red-dim); transition: opacity var(--transition);
+        }
+        .delete-group-btn:hover { opacity: 0.8; }
         .field-label { display: block; font-size: 12px; color: var(--text-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
         .field-row { display: flex; gap: 8px; }
         .text-input {

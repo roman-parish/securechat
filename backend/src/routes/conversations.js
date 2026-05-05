@@ -397,6 +397,31 @@ router.delete('/:conversationId/mute', authenticate, async (req, res) => {
   }
 });
 
+// Dissolve group — group admins only; deletes conversation and all messages for everyone
+router.delete('/:conversationId/dissolve', authenticate, async (req, res) => {
+  try {
+    const conversation = await Conversation.findOne({
+      _id: req.params.conversationId,
+      type: 'group',
+      admins: req.user.userId,
+    });
+    if (!conversation) return res.status(403).json({ error: 'Not found or not a group admin' });
+
+    await Message.deleteMany({ conversationId: conversation._id });
+    await Conversation.deleteOne({ _id: conversation._id });
+
+    // Notify all participants so they remove it from their UI
+    req.io.to(`conversation:${conversation._id}`).emit('conversation:removed', { conversationId: conversation._id });
+    for (const pid of conversation.participants) {
+      req.io.to(`user:${String(pid)}`).emit('conversation:removed', { conversationId: conversation._id });
+    }
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to delete group' });
+  }
+});
+
 // Hide conversation from list (for this user only — messages stay for others)
 router.delete('/:conversationId', authenticate, async (req, res) => {
   try {

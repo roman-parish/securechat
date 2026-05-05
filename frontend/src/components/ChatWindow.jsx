@@ -1042,6 +1042,7 @@ export default function ChatWindow({ conversationId, onBack }) {
             setConversation(prev => ({ ...prev, ...updated }));
             conversationRef.current = { ...conversationRef.current, ...updated };
           }}
+          onDeleted={onBack}
         />
       )}
 
