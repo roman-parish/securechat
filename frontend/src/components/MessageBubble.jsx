@@ -16,14 +16,16 @@ const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentUserId }) {
   const myKey = encryptedKeys?.find(k => String(k.userId) === String(currentUserId))?.encryptedKey;
   const decryptOpts = { encryptedKey: myKey, fileIv: attachment.fileIv, mimetype: attachment.mimetype, userId: currentUserId };
-  const src = useAuthBlob(attachment.url, decryptOpts);
+  const { src, error } = useAuthBlob(attachment.url, decryptOpts);
   if (attachment.mimetype?.startsWith('image/')) {
     return (
       <div className="msg-attachment">
         {src
           ? <img src={src} alt={attachment.originalName || 'image'} className="attach-img"
               onClick={e => { e.stopPropagation(); onLightbox(src); }} />
-          : <div className="attach-img-placeholder" />
+          : error
+            ? <div className="attach-img-placeholder attach-error">Failed to load</div>
+            : <div className="attach-img-placeholder" />
         }
       </div>
     );
@@ -31,7 +33,10 @@ function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentU
   if (attachment.mimetype?.startsWith('audio/')) {
     return (
       <div className="msg-attachment">
-        <AudioPlayer url={src} isOwn={isOwn} />
+        {error
+          ? <div className="attach-file attach-error">Failed to load audio</div>
+          : <AudioPlayer url={src} isOwn={isOwn} />
+        }
       </div>
     );
   }
@@ -39,7 +44,15 @@ function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentU
   return (
     <div className="msg-attachment">
       {isSecure ? (
-        src ? (
+        error ? (
+          <div className="attach-file attach-error">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <span>Failed to load</span>
+          </div>
+        ) : src ? (
           <a href={src} download={attachment.originalName || 'file'} className="attach-file">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5"/>
@@ -71,32 +84,30 @@ function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentU
 
 function useAuthBlob(url, { encryptedKey, fileIv, mimetype, userId } = {}) {
   const [src, setSrc] = useState(null);
+  const [error, setError] = useState(false);
   useEffect(() => {
+    setSrc(null);
+    setError(false);
     if (!url) return;
     if (!url.startsWith('/api/uploads/secure/')) { setSrc(url); return; }
     let objectUrl;
     const token = localStorage.getItem('accessToken');
     fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-      .then(r => r.ok ? r.arrayBuffer() : null)
+      .then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error('fetch failed')))
       .then(async (buf) => {
-        if (!buf) return;
         let finalBuf = buf;
         if (encryptedKey && fileIv && userId) {
-          try {
-            finalBuf = await decryptFile(buf, fileIv, encryptedKey, userId);
-          } catch {
-            return;
-          }
+          finalBuf = await decryptFile(buf, fileIv, encryptedKey, userId);
         } else {
-          return;
+          throw new Error('missing keys');
         }
         objectUrl = URL.createObjectURL(new Blob([finalBuf], { type: mimetype || 'application/octet-stream' }));
         setSrc(objectUrl);
       })
-      .catch(() => {});
+      .catch(() => setError(true));
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [url, encryptedKey, fileIv, mimetype, userId]);
-  return src;
+  return { src, error };
 }
 
 function AudioPlayer({ url, isOwn }) {
@@ -662,6 +673,8 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
         }
         .attach-file:hover { background: rgba(0,0,0,0.25); }
         .attach-file span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+        .attach-error { opacity: 0.55; color: var(--red, #e55); cursor: default; pointer-events: none; }
+        .attach-img-placeholder.attach-error { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--red, #e55); background: rgba(229,85,85,0.1); animation: none; }
         .audio-player {
           display: flex; align-items: center; gap: 8px;
           padding: 4px 0; min-width: 180px;

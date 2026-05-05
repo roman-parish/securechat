@@ -478,7 +478,8 @@ export default function ChatWindow({ conversationId, onBack }) {
         await apiFetch(`/messages/${editingMsg._id}`, { method: 'PUT', body: JSON.stringify(payload) });
         setMsg(editingMsg._id, content);
       } catch (err) {
-        console.error('Edit failed:', err);
+        setSendError(err.message || 'Failed to edit message.');
+        setTimeout(() => setSendError(''), 4000);
       }
       return;
     }
@@ -569,9 +570,14 @@ export default function ChatWindow({ conversationId, onBack }) {
   };
 
   const handleDelete = async (msg, forEveryone) => {
-    await apiFetch(`/messages/${msg._id}?forEveryone=${forEveryone}`, { method: 'DELETE' });
-    if (!forEveryone) {
-      setMessages(prev => prev.filter(m => m._id !== msg._id));
+    try {
+      await apiFetch(`/messages/${msg._id}?forEveryone=${forEveryone}`, { method: 'DELETE' });
+      if (!forEveryone) {
+        setMessages(prev => prev.filter(m => m._id !== msg._id));
+      }
+    } catch (err) {
+      setSendError(err.message || 'Failed to delete message.');
+      setTimeout(() => setSendError(''), 4000);
     }
   };
 
