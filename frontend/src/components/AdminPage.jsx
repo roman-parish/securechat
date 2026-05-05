@@ -366,10 +366,11 @@ export default function AdminPage({ onBack }) {
           {activeTab === 'settings' && (
             <>
               <div className="ap-group">
+                <div className="ap-group-title">Registration & Access</div>
                 <div className="ap-row">
                   <div className="ap-row-text">
                     <div className="ap-row-title">Open Registration</div>
-                    <div className="ap-row-sub">Allow new users to sign up</div>
+                    <div className="ap-row-sub">Allow new users to sign up without an invite</div>
                   </div>
                   <button
                     className={`ap-toggle ${registrationOpen ? 'on' : ''}`}
@@ -379,34 +380,19 @@ export default function AdminPage({ onBack }) {
                     <span className="ap-toggle-knob" />
                   </button>
                 </div>
-              </div>
-
-              <div className="ap-group">
-                <div className="ap-group-title">Email Notifications</div>
-                {[
-                  { key: 'enabled',           label: 'Email enabled',    sub: 'Master switch — disables all system emails when off' },
-                  { key: 'loginNotification',        label: 'Sign-in alerts',            sub: 'Send users an email when a new device signs in' },
-                  { key: 'passwordChanged',          label: 'Password changes',           sub: 'Notify users when their password is changed' },
-                  { key: 'securityAlerts',           label: 'Security alerts',            sub: 'Notify users for 2FA changes and account deletions' },
-                  { key: 'requireEmailVerification', label: 'Require email verification', sub: 'New users must verify their email before accessing the app' },
-                ].map(({ key, label, sub }) => (
-                  <div className="ap-row" key={key} style={ key !== 'enabled' && !emailSettings.enabled ? { opacity: 0.4, pointerEvents: 'none' } : {} }>
-                    <div className="ap-row-text">
-                      <div className="ap-row-title">{label}</div>
-                      <div className="ap-row-sub">{sub}</div>
-                    </div>
-                    <button
-                      className={`ap-toggle ${emailSettings[key] ? 'on' : ''}`}
-                      onClick={() => handleEmailSettingToggle(key)}
-                      aria-label={`Toggle ${label}`}
-                    >
-                      <span className="ap-toggle-knob" />
-                    </button>
+                <div className="ap-row" style={!emailSettings.enabled ? { opacity: 0.4, pointerEvents: 'none' } : {}}>
+                  <div className="ap-row-text">
+                    <div className="ap-row-title">Require email verification</div>
+                    <div className="ap-row-sub">New users must verify their email address before using the app</div>
                   </div>
-                ))}
-              </div>
-
-              <div className="ap-group">
+                  <button
+                    className={`ap-toggle ${emailSettings.requireEmailVerification ? 'on' : ''}`}
+                    onClick={() => handleEmailSettingToggle('requireEmailVerification')}
+                    aria-label="Toggle email verification"
+                  >
+                    <span className="ap-toggle-knob" />
+                  </button>
+                </div>
                 <div className="ap-row">
                   <div className="ap-row-text">
                     <div className="ap-row-title">Invite Links</div>
@@ -423,6 +409,30 @@ export default function AdminPage({ onBack }) {
                       <div className="ap-row-sub">Expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}</div>
                     </div>
                     <button className="ap-ghost-btn" onClick={() => handleRevokeInvite(inv._id)}>Revoke</button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="ap-group">
+                <div className="ap-group-title">Email Notifications</div>
+                {[
+                  { key: 'enabled',           label: 'Email enabled',       sub: 'Master switch — disables all system emails when off' },
+                  { key: 'loginNotification', label: 'Sign-in alerts',      sub: 'Send users an email when a new device signs in' },
+                  { key: 'passwordChanged',   label: 'Password changes',    sub: 'Notify users when their password is changed' },
+                  { key: 'securityAlerts',    label: 'Security alerts',     sub: 'Notify users for 2FA changes and account deletions' },
+                ].map(({ key, label, sub }) => (
+                  <div className="ap-row" key={key} style={ key !== 'enabled' && !emailSettings.enabled ? { opacity: 0.4, pointerEvents: 'none' } : {} }>
+                    <div className="ap-row-text">
+                      <div className="ap-row-title">{label}</div>
+                      <div className="ap-row-sub">{sub}</div>
+                    </div>
+                    <button
+                      className={`ap-toggle ${emailSettings[key] ? 'on' : ''}`}
+                      onClick={() => handleEmailSettingToggle(key)}
+                      aria-label={`Toggle ${label}`}
+                    >
+                      <span className="ap-toggle-knob" />
+                    </button>
                   </div>
                 ))}
               </div>
