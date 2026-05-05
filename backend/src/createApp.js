@@ -94,6 +94,17 @@ export function createApp(ioRef = mockIo) {
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
 
+  // Forgot/reset password — tighter than general auth limit to prevent email enumeration
+  const passwordResetLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: process.env.NODE_ENV === 'test' ? 10000 : 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many password reset attempts — try again in 15 minutes' },
+  });
+  app.use('/api/auth/forgot-password', passwordResetLimiter);
+  app.use('/api/auth/reset-password', passwordResetLimiter);
+
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/conversations', conversationRoutes);
