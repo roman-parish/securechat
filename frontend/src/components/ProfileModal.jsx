@@ -995,10 +995,9 @@ export default function ProfileModal({ onClose }) {
           display: flex;
           align-items: flex-end;
           justify-content: center;
-          padding-bottom: var(--bsa);
         }
         @media (min-width: 480px) {
-          .modal-overlay { align-items: center; padding-bottom: 0; }
+          .modal-overlay { align-items: center; }
         }
         .modal {
           width: 100%; max-width: 440px;
