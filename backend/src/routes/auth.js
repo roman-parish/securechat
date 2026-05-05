@@ -103,7 +103,7 @@ router.post('/register', [
 
     // If email is configured, generate a verification token
     let verificationToken = null;
-    if (process.env.SMTP_HOST) {
+    if (email && process.env.RESEND_API_KEY) {
       verificationToken = randomBytes(32).toString('hex');
       user.emailVerificationToken = verificationToken;
     }
