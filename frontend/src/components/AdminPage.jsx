@@ -22,6 +22,7 @@ const ACTION_LABELS = {
   'invite.create': 'Created invite',
   'invite.revoke': 'Revoked invite',
   'settings.registration_toggle': 'Registration',
+  'settings.email_update': 'Email settings',
 };
 
 function formatBytes(bytes) {
@@ -434,16 +435,18 @@ export default function AdminPage({ onBack }) {
                 <div key={log._id}>
                   {idx > 0 && <div className="ap-sep" />}
                   <div className="ap-audit">
-                    <span className={`ap-badge audit-${log.action.split('.')[1]}`}>
+                    <span className={`ap-badge audit-${log.action.replace('.', '-')}`}>
                       {ACTION_LABELS[log.action] || log.action}
                     </span>
-                    <span className="ap-audit-who">
-                      {log.performedByUsername}
-                      {log.targetUsername && <span className="ap-audit-target"> → {log.targetUsername}</span>}
-                      {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
-                      {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
+                    <span className="ap-audit-body">
+                      <span className="ap-audit-who">
+                        {log.performedByUsername}
+                        {log.targetUsername && <span className="ap-audit-target"> → {log.targetUsername}</span>}
+                        {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
+                        {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
+                      </span>
+                      <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
                     </span>
-                    <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
                   </div>
                 </div>
               ))}
@@ -501,8 +504,35 @@ export default function AdminPage({ onBack }) {
       {menuUser && (
         <Sheet onClose={() => setMenuUser(null)}>
           <div className="ap-sheet-header">
-            <span className="ap-sheet-title">@{menuUser.username}</span>
+            <span className="ap-sheet-title">{menuUser.displayName || menuUser.username}</span>
+            <span className="ap-sheet-handle">@{menuUser.username}</span>
           </div>
+
+          <div className="ap-user-detail">
+            {menuUser.email && (
+              <div className="ap-detail-row">
+                <span className="ap-detail-label">Email</span>
+                <span className="ap-detail-value">{menuUser.email}</span>
+              </div>
+            )}
+            <div className="ap-detail-row">
+              <span className="ap-detail-label">Joined</span>
+              <span className="ap-detail-value">{new Date(menuUser.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+            </div>
+            <div className="ap-detail-row">
+              <span className="ap-detail-label">Last seen</span>
+              <span className="ap-detail-value">{menuUser.lastSeen ? formatDistanceToNow(new Date(menuUser.lastSeen), { addSuffix: true }) : 'Never'}</span>
+            </div>
+            <div className="ap-detail-row">
+              <span className="ap-detail-label">2FA</span>
+              <span className="ap-detail-value">{menuUser.twoFactorEnabled ? '✓ Enabled' : 'Disabled'}</span>
+            </div>
+            <div className="ap-detail-row">
+              <span className="ap-detail-label">Status</span>
+              <span className={`ap-detail-value ${menuUser.banned ? 'text-red' : 'text-green'}`}>{menuUser.banned ? 'Suspended' : 'Active'}</span>
+            </div>
+          </div>
+
           <div className="ap-actions-list">
             <button
               className={`ap-action-item ${menuUser.banned ? 'green' : 'orange'}`}
@@ -512,14 +542,14 @@ export default function AdminPage({ onBack }) {
               <span className="ap-action-label">{menuUser.banned ? 'Unsuspend user' : 'Suspend user'}</span>
             </button>
             <button
-              className="ap-action-item"
+              className="ap-action-item blue"
               onClick={() => { setMenuUser(null); setResetPwUser(menuUser); setNewPassword(''); }}
             >
               <span className="ap-action-icon"><IconKey /></span>
               <span className="ap-action-label">Reset password</span>
             </button>
             <button
-              className="ap-action-item"
+              className="ap-action-item blue"
               onClick={() => { setMenuUser(null); setReset2faUser(menuUser); }}
             >
               <span className="ap-action-icon"><IconShield /></span>
@@ -870,19 +900,20 @@ export default function AdminPage({ onBack }) {
         .ap-badge.green  { background: var(--green-dim);               color: var(--green);  }
         .ap-badge.red    { background: var(--red-dim);                  color: var(--red);    }
         .ap-badge.purple { background: rgba(108,99,255,0.15);           color: var(--accent); }
-        .ap-badge.audit-ban,.ap-badge.audit-delete,.ap-badge.audit-revoke   { background: var(--red-dim);              color: var(--red);    }
-        .ap-badge.audit-unban,.ap-badge.audit-create                        { background: var(--green-dim);            color: var(--green);  }
-        .ap-badge.audit-password_reset,.ap-badge.audit-reset_2fa            { background: rgba(108,99,255,0.15);       color: var(--accent); }
-        .ap-badge.audit-registration_toggle                                 { background: var(--bg-3);                 color: var(--text-2); }
+        .ap-badge.audit-user-ban,.ap-badge.audit-user-delete,.ap-badge.audit-invite-revoke { background: var(--red-dim);         color: var(--red);    }
+        .ap-badge.audit-user-unban,.ap-badge.audit-invite-create                          { background: var(--green-dim);       color: var(--green);  }
+        .ap-badge.audit-user-password_reset,.ap-badge.audit-user-reset_2fa               { background: var(--accent-dim);      color: var(--accent); }
+        .ap-badge.audit-settings-registration_toggle,.ap-badge.audit-settings-email_update { background: var(--bg-3);           color: var(--text-2); }
 
         /* Audit row */
+        .ap-audit-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
         .ap-audit {
-          display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px;
+          display: flex; align-items: center; gap: 10px;
           padding: 12px 16px;
         }
-        .ap-audit-who { font-size: 13px; color: var(--text-1); font-weight: 500; flex: 1; min-width: 0; }
+        .ap-audit-who { font-size: 13px; color: var(--text-1); font-weight: 500; }
         .ap-audit-target { color: var(--text-3); font-weight: 400; }
-        .ap-audit-time { font-size: 11px; color: var(--text-3); flex-shrink: 0; white-space: nowrap; }
+        .ap-audit-time { font-size: 11px; color: var(--text-3); white-space: nowrap; }
 
         /* Empty */
         .ap-empty { padding: 32px 16px; text-align: center; font-size: 14px; color: var(--text-3); }
@@ -912,9 +943,23 @@ export default function AdminPage({ onBack }) {
           from { transform: translateY(20px); opacity: 0; }
           to   { transform: translateY(0);    opacity: 1; }
         }
-        .ap-sheet-header { padding-bottom: 4px; border-bottom: 1px solid var(--border); }
-        .ap-sheet-title  { font-size: 18px; font-weight: 700; color: var(--text-0); }
+        .ap-sheet-header { padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        .ap-sheet-title  { font-size: 18px; font-weight: 700; color: var(--text-0); display: block; }
+        .ap-sheet-handle { font-size: 13px; color: var(--text-3); display: block; margin-top: 2px; }
         .ap-sheet-sub    { font-size: 14px; color: var(--text-2); line-height: 1.55; }
+
+        .ap-user-detail {
+          background: var(--bg-3); border-radius: var(--radius); padding: 4px 0; margin: 4px 0;
+        }
+        .ap-detail-row {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 8px 14px; gap: 12px;
+        }
+        .ap-detail-row + .ap-detail-row { border-top: 1px solid var(--border); }
+        .ap-detail-label { font-size: 13px; color: var(--text-3); flex-shrink: 0; }
+        .ap-detail-value { font-size: 13px; color: var(--text-1); text-align: right; word-break: break-all; }
+        .ap-detail-value.text-green { color: var(--green); }
+        .ap-detail-value.text-red   { color: var(--red); }
 
         /* Action list in user menu */
         .ap-actions-list { display: flex; flex-direction: column; gap: 4px; }
@@ -926,9 +971,10 @@ export default function AdminPage({ onBack }) {
         }
         .ap-action-item:active { filter: brightness(1.15); }
         @media(hover:hover){.ap-action-item:hover{filter:brightness(1.1);}}
-        .ap-action-item.green  { background: var(--green-dim);         color: var(--green);  }
-        .ap-action-item.orange { background: rgba(255,160,60,0.12);    color: #f59e0b;       }
-        .ap-action-item.red    { background: var(--red-dim);           color: var(--red);    }
+        .ap-action-item.green  { background: var(--green-dim);      color: var(--green);  }
+        .ap-action-item.orange { background: rgba(255,160,60,0.12); color: #f59e0b;       }
+        .ap-action-item.blue   { background: var(--accent-dim);     color: var(--accent); }
+        .ap-action-item.red    { background: var(--red-dim);        color: var(--red);    }
         .ap-action-icon { flex-shrink: 0; display: flex; align-items: center; }
         .ap-action-label { font-size: 16px; font-weight: 500; }
 
