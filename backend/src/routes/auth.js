@@ -17,7 +17,7 @@ import Conversation from '../models/Conversation.js';
 import PushSubscription from '../models/PushSubscription.js';
 import { authenticate } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
-import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification, sendPasswordResetEmail, sendTwoFactorDisabledNotification, emailAllowed } from '../utils/email.js';
+import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification, sendPasswordResetEmail, sendTwoFactorDisabledNotification, sendEmailVerification, emailAllowed } from '../utils/email.js';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { randomBytes, createHash } from 'crypto';
@@ -100,6 +100,14 @@ router.post('/register', [
     if (existing) return res.status(409).json({ error: 'Username or email already taken' });
 
     const user = new User({ username, email, password, displayName: username });
+
+    // If email is configured, generate a verification token
+    let verificationToken = null;
+    if (process.env.SMTP_HOST) {
+      verificationToken = randomBytes(32).toString('hex');
+      user.emailVerificationToken = verificationToken;
+    }
+
     await user.save();
 
     const { accessToken, refreshToken, refreshJti } = generateTokens(user);
@@ -112,10 +120,37 @@ router.post('/register', [
       await invite.save();
     }
 
+    // Send verification email in the background — don't block registration
+    if (verificationToken) {
+      const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost'}/verify-email?token=${verificationToken}`;
+      sendEmailVerification({
+        to: email,
+        displayName: username,
+        verifyUrl,
+      }).catch(err => logger.error({ err }, 'Failed to send verification email'));
+    }
+
     res.status(201).json({ user, accessToken, refreshToken });
   } catch (err) {
     logger.error({ err }, 'Registration failed');
     res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// Verify email address via token sent on registration
+router.get('/verify-email', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: 'Token required' });
+  try {
+    const user = await User.findOne({ emailVerificationToken: token }).select('+emailVerificationToken');
+    if (!user) return res.status(404).json({ error: 'Invalid or already-used verification token' });
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    await user.save();
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, 'Email verification failed');
+    res.status(500).json({ error: 'Email verification failed' });
   }
 });
 
@@ -286,29 +321,49 @@ router.delete('/account', authenticate, async (req, res) => {
     }
 
     const userId = req.user.userId;
+    logger.info({ userId }, 'Account deletion started');
 
     // Anonymize messages — keep conversations intact for other participants
-    await Message.updateMany(
-      { sender: userId },
-      { $set: { 'sender': null, deletedForEveryone: true, contentType: 'deleted' } }
-    );
+    try {
+      await Message.updateMany(
+        { sender: userId },
+        { $set: { 'sender': null, deletedForEveryone: true, contentType: 'deleted' } }
+      );
+      logger.info({ userId }, 'Account deletion: messages anonymized');
+    } catch (err) {
+      logger.error({ err, userId }, 'Account deletion: failed to anonymize messages — continuing');
+    }
 
     // Remove user from all conversations; delete conversations that become empty
-    const conversations = await Conversation.find({ participants: userId });
-    for (const conv of conversations) {
-      const remaining = conv.participants.filter(p => String(p) !== userId);
-      if (remaining.length === 0) {
-        await Conversation.deleteOne({ _id: conv._id });
-        await Message.deleteMany({ conversationId: conv._id });
-      } else {
-        await Conversation.findByIdAndUpdate(conv._id, {
-          $pull: { participants: userId, admins: userId },
-        });
+    try {
+      const conversations = await Conversation.find({ participants: userId });
+      for (const conv of conversations) {
+        const remaining = conv.participants.filter(p => String(p) !== userId);
+        try {
+          if (remaining.length === 0) {
+            await Conversation.deleteOne({ _id: conv._id });
+            await Message.deleteMany({ conversationId: conv._id });
+          } else {
+            await Conversation.findByIdAndUpdate(conv._id, {
+              $pull: { participants: userId, admins: userId },
+            });
+          }
+        } catch (err) {
+          logger.error({ err, userId, convId: conv._id }, 'Account deletion: failed to update conversation — continuing');
+        }
       }
+      logger.info({ userId }, 'Account deletion: conversations updated');
+    } catch (err) {
+      logger.error({ err, userId }, 'Account deletion: failed to fetch conversations — continuing');
     }
 
     // Delete push subscriptions
-    await PushSubscription.deleteMany({ userId });
+    try {
+      await PushSubscription.deleteMany({ userId });
+      logger.info({ userId }, 'Account deletion: push subscriptions removed');
+    } catch (err) {
+      logger.error({ err, userId }, 'Account deletion: failed to remove push subscriptions — continuing');
+    }
 
     // Send deletion confirmation before wiping the user doc
     if (user.email && await emailAllowed('securityAlerts', user.emailPrefs).catch(() => true)) {
@@ -318,8 +373,9 @@ router.delete('/account', authenticate, async (req, res) => {
       }).catch(() => {});
     }
 
-    // Delete the user
+    // Delete the user — must be last so partial failures above don't leave a ghost account
     await User.deleteOne({ _id: userId });
+    logger.info({ userId }, 'Account deletion: user document removed — deletion complete');
 
     res.json({ success: true });
   } catch (err) {
@@ -407,23 +463,32 @@ router.post('/2fa/authenticate', async (req, res) => {
     const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
     if (decoded.purpose !== '2fa') return res.status(401).json({ error: 'Invalid token' });
 
-    const user = await User.findById(decoded.userId).select('+twoFactorSecret +twoFactorRecoveryCodes +refreshTokens +trustedDevices');
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    // Try TOTP first — we need the secret for this, so fetch the user initially
+    const userForTotp = await User.findById(decoded.userId).select('+twoFactorSecret');
+    if (!userForTotp) return res.status(404).json({ error: 'User not found' });
 
-    // Try TOTP first, then recovery code
     const totpValid = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
+      secret: userForTotp.twoFactorSecret,
       encoding: 'base32',
       token: code.replace(/\s/g, ''),
       window: 1,
     });
 
+    let user;
     let usedRecovery = false;
-    if (!totpValid) {
+    if (totpValid) {
+      // TOTP succeeded — fetch remaining fields needed for the rest of the flow
+      user = await User.findById(decoded.userId).select('+twoFactorSecret +twoFactorRecoveryCodes +refreshTokens +trustedDevices');
+      if (!user) return res.status(404).json({ error: 'User not found' });
+    } else {
+      // Attempt atomic recovery-code redemption to prevent race conditions
       const hashed = hashRecoveryCode(code);
-      const recoveryEntry = user.twoFactorRecoveryCodes.find(r => r.code === hashed && !r.used);
-      if (!recoveryEntry) return res.status(401).json({ error: 'Invalid code' });
-      recoveryEntry.used = true;
+      user = await User.findOneAndUpdate(
+        { _id: decoded.userId, twoFactorRecoveryCodes: { $elemMatch: { code: hashed, used: false } } },
+        { $set: { 'twoFactorRecoveryCodes.$.used': true } },
+        { new: true, select: '+twoFactorSecret +twoFactorRecoveryCodes +refreshTokens +trustedDevices' },
+      );
+      if (!user) return res.status(401).json({ error: 'Invalid code' });
       usedRecovery = true;
     }
 

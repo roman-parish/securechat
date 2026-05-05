@@ -35,15 +35,36 @@ function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentU
       </div>
     );
   }
+  const isSecure = attachment.url?.startsWith('/api/uploads/secure/');
   return (
     <div className="msg-attachment">
-      <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="attach-file">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5"/>
-          <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
-        <span>{attachment.originalName || 'Download file'}</span>
-      </a>
+      {isSecure ? (
+        src ? (
+          <a href={src} download={attachment.originalName || 'file'} className="attach-file">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <span>{attachment.originalName || 'Download file'}</span>
+          </a>
+        ) : (
+          <div className="attach-file attach-file--loading">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.4 }}>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <span style={{ opacity: 0.5 }}>{attachment.originalName || 'Loading…'}</span>
+          </div>
+        )
+      ) : (
+        <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="attach-file">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <span>{attachment.originalName || 'Download file'}</span>
+        </a>
+      )}
     </div>
   );
 }

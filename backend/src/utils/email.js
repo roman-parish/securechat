@@ -140,6 +140,28 @@ export async function sendTwoFactorDisabledNotification({ to, displayName, time 
   });
 }
 
+export async function sendEmailVerification({ to, displayName, verifyUrl }) {
+  await send({
+    to,
+    subject: 'Verify your SecureChat email address',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="margin:0 0 16px">Verify your email</h2>
+        <p>Hi ${displayName},</p>
+        <p>Thanks for registering with SecureChat. Click the button below to verify your email address.</p>
+        <div style="margin:24px 0;text-align:center">
+          <a href="${verifyUrl}" style="background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
+            Verify Email
+          </a>
+        </div>
+        <p style="color:#666;font-size:13px">If you didn't create a SecureChat account, you can ignore this email.</p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
+        <p style="font-size:12px;color:#999">SecureChat — End-to-end encrypted messaging</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendPasswordResetEmail({ to, displayName, resetUrl }) {
   await send({
     to,

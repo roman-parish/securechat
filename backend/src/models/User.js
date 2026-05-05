@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema({
   // AES-GCM IV used to wrap the private key
   keyWrapIv: { type: String, default: null },
 
+  // Email verification
+  emailVerified: { type: Boolean, default: false },
+  emailVerificationToken: { type: String, default: null, select: false },
+
   // Password reset
   passwordResetToken: { type: String, default: null, select: false },
   passwordResetExpires: { type: Date, default: null },

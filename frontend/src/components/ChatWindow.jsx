@@ -37,6 +37,7 @@ export default function ChatWindow({ conversationId, onBack }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
+  const [blockedByOther, setBlockedByOther] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -522,8 +523,12 @@ export default function ChatWindow({ conversationId, onBack }) {
       setAtBottom(true);
     } catch (err) {
       setText(content);
-      setSendError(err.message || 'Failed to send message.');
-      setTimeout(() => setSendError(''), 5000);
+      if (err.message?.toLowerCase().includes('block') && !iBlockedThem) {
+        setBlockedByOther(true);
+      } else {
+        setSendError(err.message || 'Failed to send message.');
+        setTimeout(() => setSendError(''), 5000);
+      }
       console.error('Send failed:', err);
     } finally {
       setSending(false);
@@ -840,6 +845,17 @@ export default function ChatWindow({ conversationId, onBack }) {
         </div>
       )}
 
+      {/* Blocked-by-other banner */}
+      {blockedByOther && !isBlocked && (
+        <div style={{
+          padding: '10px 16px', background: 'var(--red-dim)',
+          borderTop: '1px solid rgba(255,87,87,0.2)',
+          fontSize: 13, color: 'var(--red)', textAlign: 'center',
+        }}>
+          You cannot send messages to this user.
+        </div>
+      )}
+
       {/* Edit banner */}
       {editingMsg && (
         <div className="context-bar edit-bar">
@@ -877,7 +893,13 @@ export default function ChatWindow({ conversationId, onBack }) {
 
       {/* Send error banner */}
       {sendError && (
-        <div className="send-error-bar">{sendError}</div>
+        <div className="send-error-bar">
+          <span>{sendError}</span>
+          <button
+            style={{ color: 'var(--accent)', fontWeight: 500, marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}
+            onClick={() => { setSendError(''); sendMessage(); }}
+          >Retry →</button>
+        </div>
       )}
 
       {/* Recording UI */}
@@ -903,7 +925,7 @@ export default function ChatWindow({ conversationId, onBack }) {
       )}
 
       {/* Input */}
-      {!isRecording && !isBlocked && (
+      {!isRecording && !isBlocked && !blockedByOther && (
       <form className="chat-input-bar" onSubmit={sendMessage}>
         <div className="input-wrapper">
           <textarea
