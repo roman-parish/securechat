@@ -376,9 +376,10 @@ export default function AdminPage({ onBack }) {
                 <div className="ap-group-title">Email Notifications</div>
                 {[
                   { key: 'enabled',           label: 'Email enabled',    sub: 'Master switch — disables all system emails when off' },
-                  { key: 'loginNotification', label: 'Sign-in alerts',   sub: 'Send users an email when a new device signs in' },
-                  { key: 'passwordChanged',   label: 'Password changes', sub: 'Notify users when their password is changed' },
-                  { key: 'securityAlerts',    label: 'Security alerts',  sub: 'Notify users for 2FA changes and account deletions' },
+                  { key: 'loginNotification',        label: 'Sign-in alerts',            sub: 'Send users an email when a new device signs in' },
+                  { key: 'passwordChanged',          label: 'Password changes',           sub: 'Notify users when their password is changed' },
+                  { key: 'securityAlerts',           label: 'Security alerts',            sub: 'Notify users for 2FA changes and account deletions' },
+                  { key: 'requireEmailVerification', label: 'Require email verification', sub: 'New users must verify their email before accessing the app' },
                 ].map(({ key, label, sub }) => (
                   <div className="ap-row" key={key} style={ key !== 'enabled' && !emailSettings.enabled ? { opacity: 0.4, pointerEvents: 'none' } : {} }>
                     <div className="ap-row-text">

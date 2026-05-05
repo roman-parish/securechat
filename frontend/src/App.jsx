@@ -5,7 +5,7 @@
  *
  * https://github.com/roman-parish/securechat
  */
-import { useState, Component } from 'react';
+import { useState, useEffect, Component } from 'react';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { SocketProvider } from './contexts/SocketContext.jsx';
@@ -17,12 +17,17 @@ import AdminPage from './components/AdminPage.jsx';
 function AppInner() {
   const { user, loading } = useAuth();
   const [showAdmin, setShowAdmin] = useState(false);
+  const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
 
   if (loading) return <SplashScreen />;
 
   // Handle password reset link: /?reset=TOKEN
   const resetToken = new URLSearchParams(window.location.search).get('reset');
   if (resetToken) return <ResetPasswordPage token={resetToken} />;
+
+  // Handle email verification link: /?verify=TOKEN
+  const verifyToken = new URLSearchParams(window.location.search).get('verify');
+  if (verifyToken) return <VerifyEmailPage token={verifyToken} />;
 
   if (!user) return <AuthPage />;
 
@@ -31,13 +36,37 @@ function AppInner() {
     .split(',').map(u => u.trim().toLowerCase()).filter(Boolean);
   const isAdmin = admins.includes(user.username?.toLowerCase());
 
+  const showEmailBanner = user.emailVerified === false && user.email && !emailBannerDismissed;
+
   return (
     <SocketProvider>
       <ChatProvider>
-        {showAdmin && isAdmin
-          ? <AdminPage onBack={() => setShowAdmin(false)} />
-          : <ChatLayout onOpenAdmin={isAdmin ? () => setShowAdmin(true) : null} />
-        }
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          {showEmailBanner && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 8, padding: '9px 16px',
+              background: 'var(--warning-dim, rgba(255,200,0,0.1))',
+              color: 'var(--warning, #f5a623)',
+              borderBottom: '1px solid rgba(245,166,35,0.2)',
+              fontSize: 13, flexShrink: 0,
+            }}>
+              <span>Please verify your email address. Check your inbox for a verification link.</span>
+              <button
+                onClick={() => setEmailBannerDismissed(true)}
+                aria-label="Dismiss"
+                style={{
+                  color: 'var(--warning, #f5a623)', fontSize: 18, lineHeight: 1,
+                  padding: '0 4px', flexShrink: 0, opacity: 0.8,
+                }}
+              >×</button>
+            </div>
+          )}
+          {showAdmin && isAdmin
+            ? <AdminPage onBack={() => setShowAdmin(false)} />
+            : <ChatLayout onOpenAdmin={isAdmin ? () => setShowAdmin(true) : null} />
+          }
+        </div>
       </ChatProvider>
     </SocketProvider>
   );
@@ -338,6 +367,117 @@ function ResetPasswordPage({ token }) {
           width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
           border-top-color: white; border-radius: 50%;
           animation: spin 0.6s linear infinite;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function VerifyEmailPage({ token }) {
+  const [status, setStatus] = useState('loading'); // loading | success | error
+
+  useEffect(() => {
+    fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+      .then(async r => {
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(data.error || 'Verification failed');
+        }
+        setStatus('success');
+      })
+      .catch(() => {
+        setStatus('error');
+      });
+  }, [token]);
+
+  return (
+    <div className="auth-page">
+      <div className="auth-glow" />
+      <div className="auth-card">
+        <div className="auth-logo">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="11" width="18" height="11" rx="3" fill="var(--accent)" opacity="0.2"/>
+            <rect x="3" y="11" width="18" height="11" rx="3" stroke="var(--accent)" strokeWidth="1.5"/>
+            <path d="M7 11V7a5 5 0 0110 0v4" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="12" cy="16.5" r="1.5" fill="var(--accent)"/>
+          </svg>
+          <h1>Email Verification</h1>
+          <p>Verifying your email address</p>
+        </div>
+        {status === 'loading' && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
+            <span className="spinner" style={{ borderColor: 'rgba(108,99,255,0.3)', borderTopColor: 'var(--accent)' }} />
+          </div>
+        )}
+        {status === 'success' && (
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: '50%',
+              background: 'rgba(50,205,100,0.12)', border: '1px solid rgba(50,205,100,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M5 13l4 4L19 7" stroke="var(--green, #32cd64)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-0)' }}>
+              Email verified!
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+              You can now close this page.
+            </p>
+            <a
+              href="/"
+              onClick={e => { e.preventDefault(); window.location.href = '/'; }}
+              style={{
+                marginTop: 4, fontSize: 14, color: 'var(--accent)',
+                textDecoration: 'underline', cursor: 'pointer',
+              }}
+            >
+              Go to app
+            </a>
+          </div>
+        )}
+        {status === 'error' && (
+          <div className="auth-error" style={{ justifyContent: 'center' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="var(--red)" strokeWidth="1.5"/>
+              <path d="M12 8v5M12 16.5v.5" stroke="var(--red)" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            This verification link is invalid or has already been used.
+          </div>
+        )}
+      </div>
+      <style>{`
+        .auth-page {
+          display: flex; align-items: center; justify-content: center;
+          flex: 1; background: var(--bg-0);
+          padding: 24px; position: relative; overflow: hidden;
+        }
+        .auth-glow {
+          position: absolute; width: 600px; height: 600px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%);
+          top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
+        }
+        .auth-card {
+          width: 100%; max-width: 400px; background: var(--bg-2);
+          border: 1px solid var(--border); border-radius: var(--radius-xl);
+          padding: 40px 32px; animation: slideUp 0.4s ease; position: relative; z-index: 1;
+          display: flex; flex-direction: column; gap: 24px;
+        }
+        .auth-logo { text-align: center; }
+        .auth-logo h1 { font-size: 24px; font-weight: 600; margin-top: 12px; letter-spacing: -0.5px; }
+        .auth-logo p { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+        .auth-error {
+          display: flex; align-items: center; gap: 8px;
+          background: var(--red-dim); border: 1px solid rgba(255,87,87,0.2);
+          border-radius: var(--radius); padding: 10px 12px;
+          font-size: 13px; color: var(--red);
+        }
+        .spinner {
+          width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: white; border-radius: 50%;
+          animation: spin 0.6s linear infinite; display: block;
         }
       `}</style>
     </div>

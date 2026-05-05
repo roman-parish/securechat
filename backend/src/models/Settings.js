@@ -10,10 +10,11 @@ import mongoose from 'mongoose';
 const settingsSchema = new mongoose.Schema({
   registrationOpen: { type: Boolean, default: true },
   email: {
-    enabled:           { type: Boolean, default: true },
-    loginNotification: { type: Boolean, default: true },
-    passwordChanged:   { type: Boolean, default: true },
-    securityAlerts:    { type: Boolean, default: true },
+    enabled:                 { type: Boolean, default: true },
+    loginNotification:       { type: Boolean, default: true },
+    passwordChanged:         { type: Boolean, default: true },
+    securityAlerts:          { type: Boolean, default: true },
+    requireEmailVerification: { type: Boolean, default: false },
   },
 }, { timestamps: true });
 

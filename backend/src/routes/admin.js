@@ -312,10 +312,11 @@ router.get('/settings', async (req, res) => {
     res.json({
       registrationOpen: settings.registrationOpen ?? true,
       email: {
-        enabled:           settings.email?.enabled           ?? true,
-        loginNotification: settings.email?.loginNotification ?? true,
-        passwordChanged:   settings.email?.passwordChanged   ?? true,
-        securityAlerts:    settings.email?.securityAlerts    ?? true,
+        enabled:                  settings.email?.enabled                  ?? true,
+        loginNotification:        settings.email?.loginNotification        ?? true,
+        passwordChanged:          settings.email?.passwordChanged          ?? true,
+        securityAlerts:           settings.email?.securityAlerts           ?? true,
+        requireEmailVerification: settings.email?.requireEmailVerification ?? false,
       },
     });
   } catch {
@@ -332,7 +333,7 @@ router.put('/settings', async (req, res) => {
     if (typeof registrationOpen === 'boolean') update.registrationOpen = registrationOpen;
 
     if (email && typeof email === 'object') {
-      for (const key of ['enabled', 'loginNotification', 'passwordChanged', 'securityAlerts']) {
+      for (const key of ['enabled', 'loginNotification', 'passwordChanged', 'securityAlerts', 'requireEmailVerification']) {
         if (typeof email[key] === 'boolean') update[`email.${key}`] = email[key];
       }
     }
@@ -357,10 +358,11 @@ router.put('/settings', async (req, res) => {
     res.json({
       registrationOpen: settings.registrationOpen ?? true,
       email: {
-        enabled:           settings.email?.enabled           ?? true,
-        loginNotification: settings.email?.loginNotification ?? true,
-        passwordChanged:   settings.email?.passwordChanged   ?? true,
-        securityAlerts:    settings.email?.securityAlerts    ?? true,
+        enabled:                  settings.email?.enabled                  ?? true,
+        loginNotification:        settings.email?.loginNotification        ?? true,
+        passwordChanged:          settings.email?.passwordChanged          ?? true,
+        securityAlerts:           settings.email?.securityAlerts           ?? true,
+        requireEmailVerification: settings.email?.requireEmailVerification ?? false,
       },
     });
   } catch {

@@ -101,9 +101,10 @@ router.post('/register', [
 
     const user = new User({ username, email, password, displayName: username });
 
-    // If email is configured, generate a verification token
+    // If email is configured and the admin has enabled email verification, generate a token
     let verificationToken = null;
-    if (email && process.env.RESEND_API_KEY) {
+    const shouldVerify = email && process.env.RESEND_API_KEY && (settings?.email?.requireEmailVerification === true);
+    if (shouldVerify) {
       verificationToken = randomBytes(32).toString('hex');
       user.emailVerificationToken = verificationToken;
     }
