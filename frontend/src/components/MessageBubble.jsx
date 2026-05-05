@@ -170,7 +170,7 @@ function replyPreviewText(replyTo, plaintext) {
   return 'Message';
 }
 
-export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId }) {
+export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, isTail, onReply, onEdit, onDelete, currentUserId }) {
   const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
@@ -356,7 +356,7 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
 
         {/* Bubble */}
         <div
-          className={`bubble ${isOwn ? 'own' : ''} ${failed ? 'failed' : ''} ${isDeleted ? 'deleted' : ''} ${showActions ? 'active' : ''}`}
+          className={`bubble ${isOwn ? 'own' : ''} ${failed ? 'failed' : ''} ${isDeleted ? 'deleted' : ''} ${showActions ? 'active' : ''} ${isTail ? 'tail' : ''}`}
           onClick={handleBubbleTap}
         >
           {isDeleted ? (
@@ -543,6 +543,19 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
         .bubble.own.deleted { background: transparent; border-color: rgba(255,255,255,0.2); }
         .bubble.active { filter: brightness(1.12); }
         .bubble.own.active { filter: brightness(1.1); }
+        /* Tail — shown on the last bubble in a consecutive group */
+        .bubble.tail::after {
+          content: ''; position: absolute; bottom: 0; width: 10px; height: 14px;
+          clip-path: polygon(0 0, 100% 0, 100% 100%);
+        }
+        .bubble.tail:not(.own)::after {
+          left: -8px; background: var(--bg-3);
+          clip-path: polygon(100% 0, 0 100%, 100% 100%);
+        }
+        .bubble.tail.own::after {
+          right: -8px; background: var(--accent);
+          clip-path: polygon(0 0, 0 100%, 100% 100%);
+        }
         .deleted-text { font-size: 14px; color: var(--text-3); font-style: italic; margin: 0; }
         .msg-text {
           font-size: 15px; line-height: 1.5; margin: 0;
@@ -565,9 +578,11 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
         .decrypt-dots span:nth-child(3) { animation-delay: 0.4s; }
         .reply-preview-bubble {
           display: flex; gap: 8px;
-          background: rgba(0,0,0,0.15); border-radius: var(--radius-sm); padding: 5px 8px;
+          background: rgba(0,0,0,0.12); border-radius: var(--radius-sm); padding: 5px 8px;
         }
-        .reply-bar-inner { width: 2px; background: rgba(255,255,255,0.35); border-radius: 2px; flex-shrink: 0; }
+        .bubble:not(.own) .reply-preview-bubble { background: var(--bg-4); }
+        .reply-bar-inner { width: 2px; background: rgba(255,255,255,0.4); border-radius: 2px; flex-shrink: 0; }
+        .bubble:not(.own) .reply-bar-inner { background: var(--accent); }
         .reply-author { display: block; font-size: 11px; opacity: 0.7; font-weight: 500; }
         .reply-text { display: block; font-size: 12px; opacity: 0.55; }
         .reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }

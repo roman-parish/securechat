@@ -717,7 +717,18 @@ export default function ChatWindow({ conversationId, onBack }) {
         }}
       >
         {loading ? (
-          <div className="msg-loading"><span className="spinner" /></div>
+          <div className="msg-skeleton-list">
+            {[
+              { own: false, w: '55%' }, { own: false, w: '40%' }, { own: true, w: '48%' },
+              { own: false, w: '62%' }, { own: true, w: '35%' }, { own: true, w: '52%' },
+              { own: false, w: '44%' }, { own: true, w: '60%' },
+            ].map((s, i) => (
+              <div key={i} className={`msg-skeleton-row ${s.own ? 'own' : ''}`}>
+                {!s.own && <div className="msg-skeleton-avatar" />}
+                <div className="msg-skeleton-bubble" style={{ width: s.w }} />
+              </div>
+            ))}
+          </div>
         ) : (
           <div ref={messagesContentRef}>
             {loadingMore && <div className="loading-more"><span className="spinner" style={{width:16,height:16}} /></div>}
@@ -734,9 +745,13 @@ export default function ChatWindow({ conversationId, onBack }) {
                 <div className="date-separator"><span>{date}</span></div>
                 {msgs.map((msg, i) => {
                   const prev = i > 0 ? msgs[i - 1] : null;
-                  const consecutive = prev &&
+                  const next = i < msgs.length - 1 ? msgs[i + 1] : null;
+                  const sameAsPrev = prev &&
                     String(prev.sender._id) === String(msg.sender._id) &&
                     new Date(msg.createdAt) - new Date(prev.createdAt) < 5 * 60 * 1000;
+                  const sameAsNext = next &&
+                    String(next.sender._id) === String(msg.sender._id) &&
+                    new Date(next.createdAt) - new Date(msg.createdAt) < 5 * 60 * 1000;
                   const isHighlighted = jumpHighlight === String(msg._id);
                   return (
                     <div
@@ -749,7 +764,8 @@ export default function ChatWindow({ conversationId, onBack }) {
                         plaintext={decrypted[msg._id]}
                         replyPlaintext={msg.replyTo ? decrypted[String(msg.replyTo._id)] : null}
                         isOwn={String(msg.sender._id) === myId}
-                        isConsecutive={consecutive}
+                        isConsecutive={sameAsPrev}
+                        isTail={!sameAsNext}
                         onReply={() => { setReplyTo(msg); setEditingMsg(null); textareaRef.current?.focus(); }}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
@@ -1122,6 +1138,30 @@ export default function ChatWindow({ conversationId, onBack }) {
           justify-content: center; flex: 1; gap: 12px;
           color: var(--text-3); font-size: 14px; text-align: center;
         }
+        .msg-skeleton-list {
+          display: flex; flex-direction: column; gap: 6px;
+          padding: 16px; flex: 1; justify-content: flex-end;
+        }
+        .msg-skeleton-row {
+          display: flex; align-items: flex-end; gap: 8px;
+        }
+        .msg-skeleton-row.own { flex-direction: row-reverse; }
+        .msg-skeleton-avatar {
+          width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+          background: linear-gradient(90deg, var(--bg-3) 25%, var(--bg-4) 50%, var(--bg-3) 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.4s infinite;
+        }
+        .msg-skeleton-bubble {
+          height: 38px; border-radius: var(--radius-lg);
+          background: linear-gradient(90deg, var(--bg-3) 25%, var(--bg-4) 50%, var(--bg-3) 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.4s infinite;
+        }
+        .msg-skeleton-row.own .msg-skeleton-bubble {
+          background: linear-gradient(90deg, var(--accent-dim) 25%, rgba(108,99,255,0.25) 50%, var(--accent-dim) 75%);
+          background-size: 200% 100%;
+        }
         .loading-more { display: flex; justify-content: center; padding: 12px; }
         .history-start {
           text-align: center; padding: 12px; font-size: 12px;
@@ -1158,8 +1198,8 @@ export default function ChatWindow({ conversationId, onBack }) {
         }
         .send-error-bar {
           padding: 8px 14px; font-size: 13px;
-          color: #ff6b6b; background: rgba(255,107,107,0.1);
-          border-top: 1px solid rgba(255,107,107,0.2);
+          color: var(--red); background: var(--red-dim);
+          border-top: 1px solid rgba(255,87,87,0.2);
         }
         .context-bar {
           display: flex; align-items: center; gap: 10px;

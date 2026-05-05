@@ -240,10 +240,21 @@ function convTimestamp(dateStr) {
   return format(d, 'dd/MM/yy');
 }
 
-function convPreview(conv, currentUser, unread) {
-  if (!conv.lastMessage) return 'Start a conversation';
-  if (unread > 0) return unread === 1 ? 'New message' : `${unread} new messages`;
-  return '';
+function convPreview(conv, currentUser) {
+  const msg = conv.lastMessage;
+  if (!msg) return 'Start a conversation';
+
+  const isMe = String(msg.sender?._id || msg.sender) === String(currentUser._id);
+  const senderName = isMe ? 'You' : (msg.sender?.displayName || msg.sender?.username || '');
+  const prefix = conv.type === 'group' ? `${senderName}: ` : (isMe ? 'You: ' : '');
+
+  switch (msg.type) {
+    case 'image': return `${prefix}📷 Photo`;
+    case 'audio': return `${prefix}🎤 Voice message`;
+    case 'file':  return `${prefix}📎 ${msg.attachment?.originalName || 'File'}`;
+    case 'system': return msg.attachment?.originalName || 'System message';
+    default:      return `${prefix}Message`;
+  }
 }
 
 function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onArchive, onUnarchive, onBlock, onMuteToggle, isArchived }) {
@@ -317,7 +328,7 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
             </span>
           ) : (
             <span className={`conv-preview ${hasUnread ? 'unread' : ''}`}>
-              {convPreview(conv, user, unread)}
+              {convPreview(conv, user)}
             </span>
           )}
           {hasUnread && !showMoreBtn && (

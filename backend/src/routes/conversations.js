@@ -29,7 +29,7 @@ router.get('/', authenticate, async (req, res) => {
 
     const conversations = await Conversation.find(query)
       .populate('participants', 'username displayName avatar publicKey lastSeen bio')
-      .populate('lastMessage')
+      .populate({ path: 'lastMessage', populate: { path: 'sender', select: 'username displayName' } })
       .sort({ lastActivity: -1 });
 
     res.json(conversations);
