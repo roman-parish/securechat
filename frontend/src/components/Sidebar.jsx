@@ -240,7 +240,7 @@ function convTimestamp(dateStr) {
   return format(d, 'dd/MM/yy');
 }
 
-function convPreview(conv, currentUser) {
+function convPreview(conv, currentUser, hasUnread) {
   const msg = conv.lastMessage;
   if (!msg) return 'Start a conversation';
 
@@ -253,7 +253,7 @@ function convPreview(conv, currentUser) {
     case 'audio': return `${prefix}🎤 Voice message`;
     case 'file':  return `${prefix}📎 ${msg.attachment?.originalName || 'File'}`;
     case 'system': return msg.attachment?.originalName || 'System message';
-    default:      return `${prefix}Message`;
+    default:      return hasUnread ? `${prefix}New Message` : '';
   }
 }
 
@@ -328,7 +328,7 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
             </span>
           ) : (
             <span className={`conv-preview ${hasUnread ? 'unread' : ''}`}>
-              {convPreview(conv, user)}
+              {convPreview(conv, user, hasUnread)}
             </span>
           )}
           {hasUnread && !showMoreBtn && (
