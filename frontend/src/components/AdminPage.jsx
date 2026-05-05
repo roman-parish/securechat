@@ -577,15 +577,28 @@ export default function AdminPage({ onBack }) {
       {menuUser && (
         <Sheet onClose={() => setMenuUser(null)}>
           <div className="ap-sheet-header">
-            <span className="ap-sheet-title">{menuUser.displayName || menuUser.username}</span>
-            <span className="ap-sheet-handle">@{menuUser.username}</span>
+            <div>
+              <span className="ap-sheet-title">{menuUser.displayName || menuUser.username}</span>
+              <span className="ap-sheet-handle">@{menuUser.username}</span>
+            </div>
+            <button className="ap-sheet-close" onClick={() => setMenuUser(null)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
           </div>
 
           <div className="ap-user-detail">
             {menuUser.email && (
               <div className="ap-detail-row">
                 <span className="ap-detail-label">Email</span>
-                <span className="ap-detail-value">{menuUser.email}</span>
+                <span className="ap-detail-value" style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  <span>{menuUser.email}</span>
+                  {menuUser.emailVerified
+                    ? <span className="ap-badge green" style={{ fontSize: 10 }}>Verified</span>
+                    : <span className="ap-badge" style={{ fontSize: 10, background: 'var(--bg-4)', color: 'var(--text-3)' }}>Unverified</span>
+                  }
+                </span>
               </div>
             )}
             <div className="ap-detail-row">
@@ -598,16 +611,8 @@ export default function AdminPage({ onBack }) {
             </div>
             <div className="ap-detail-row">
               <span className="ap-detail-label">2FA</span>
-              <span className="ap-detail-value">{menuUser.twoFactorEnabled ? '✓ Enabled' : 'Disabled'}</span>
+              <span className={`ap-detail-value ${menuUser.twoFactorEnabled ? 'text-green' : ''}`}>{menuUser.twoFactorEnabled ? '✓ Enabled' : 'Disabled'}</span>
             </div>
-            {menuUser.email && (
-              <div className="ap-detail-row">
-                <span className="ap-detail-label">Email</span>
-                <span className={`ap-detail-value ${menuUser.emailVerified ? 'text-green' : ''}`} style={!menuUser.emailVerified ? { color: 'var(--text-3)' } : {}}>
-                  {menuUser.emailVerified ? 'Verified ✓' : 'Unverified'}
-                </span>
-              </div>
-            )}
             <div className="ap-detail-row">
               <span className="ap-detail-label">Status</span>
               <span className={`ap-detail-value ${menuUser.banned ? 'text-red' : 'text-green'}`}>{menuUser.banned ? 'Suspended' : 'Active'}</span>
@@ -653,7 +658,6 @@ export default function AdminPage({ onBack }) {
               <span className="ap-action-label">Delete user</span>
             </button>
           </div>
-          <button className="ap-cancel-btn" onClick={() => setMenuUser(null)}>Cancel</button>
         </Sheet>
       )}
 
@@ -1033,9 +1037,11 @@ export default function AdminPage({ onBack }) {
           from { transform: translateY(20px); opacity: 0; }
           to   { transform: translateY(0);    opacity: 1; }
         }
-        .ap-sheet-header { padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        .ap-sheet-header { padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
         .ap-sheet-title  { font-size: 18px; font-weight: 700; color: var(--text-0); display: block; }
         .ap-sheet-handle { font-size: 13px; color: var(--text-3); display: block; margin-top: 2px; }
+        .ap-sheet-close  { width: 32px; height: 32px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--text-3); background: var(--bg-3); flex-shrink: 0; transition: all var(--transition); margin-top: 2px; }
+        @media(hover:hover){.ap-sheet-close:hover{background:var(--bg-4);color:var(--text-0);}}
         .ap-sheet-sub    { font-size: 14px; color: var(--text-2); line-height: 1.55; }
 
         .ap-user-detail {
