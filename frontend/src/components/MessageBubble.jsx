@@ -170,7 +170,7 @@ function replyPreviewText(replyTo, plaintext) {
   return 'Message';
 }
 
-export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, isTail, onReply, onEdit, onDelete, currentUserId }) {
+export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId }) {
   const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
@@ -356,7 +356,7 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
 
         {/* Bubble */}
         <div
-          className={`bubble ${isOwn ? 'own' : ''} ${failed ? 'failed' : ''} ${isDeleted ? 'deleted' : ''} ${showActions ? 'active' : ''} ${isTail ? 'tail' : ''}`}
+          className={`bubble ${isOwn ? 'own' : ''} ${failed ? 'failed' : ''} ${isDeleted ? 'deleted' : ''} ${showActions ? 'active' : ''}`}
           onClick={handleBubbleTap}
         >
           {isDeleted ? (
@@ -543,19 +543,6 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
         .bubble.own.deleted { background: transparent; border-color: rgba(255,255,255,0.2); }
         .bubble.active { filter: brightness(1.12); }
         .bubble.own.active { filter: brightness(1.1); }
-        /* Tail — shown on the last bubble in a consecutive group */
-        .bubble.tail::after {
-          content: ''; position: absolute; bottom: 0; width: 10px; height: 14px;
-          clip-path: polygon(0 0, 100% 0, 100% 100%);
-        }
-        .bubble.tail:not(.own)::after {
-          left: -8px; background: var(--bg-3);
-          clip-path: polygon(100% 0, 0 100%, 100% 100%);
-        }
-        .bubble.tail.own::after {
-          right: -8px; background: var(--accent);
-          clip-path: polygon(0 0, 0 100%, 100% 100%);
-        }
         .deleted-text { font-size: 14px; color: var(--text-3); font-style: italic; margin: 0; }
         .msg-text {
           font-size: 15px; line-height: 1.5; margin: 0;
