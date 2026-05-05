@@ -681,7 +681,7 @@ router.put('/email-prefs', authenticate, async (req, res) => {
     if (typeof passwordChanged   === 'boolean') prefs['emailPrefs.passwordChanged']   = passwordChanged;
     if (typeof securityAlerts    === 'boolean') prefs['emailPrefs.securityAlerts']     = securityAlerts;
     if (Object.keys(prefs).length === 0) return res.status(400).json({ error: 'No valid fields provided' });
-    const user = await User.findByIdAndUpdate(req.user.id, { $set: prefs }, { new: true });
+    const user = await User.findByIdAndUpdate(req.user.userId, { $set: prefs }, { new: true });
     res.json({ emailPrefs: user.emailPrefs });
   } catch (err) {
     logger.error({ err }, 'Failed to update email prefs');
