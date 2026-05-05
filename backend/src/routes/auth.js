@@ -155,6 +155,29 @@ router.get('/verify-email', async (req, res) => {
   }
 });
 
+// Resend verification email for the currently authenticated user
+router.post('/resend-verification', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('+emailVerificationToken');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.emailVerified === true) return res.status(400).json({ error: 'Email already verified' });
+    if (!user.email) return res.status(400).json({ error: 'No email address on file' });
+    const token = randomBytes(32).toString('hex');
+    user.emailVerificationToken = token;
+    await user.save();
+    const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost'}/?verify=${token}`;
+    sendEmailVerification({
+      to: user.email,
+      displayName: user.displayName || user.username,
+      verifyUrl,
+    }).catch(err => logger.error({ err }, 'Failed to resend verification email'));
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, 'Resend verification failed');
+    res.status(500).json({ error: 'Failed to resend verification email' });
+  }
+});
+
 // Login — returns encrypted key material so client can unwrap private key
 router.post('/login', [
   body('username').trim().notEmpty(),

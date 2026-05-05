@@ -105,7 +105,7 @@ router.get('/users', async (req, res) => {
       : {};
 
     const users = await User.find(query)
-      .select('username email displayName avatar lastSeen createdAt banned twoFactorEnabled')
+      .select('username email displayName avatar lastSeen createdAt banned twoFactorEnabled emailVerified')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -174,6 +174,21 @@ router.put('/users/:userId/reset-2fa', async (req, res) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed to reset 2FA' });
+  }
+});
+
+// PUT /api/admin/users/:userId/verify-email
+router.put('/users/:userId/verify-email', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    await user.save();
+    await audit(req, 'user.verify_email', user);
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to verify email' });
   }
 });
 

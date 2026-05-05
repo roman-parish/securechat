@@ -232,6 +232,15 @@ export default function AdminPage({ onBack }) {
     } catch (e) { showFlash('Error: ' + e.message); }
   };
 
+  const handleVerifyEmail = async () => {
+    try {
+      await apiFetch(`/admin/users/${menuUser._id}/verify-email`, { method: 'PUT' });
+      setMenuUser(u => ({ ...u, emailVerified: true }));
+      setUsers(prev => prev.map(x => x._id === menuUser._id ? { ...x, emailVerified: true } : x));
+      showFlash(`Email verified for ${menuUser.username}`);
+    } catch (e) { showFlash('Error: ' + e.message); }
+  };
+
   const isMe = (u) => String(u._id) === String(user?._id);
 
   const TAB_TITLES = { stats: 'Stats', settings: 'Settings', users: 'Users', logs: 'Audit Log' };
@@ -580,6 +589,14 @@ export default function AdminPage({ onBack }) {
               <span className="ap-detail-label">2FA</span>
               <span className="ap-detail-value">{menuUser.twoFactorEnabled ? '✓ Enabled' : 'Disabled'}</span>
             </div>
+            {menuUser.email && (
+              <div className="ap-detail-row">
+                <span className="ap-detail-label">Email</span>
+                <span className={`ap-detail-value ${menuUser.emailVerified ? 'text-green' : ''}`} style={!menuUser.emailVerified ? { color: 'var(--text-3)' } : {}}>
+                  {menuUser.emailVerified ? 'Verified ✓' : 'Unverified'}
+                </span>
+              </div>
+            )}
             <div className="ap-detail-row">
               <span className="ap-detail-label">Status</span>
               <span className={`ap-detail-value ${menuUser.banned ? 'text-red' : 'text-green'}`}>{menuUser.banned ? 'Suspended' : 'Active'}</span>
@@ -594,6 +611,15 @@ export default function AdminPage({ onBack }) {
               <span className="ap-action-icon">{menuUser.banned ? <IconCheck /> : <IconBan />}</span>
               <span className="ap-action-label">{menuUser.banned ? 'Unsuspend user' : 'Suspend user'}</span>
             </button>
+            {menuUser.email && menuUser.emailVerified !== true && (
+              <button
+                className="ap-action-item green"
+                onClick={handleVerifyEmail}
+              >
+                <span className="ap-action-icon"><IconCheck /></span>
+                <span className="ap-action-label">Verify email</span>
+              </button>
+            )}
             <button
               className="ap-action-item blue"
               onClick={() => { setMenuUser(null); setResetPwUser(menuUser); setNewPassword(''); }}

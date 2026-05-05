@@ -13,11 +13,24 @@ import { ChatProvider } from './contexts/ChatContext.jsx';
 import AuthPage from './components/AuthPage.jsx';
 import ChatLayout from './components/ChatLayout.jsx';
 import AdminPage from './components/AdminPage.jsx';
+import { apiFetch } from './utils/api.js';
 
 function AppInner() {
   const { user, loading } = useAuth();
   const [showAdmin, setShowAdmin] = useState(false);
   const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
+  const [resendState, setResendState] = useState('idle'); // 'idle' | 'loading' | 'sent'
+
+  const handleResendVerification = async () => {
+    setResendState('loading');
+    try {
+      await apiFetch('/auth/resend-verification', { method: 'POST' });
+      setResendState('sent');
+      setTimeout(() => setResendState('idle'), 3000);
+    } catch {
+      setResendState('idle');
+    }
+  };
 
   if (loading) return <SplashScreen />;
 
@@ -51,7 +64,25 @@ function AppInner() {
               borderBottom: '1px solid rgba(245,166,35,0.2)',
               fontSize: 13, flexShrink: 0,
             }}>
-              <span>Please verify your email address. Check your inbox for a verification link.</span>
+              <span>
+                Please verify your email address. Check your inbox for a verification link.
+                {resendState === 'sent' ? (
+                  <span style={{ paddingLeft: 8, fontWeight: 600 }}>Sent!</span>
+                ) : (
+                  <button
+                    onClick={handleResendVerification}
+                    disabled={resendState === 'loading'}
+                    style={{
+                      color: 'var(--warning, #f5a623)', fontWeight: 600,
+                      textDecoration: 'underline', background: 'none', border: 'none',
+                      cursor: resendState === 'loading' ? 'default' : 'pointer',
+                      padding: '0 0 0 8px', opacity: resendState === 'loading' ? 0.6 : 1,
+                    }}
+                  >
+                    {resendState === 'loading' ? 'Sending…' : 'Resend'}
+                  </button>
+                )}
+              </span>
               <button
                 onClick={() => setEmailBannerDismissed(true)}
                 aria-label="Dismiss"
