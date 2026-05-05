@@ -19,6 +19,9 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
   const [inviteResults, setInviteResults] = useState([]);
   const [inviteSearching, setInviteSearching] = useState(false);
   const [pendingInvites, setPendingInvites] = useState([]);
+  const [confirmRemove, setConfirmRemove] = useState(null); // participant object
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleInviteSearch = useCallback(async (q) => {
     setInviteSearch(q);
@@ -26,7 +29,6 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
     setInviteSearching(true);
     try {
       const data = await apiFetch(`/users/search?q=${encodeURIComponent(q)}`);
-      // Filter out existing participants
       const participantIds = new Set(conversation.participants?.map(p => String(p._id)));
       setInviteResults((data || []).filter(u => !participantIds.has(String(u._id))));
     } catch {} finally {
@@ -81,78 +83,82 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
     }
   };
 
+  const handleRemoveConfirmed = async () => {
+    const pid = String(confirmRemove._id);
+    setConfirmRemove(null);
+    try {
+      await apiFetch(`/conversations/${conversation._id}/participants/${pid}`, { method: 'DELETE' });
+      onUpdated?.({
+        ...conversation,
+        participants: conversation.participants.filter(p => String(p._id) !== pid),
+      });
+    } catch {
+      setMsg('Failed to remove member');
+    }
+  };
+
   const handleDeleteGroup = async () => {
-    if (!confirm(`Delete "${conversation.name}"? This will permanently remove all messages for everyone.`)) return;
+    setDeleting(true);
     try {
       await apiFetch(`/conversations/${conversation._id}/dissolve`, { method: 'DELETE' });
       onDeleted?.();
     } catch (err) {
       setMsg(err.message || 'Failed to delete group');
-    }
-  };
-
-  const handleRemove = async (userId) => {
-    if (!confirm('Remove this member?')) return;
-    try {
-      await apiFetch(`/conversations/${conversation._id}/participants/${userId}`, { method: 'DELETE' });
-      onUpdated?.({
-        ...conversation,
-        participants: conversation.participants.filter(p => String(p._id) !== String(userId)),
-      });
-    } catch {
-      setMsg('Failed to remove');
+      setConfirmDelete(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box">
-        <div className="modal-header">
-          <span>Group Info</span>
-          <button className="close-btn" onClick={onClose}>
+    <div className="gi-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="gi-modal">
+        <div className="gi-header">
+          <span>Group Settings</span>
+          <button className="gi-close" onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </button>
         </div>
 
-        <div className="modal-body">
+        <div className="gi-body">
           {/* Group name */}
-          <label className="field-label">Group name</label>
-          <div className="field-row">
-            <input
-              className="text-input"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              disabled={!isAdmin}
-              placeholder="Group name"
-            />
-            {isAdmin && (
-              <button className="save-btn" onClick={handleSave} disabled={saving || !name.trim()}>
-                {saving ? '…' : 'Save'}
-              </button>
-            )}
+          <div className="field">
+            <label>Group name</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                disabled={!isAdmin}
+                placeholder="Group name"
+                onKeyDown={e => e.key === 'Enter' && handleSave()}
+              />
+              {isAdmin && (
+                <button className="primary-btn" onClick={handleSave} disabled={saving || !name.trim()} style={{ flexShrink: 0, padding: '0 18px' }}>
+                  {saving ? '…' : 'Save'}
+                </button>
+              )}
+            </div>
           </div>
-          {msg && <p className="msg-text">{msg}</p>}
+          {msg && <p style={{ fontSize: 13, marginTop: 6, color: msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('error') ? 'var(--red)' : 'var(--green)' }}>{msg}</p>}
 
           {/* Members */}
-          <label className="field-label" style={{ marginTop: 20 }}>
-            Members · {conversation.participants?.length}
-          </label>
-          <div className="member-list">
+          <p className="section-label" style={{ marginTop: 20 }}>Members · {conversation.participants?.length}</p>
+          <div className="gi-member-list">
             {conversation.participants?.map(p => {
               const pid = String(p._id);
               const isMe = pid === myId;
               const memberIsAdmin = conversation.admins?.some(a => String(a) === pid || String(a._id) === pid);
               return (
-                <div key={pid} className="member-row">
+                <div key={pid} className="gi-member-row">
                   <Avatar user={p} size={36} />
-                  <div className="member-info">
-                    <span className="member-name">{p.displayName || p.username}</span>
-                    <span className="member-sub">@{p.username}{memberIsAdmin ? ' · admin' : ''}</span>
+                  <div className="gi-member-info">
+                    <span className="gi-member-name">{p.displayName || p.username}</span>
+                    <span className="gi-member-sub">@{p.username}{memberIsAdmin ? ' · Admin' : ''}</span>
                   </div>
                   {isAdmin && !isMe && (
-                    <button className="remove-btn" onClick={() => handleRemove(pid)}>Remove</button>
+                    <button className="danger-btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setConfirmRemove(p)}>Remove</button>
                   )}
                 </div>
               );
@@ -162,145 +168,185 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
           {/* Invite section — admins only */}
           {isAdmin && (
             <>
-              <label className="field-label" style={{ marginTop: 20 }}>Invite member</label>
-              <input
-                className="text-input"
-                placeholder="Search users…"
-                value={inviteSearch}
-                onChange={e => handleInviteSearch(e.target.value)}
-              />
-              {inviteSearching && <p className="msg-text" style={{ color: 'var(--text-3)' }}>Searching…</p>}
+              <p className="section-label" style={{ marginTop: 20 }}>Invite member</p>
+              <div className="field">
+                <input
+                  placeholder="Search by name or username…"
+                  value={inviteSearch}
+                  onChange={e => handleInviteSearch(e.target.value)}
+                />
+              </div>
+              {inviteSearching && <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6 }}>Searching…</p>}
               {inviteResults.length > 0 && (
-                <div className="invite-results">
+                <div className="gi-invite-results">
                   {inviteResults.map(u => (
-                    <div key={u._id} className="invite-result-row">
-                      <Avatar user={u} size={30} />
-                      <div className="member-info">
-                        <span className="member-name">{u.displayName || u.username}</span>
-                        <span className="member-sub">@{u.username}</span>
+                    <div key={u._id} className="gi-member-row">
+                      <Avatar user={u} size={32} />
+                      <div className="gi-member-info">
+                        <span className="gi-member-name">{u.displayName || u.username}</span>
+                        <span className="gi-member-sub">@{u.username}</span>
                       </div>
-                      <button className="invite-btn" onClick={() => handleInvite(u._id)}>Invite</button>
+                      <button className="primary-btn" style={{ fontSize: 12, padding: '4px 14px' }} onClick={() => handleInvite(u._id)}>Invite</button>
                     </div>
                   ))}
                 </div>
               )}
-              {msg && <p className="msg-text" style={{ color: msg.includes('sent') ? 'var(--green)' : 'var(--red)' }}>{msg}</p>}
 
               {pendingInvites.length > 0 && (
                 <>
-                  <label className="field-label" style={{ marginTop: 16 }}>Pending invitations · {pendingInvites.length}</label>
-                  <div className="member-list">
+                  <p className="section-label" style={{ marginTop: 16 }}>Pending invitations · {pendingInvites.length}</p>
+                  <div className="gi-member-list">
                     {pendingInvites.map(inv => (
-                      <div key={inv._id} className="member-row">
-                        <Avatar user={inv.invitee} size={36} />
-                        <div className="member-info">
-                          <span className="member-name">{inv.invitee?.displayName || inv.invitee?.username}</span>
-                          <span className="member-sub">@{inv.invitee?.username} · invited by {inv.invitedBy?.displayName || inv.invitedBy?.username}</span>
+                      <div key={inv._id} className="gi-member-row">
+                        <Avatar user={inv.invitee} size={32} />
+                        <div className="gi-member-info">
+                          <span className="gi-member-name">{inv.invitee?.displayName || inv.invitee?.username}</span>
+                          <span className="gi-member-sub">@{inv.invitee?.username} · invited by {inv.invitedBy?.displayName || inv.invitedBy?.username}</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 </>
               )}
+
+              {/* Delete group */}
+              <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                <p className="section-label">Danger zone</p>
+                <button className="danger-btn" style={{ width: '100%', justifyContent: 'center', display: 'flex', gap: 8, alignItems: 'center' }} onClick={() => setConfirmDelete(true)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <path d="M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <path d="M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  Delete Group
+                </button>
+              </div>
             </>
           )}
-        {isAdmin && (
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-            <button className="delete-group-btn" onClick={handleDeleteGroup}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              Delete Group
-            </button>
-          </div>
-        )}
         </div>
       </div>
 
+      {/* Remove member confirmation */}
+      {confirmRemove && (
+        <div className="cp-overlay" onClick={() => setConfirmRemove(null)}>
+          <div className="cp-modal" onClick={e => e.stopPropagation()}>
+            <div className="cp-header">
+              <h3>Remove member</h3>
+              <button className="gi-close" onClick={() => setConfirmRemove(null)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <div className="change-password-form">
+              <p className="cp-note">Remove <strong>{confirmRemove.displayName || confirmRemove.username}</strong> from this group? They can be re-invited later.</p>
+              <div className="cp-actions">
+                <button className="cancel-btn" onClick={() => setConfirmRemove(null)}>Cancel</button>
+                <button className="danger-btn" onClick={handleRemoveConfirmed}>Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete group confirmation */}
+      {confirmDelete && (
+        <div className="cp-overlay" onClick={() => setConfirmDelete(false)}>
+          <div className="cp-modal" onClick={e => e.stopPropagation()}>
+            <div className="cp-header">
+              <h3>Delete group</h3>
+              <button className="gi-close" onClick={() => setConfirmDelete(false)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <div className="change-password-form">
+              <p className="cp-note">Permanently delete <strong>{conversation.name}</strong>? All messages will be removed for every member. This cannot be undone.</p>
+              <div className="cp-actions">
+                <button className="cancel-btn" onClick={() => setConfirmDelete(false)}>Cancel</button>
+                <button className="danger-btn" onClick={handleDeleteGroup} disabled={deleting}>
+                  {deleting ? 'Deleting…' : 'Delete group'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
-        .modal-overlay {
+        .gi-overlay {
           position: fixed; inset: 0; z-index: 100;
           background: rgba(0,0,0,0.6); display: flex;
           align-items: center; justify-content: center;
           padding: 20px;
         }
-        .modal-box {
+        .gi-modal {
           background: var(--bg-2); border: 1px solid var(--border-strong);
           border-radius: var(--radius-xl); width: 100%; max-width: 420px;
           box-shadow: var(--shadow-lg); animation: slideUp 0.2s ease;
-          max-height: 80vh; display: flex; flex-direction: column;
+          max-height: 85vh; display: flex; flex-direction: column;
         }
-        .modal-header {
+        .gi-header {
           display: flex; align-items: center; justify-content: space-between;
           padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
           font-weight: 600; font-size: 15px; flex-shrink: 0;
+          color: var(--text-0);
         }
-        .close-btn {
+        .gi-close {
           width: 30px; height: 30px; border-radius: var(--radius-sm);
           display: flex; align-items: center; justify-content: center;
-          color: var(--text-2);
+          color: var(--text-2); transition: background var(--transition);
         }
-        .close-btn:hover { background: var(--bg-4); color: var(--text-0); }
-        .modal-body { padding: 18px 20px; overflow-y: auto; }
-        .delete-group-btn {
-          display: flex; align-items: center; gap: 8px;
-          width: 100%; padding: 10px 12px; border-radius: var(--radius);
-          color: var(--red); font-size: 14px; font-weight: 500;
-          background: var(--red-dim); transition: opacity var(--transition);
-        }
-        .delete-group-btn:hover { opacity: 0.8; }
-        .field-label { display: block; font-size: 12px; color: var(--text-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-        .field-row { display: flex; gap: 8px; }
-        .text-input {
-          flex: 1; background: var(--bg-3); border: 1px solid var(--border);
-          border-radius: var(--radius); padding: 9px 12px;
-          font-size: 14px; color: var(--text-0); transition: border-color var(--transition);
-        }
-        .text-input:focus { border-color: var(--accent); outline: none; }
-        .text-input:disabled { opacity: 0.5; }
-        .save-btn {
-          padding: 9px 16px; background: var(--accent); color: white;
-          border-radius: var(--radius); font-size: 13px; font-weight: 500;
-          transition: all var(--transition);
-        }
-        .save-btn:hover:not(:disabled) { filter: brightness(1.15); }
-        .save-btn:disabled { opacity: 0.5; }
-        .msg-text { font-size: 13px; color: var(--green); margin-top: 6px; }
-        .member-list { display: flex; flex-direction: column; gap: 2px; }
-        .member-row {
+        .gi-close:hover { background: var(--bg-4); color: var(--text-0); }
+        .gi-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+        .gi-member-list { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+        .gi-member-row {
           display: flex; align-items: center; gap: 10px;
           padding: 8px; border-radius: var(--radius);
           transition: background var(--transition);
         }
-        .member-row:hover { background: var(--bg-3); }
-        .member-info { flex: 1; min-width: 0; }
-        .member-name { display: block; font-size: 14px; font-weight: 500; }
-        .member-sub { display: block; font-size: 12px; color: var(--text-3); }
-        .remove-btn {
-          padding: 5px 10px; border-radius: var(--radius-sm);
-          font-size: 12px; color: var(--red);
-          background: var(--red-dim); transition: all var(--transition);
-        }
-        .remove-btn:hover { filter: brightness(1.2); }
-        .invite-results {
+        .gi-member-row:hover { background: var(--bg-3); }
+        .gi-member-info { flex: 1; min-width: 0; }
+        .gi-member-name { display: block; font-size: 14px; font-weight: 500; color: var(--text-0); }
+        .gi-member-sub { display: block; font-size: 12px; color: var(--text-3); }
+        .gi-invite-results {
           margin-top: 6px; border: 1px solid var(--border);
           border-radius: var(--radius); overflow: hidden;
         }
-        .invite-result-row {
-          display: flex; align-items: center; gap: 10px;
-          padding: 8px 10px; transition: background var(--transition);
+        .gi-invite-results .gi-member-row { border-radius: 0; padding: 8px 10px; }
+
+        /* Reuse ProfileModal patterns */
+        .field { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+        .field label { font-size: 13px; color: var(--text-2); font-weight: 500; }
+        .field input {
+          background: var(--bg-3); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 9px 12px;
+          font-size: 14px; color: var(--text-0); width: 100%;
+          transition: border-color var(--transition); font-family: var(--font-sans);
         }
-        .invite-result-row:hover { background: var(--bg-3); }
-        .invite-btn {
-          padding: 4px 12px; border-radius: var(--radius-sm);
-          font-size: 12px; font-weight: 500;
-          background: var(--accent-dim); color: var(--accent);
-          transition: all var(--transition); flex-shrink: 0;
-        }
-        .invite-btn:hover { background: var(--accent); color: white; }
+        .field input:focus { border-color: var(--accent); outline: none; }
+        .field input:disabled { opacity: 0.5; }
+        .section-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+        .primary-btn { background: var(--accent); color: white; border-radius: var(--radius); padding: 9px 18px; font-size: 13px; font-weight: 500; transition: all var(--transition); }
+        .primary-btn:hover:not(:disabled) { background: #8b84ff; }
+        .primary-btn:disabled { opacity: 0.5; }
+        .cancel-btn { background: var(--bg-3); color: var(--text-1); border-radius: var(--radius); padding: 9px 18px; font-size: 13px; font-weight: 500; transition: background var(--transition); }
+        .cancel-btn:hover { background: var(--bg-4); }
+        .danger-btn { background: transparent; border: 1px solid var(--red); color: var(--red); border-radius: var(--radius); padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background var(--transition); }
+        .danger-btn:hover { background: var(--red-dim); }
+        .danger-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Confirmation dialogs — matches ProfileModal cp-* pattern */
+        .cp-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .cp-modal { background: var(--bg-2); border: 1px solid var(--border-strong); border-radius: var(--radius-xl); width: 100%; max-width: 380px; box-shadow: var(--shadow-lg); animation: slideUp 0.15s ease; }
+        .cp-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 1px solid var(--border); }
+        .cp-header h3 { font-size: 15px; font-weight: 600; color: var(--text-0); }
+        .change-password-form { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+        .cp-note { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+        .cp-note strong { color: var(--text-0); }
+        .cp-actions { display: flex; gap: 8px; justify-content: flex-end; }
       `}</style>
     </div>
   );
