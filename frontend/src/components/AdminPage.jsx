@@ -19,6 +19,7 @@ const ACTION_LABELS = {
   'user.delete': 'Deleted user',
   'user.password_reset': 'Reset password',
   'user.reset_2fa': 'Reset 2FA',
+  'user.verify_email': 'Verified email',
   'invite.create': 'Created invite',
   'invite.revoke': 'Revoked invite',
   'settings.registration_toggle': 'Registration',
@@ -991,7 +992,7 @@ export default function AdminPage({ onBack }) {
         .ap-badge.purple { background: rgba(108,99,255,0.15);           color: var(--accent); }
         .ap-badge.audit-user-ban,.ap-badge.audit-user-delete,.ap-badge.audit-invite-revoke { background: var(--red-dim);         color: var(--red);    }
         .ap-badge.audit-user-unban,.ap-badge.audit-invite-create                          { background: var(--green-dim);       color: var(--green);  }
-        .ap-badge.audit-user-password_reset,.ap-badge.audit-user-reset_2fa               { background: var(--accent-dim);      color: var(--accent); }
+        .ap-badge.audit-user-password_reset,.ap-badge.audit-user-reset_2fa,.ap-badge.audit-user-verify_email { background: var(--accent-dim); color: var(--accent); }
         .ap-badge.audit-settings-registration_toggle,.ap-badge.audit-settings-email_update { background: var(--bg-3);           color: var(--text-2); }
 
         /* Audit row */
