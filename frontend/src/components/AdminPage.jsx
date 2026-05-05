@@ -96,6 +96,7 @@ export default function AdminPage({ onBack }) {
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'audit'
 
   const [stats, setStats] = useState(null);
+  const [msgChart, setMsgChart] = useState([]);
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -141,6 +142,7 @@ export default function AdminPage({ onBack }) {
 
   useEffect(() => {
     loadStats(); loadUsers(); loadInvites();
+    apiFetch('/admin/stats/messages-chart').then(d => setMsgChart(d)).catch(() => {});
     apiFetch('/admin/settings').then(d => {
       setRegistrationOpen(d.registrationOpen);
       if (d.email) setEmailSettings(d.email);
@@ -300,6 +302,56 @@ export default function AdminPage({ onBack }) {
               </div>
             ) : <div className="ap-empty">Loading…</div>
           )}
+
+          {activeTab === 'stats' && msgChart.length === 7 && (() => {
+            const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const W = 300, H = 80, LABEL_H = 20, BAR_AREA = H - LABEL_H;
+            const maxCount = Math.max(1, ...msgChart.map(d => d.count));
+            const barW = Math.floor((W / 7) * 0.55);
+            const slotW = W / 7;
+            return (
+              <div className="ap-group">
+                <div className="ap-group-title">Messages — last 7 days</div>
+                <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', padding: '4px 12px 0', boxSizing: 'border-box' }}>
+                  {msgChart.map((pt, i) => {
+                    const barH = Math.max(2, (pt.count / maxCount) * (BAR_AREA - 14));
+                    const x = slotW * i + (slotW - barW) / 2;
+                    const y = BAR_AREA - barH;
+                    const dayAbbr = DAY_ABBR[new Date(pt.date + 'T12:00:00').getDay()];
+                    return (
+                      <g key={pt.date} className="ap-chart-bar-g">
+                        <rect
+                          x={x} y={y} width={barW} height={barH}
+                          rx="3"
+                          fill="#6c63ff"
+                          fillOpacity="0.2"
+                          className="ap-chart-bar"
+                        />
+                        {pt.count > 0 && (
+                          <text
+                            x={x + barW / 2} y={y - 3}
+                            textAnchor="middle"
+                            fontSize="7"
+                            fill="#6c63ff"
+                            fillOpacity="0.7"
+                          >{pt.count}</text>
+                        )}
+                        <text
+                          x={slotW * i + slotW / 2} y={H - 4}
+                          textAnchor="middle"
+                          fontSize="7.5"
+                          fill="var(--text-3)"
+                        >{dayAbbr}</text>
+                      </g>
+                    );
+                  })}
+                </svg>
+                <style>{`
+                  .ap-chart-bar-g:hover .ap-chart-bar { fill-opacity: 1; }
+                `}</style>
+              </div>
+            );
+          })()}
 
           {/* ════ SETTINGS ════ */}
           {activeTab === 'settings' && (

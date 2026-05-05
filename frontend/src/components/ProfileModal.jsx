@@ -1092,12 +1092,12 @@ export default function ProfileModal({ onClose }) {
           -webkit-overflow-scrolling: touch;
           background: var(--bg-2);
           scrollbar-width: thin;
-          scrollbar-color: rgba(255,255,255,0.15) transparent;
+          scrollbar-color: var(--border) transparent;
         }
         .modal-body > * + * { margin-top: 16px; }
         .modal-body::-webkit-scrollbar { width: 4px; }
         .modal-body::-webkit-scrollbar-track { background: transparent; }
-        .modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
         .avatar-section {
           display: flex; align-items: center; gap: 16px;
           padding-bottom: 16px; border-bottom: 1px solid var(--border);
@@ -1176,7 +1176,7 @@ export default function ProfileModal({ onClose }) {
         .pw-msg.error { color: var(--red); }
         .danger-zone { }
         .danger-zone-label { font-size: 11px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
-        .danger-row { border: 1px solid rgba(255,80,80,0.2); border-radius: var(--radius); background: rgba(255,80,80,0.04); padding: 14px; }
+        .danger-row { border: 1px solid rgba(255,87,87,0.2); border-radius: var(--radius); background: var(--red-dim); padding: 14px; }
         .danger-btn { background: transparent; border: 1px solid var(--red); color: var(--red); border-radius: var(--radius); padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
         .danger-btn:hover { background: rgba(255,80,80,0.1); }
         .danger-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -1255,7 +1255,7 @@ export default function ProfileModal({ onClose }) {
         .pubkey-value {
           font-size: 11px; color: var(--text-1); font-family: 'JetBrains Mono', ui-monospace, monospace;
           word-break: break-all; line-height: 1.6;
-          background: rgba(0,0,0,0.2); border-radius: 8px;
+          background: var(--bg-0); border-radius: 8px;
           padding: 8px 10px;
         }
         .security-info-row {

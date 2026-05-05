@@ -275,6 +275,36 @@ router.get('/audit', async (req, res) => {
   }
 });
 
+// GET /api/admin/stats/messages-chart
+router.get('/stats/messages-chart', async (req, res) => {
+  try {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    const rows = await Message.aggregate([
+      { $match: { createdAt: { $gte: sevenDaysAgo }, type: { $ne: 'deleted' } } },
+      { $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          count: { $sum: 1 },
+      }},
+      { $sort: { _id: 1 } },
+    ]);
+
+    const byDate = Object.fromEntries(rows.map(r => [r._id, r.count]));
+    const result = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      result.push({ date: key, count: byDate[key] || 0 });
+    }
+
+    res.json(result);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch message chart' });
+  }
+});
+
 // GET /api/admin/settings
 router.get('/settings', async (req, res) => {
   try {
