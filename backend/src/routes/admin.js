@@ -68,7 +68,7 @@ router.get('/stats', async (req, res) => {
       User.countDocuments({ banned: true }),
       User.countDocuments({ twoFactorEnabled: true }),
       Message.countDocuments({ 'attachment.url': { $exists: true } }),
-      Conversation.countDocuments({ isGroup: true }),
+      Conversation.countDocuments({ type: 'group' }),
     ]);
 
     const storageBytes = storageResult[0]?.total || 0;
