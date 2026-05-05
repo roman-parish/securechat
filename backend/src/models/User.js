@@ -51,6 +51,12 @@ const userSchema = new mongoose.Schema({
     default: [],
   },
 
+  emailPrefs: {
+    loginNotification: { type: Boolean, default: true },
+    passwordChanged:   { type: Boolean, default: true },
+    securityAlerts:    { type: Boolean, default: true },
+  },
+
   blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: [] }],
 
   lastSeen: { type: Date, default: Date.now },

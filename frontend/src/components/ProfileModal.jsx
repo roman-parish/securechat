@@ -44,6 +44,12 @@ export default function ProfileModal({ onClose }) {
   const [recoveryCodes, setRecoveryCodes] = useState(null);
   const [remainingCodes, setRemainingCodes] = useState(null);
   const [showRegenerateCodes, setShowRegenerateCodes] = useState(false);
+  const [emailPrefs, setEmailPrefs] = useState({
+    loginNotification: user?.emailPrefs?.loginNotification ?? true,
+    passwordChanged:   user?.emailPrefs?.passwordChanged   ?? true,
+    securityAlerts:    user?.emailPrefs?.securityAlerts    ?? true,
+  });
+  const [emailPrefsMsg, setEmailPrefsMsg] = useState('');
 
   // Check if there's an actual push subscription on mount
   useEffect(() => {
@@ -358,6 +364,20 @@ export default function ProfileModal({ onClose }) {
     setTimeout(() => setMsg(''), 8000);
   };
 
+  const handleEmailPrefToggle = async (key) => {
+    const updated = { ...emailPrefs, [key]: !emailPrefs[key] };
+    setEmailPrefs(updated);
+    setEmailPrefsMsg('');
+    try {
+      await apiFetch('/auth/email-prefs', { method: 'PUT', body: JSON.stringify({ [key]: updated[key] }) });
+      setEmailPrefsMsg('Saved');
+    } catch {
+      setEmailPrefs(emailPrefs); // revert
+      setEmailPrefsMsg('Failed to save');
+    }
+    setTimeout(() => setEmailPrefsMsg(''), 3000);
+  };
+
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const notifPermission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
 
@@ -493,6 +513,34 @@ export default function ProfileModal({ onClose }) {
               )}
 
               {msg && <p className="status-msg">{msg}</p>}
+
+              {/* Email notification preferences */}
+              {user?.email && (
+                <>
+                  <div className="section-divider" />
+                  <p className="section-label">Email Notifications</p>
+                  {[
+                    { key: 'loginNotification', label: 'Sign-in alerts', desc: 'Email me when a new device signs into my account' },
+                    { key: 'passwordChanged',   label: 'Password changes', desc: 'Email me when my password is changed' },
+                    { key: 'securityAlerts',    label: 'Security alerts', desc: 'Email me for 2FA changes and account deletions' },
+                  ].map(({ key, label, desc }) => (
+                    <div className="setting-row" key={key}>
+                      <div className="setting-text">
+                        <p className="setting-label">{label}</p>
+                        <p className="setting-desc">{desc}</p>
+                      </div>
+                      <button
+                        className={`toggle ${emailPrefs[key] ? 'on' : ''}`}
+                        onClick={() => handleEmailPrefToggle(key)}
+                        aria-label={emailPrefs[key] ? `Disable ${label}` : `Enable ${label}`}
+                      >
+                        <span />
+                      </button>
+                    </div>
+                  ))}
+                  {emailPrefsMsg && <p className="status-msg">{emailPrefsMsg}</p>}
+                </>
+              )}
             </>
           )}
 
@@ -1107,6 +1155,10 @@ export default function ProfileModal({ onClose }) {
         .cp-actions .primary-btn { flex: 1; }
         .section-divider {
           height: 1px; background: var(--border); margin: 4px 0;
+        }
+        .section-label {
+          font-size: 11px; font-weight: 600; color: var(--text-3);
+          text-transform: uppercase; letter-spacing: 0.06em; margin: 4px 0 2px;
         }
         .change-password-form {
           display: flex; flex-direction: column; gap: 10px;

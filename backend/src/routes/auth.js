@@ -17,7 +17,7 @@ import Conversation from '../models/Conversation.js';
 import PushSubscription from '../models/PushSubscription.js';
 import { authenticate } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
-import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification, sendPasswordResetEmail, sendTwoFactorDisabledNotification } from '../utils/email.js';
+import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification, sendPasswordResetEmail, sendTwoFactorDisabledNotification, emailAllowed } from '../utils/email.js';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { randomBytes, createHash } from 'crypto';
@@ -165,12 +165,14 @@ router.post('/login', [
 
     // Login notification — fire and forget, don't block response
     if (user.email) {
-      sendLoginNotification({
-        to: user.email,
-        displayName: user.displayName || user.username,
-        ip: req.ip,
-        userAgent: req.headers['user-agent'] || 'Unknown device',
-        time: new Date().toUTCString(),
+      emailAllowed('loginNotification', user.emailPrefs).then(allowed => {
+        if (allowed) sendLoginNotification({
+          to: user.email,
+          displayName: user.displayName || user.username,
+          ip: req.ip,
+          userAgent: req.headers['user-agent'] || 'Unknown device',
+          time: new Date().toUTCString(),
+        }).catch(() => {});
       }).catch(() => {});
     }
 
@@ -309,7 +311,7 @@ router.delete('/account', authenticate, async (req, res) => {
     await PushSubscription.deleteMany({ userId });
 
     // Send deletion confirmation before wiping the user doc
-    if (user.email) {
+    if (user.email && await emailAllowed('securityAlerts', user.emailPrefs).catch(() => true)) {
       await sendAccountDeletedNotification({
         to: user.email,
         displayName: user.displayName || user.username,
@@ -381,10 +383,12 @@ router.post('/change-password', authenticate, async (req, res) => {
     await user.save();
 
     if (user.email) {
-      sendPasswordChangedNotification({
-        to: user.email,
-        displayName: user.displayName || user.username,
-        time: new Date().toUTCString(),
+      emailAllowed('passwordChanged', user.emailPrefs).then(allowed => {
+        if (allowed) sendPasswordChangedNotification({
+          to: user.email,
+          displayName: user.displayName || user.username,
+          time: new Date().toUTCString(),
+        }).catch(() => {});
       }).catch(() => {});
     }
 
@@ -440,12 +444,14 @@ router.post('/2fa/authenticate', async (req, res) => {
     await user.save();
 
     if (user.email) {
-      sendLoginNotification({
-        to: user.email,
-        displayName: user.displayName || user.username,
-        ip: req.ip,
-        userAgent: req.headers['user-agent'] || 'Unknown device',
-        time: new Date().toUTCString(),
+      emailAllowed('loginNotification', user.emailPrefs).then(allowed => {
+        if (allowed) sendLoginNotification({
+          to: user.email,
+          displayName: user.displayName || user.username,
+          ip: req.ip,
+          userAgent: req.headers['user-agent'] || 'Unknown device',
+          time: new Date().toUTCString(),
+        }).catch(() => {});
       }).catch(() => {});
     }
 
@@ -585,11 +591,13 @@ router.post('/2fa/disable', authenticate, async (req, res) => {
     await user.save();
 
     if (user.email) {
-      sendTwoFactorDisabledNotification({
-        to: user.email,
-        displayName: user.displayName || user.username,
-        time: new Date().toUTCString(),
-      });
+      emailAllowed('securityAlerts', user.emailPrefs).then(allowed => {
+        if (allowed) sendTwoFactorDisabledNotification({
+          to: user.email,
+          displayName: user.displayName || user.username,
+          time: new Date().toUTCString(),
+        });
+      }).catch(() => {});
     }
 
     res.json({ success: true });
@@ -648,10 +656,12 @@ router.post('/reset-password', async (req, res) => {
     await user.save();
 
     if (user.email) {
-      sendPasswordChangedNotification({
-        to: user.email,
-        displayName: user.displayName || user.username,
-        time: new Date().toUTCString(),
+      emailAllowed('passwordChanged', user.emailPrefs).then(allowed => {
+        if (allowed) sendPasswordChangedNotification({
+          to: user.email,
+          displayName: user.displayName || user.username,
+          time: new Date().toUTCString(),
+        }).catch(() => {});
       }).catch(() => {});
     }
 
@@ -659,6 +669,23 @@ router.post('/reset-password', async (req, res) => {
   } catch (err) {
     logger.error({ err }, 'Reset password failed');
     res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// PUT /api/auth/email-prefs — update the authenticated user's email notification preferences
+router.put('/email-prefs', authenticate, async (req, res) => {
+  try {
+    const { loginNotification, passwordChanged, securityAlerts } = req.body;
+    const prefs = {};
+    if (typeof loginNotification === 'boolean') prefs['emailPrefs.loginNotification'] = loginNotification;
+    if (typeof passwordChanged   === 'boolean') prefs['emailPrefs.passwordChanged']   = passwordChanged;
+    if (typeof securityAlerts    === 'boolean') prefs['emailPrefs.securityAlerts']     = securityAlerts;
+    if (Object.keys(prefs).length === 0) return res.status(400).json({ error: 'No valid fields provided' });
+    const user = await User.findByIdAndUpdate(req.user.id, { $set: prefs }, { new: true });
+    res.json({ emailPrefs: user.emailPrefs });
+  } catch (err) {
+    logger.error({ err }, 'Failed to update email prefs');
+    res.status(500).json({ error: 'Failed to update email preferences' });
   }
 });
 

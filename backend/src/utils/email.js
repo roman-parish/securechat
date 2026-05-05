@@ -6,11 +6,28 @@
  * https://github.com/roman-parish/securechat
  */
 import { Resend } from 'resend';
+import Settings from '../models/Settings.js';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const FROM = process.env.EMAIL_FROM || 'SecureChat <noreply@example.com>';
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost';
+
+// Returns true if this email type is permitted by both system settings and the user's own prefs.
+// type: 'loginNotification' | 'passwordChanged' | 'securityAlerts'
+// userPrefs: user.emailPrefs (may be undefined for older accounts — default to true)
+export async function emailAllowed(type, userPrefs) {
+  try {
+    const settings = await Settings.findOne().lean();
+    const sys = settings?.email ?? {};
+    if (sys.enabled === false) return false;
+    if (sys[type] === false) return false;
+  } catch {
+    // If DB check fails, don't block email
+  }
+  if (userPrefs && userPrefs[type] === false) return false;
+  return true;
+}
 
 async function send({ to, subject, html }) {
   if (!resend) {

@@ -110,6 +110,9 @@ export default function AdminPage({ onBack }) {
 
   /* Settings */
   const [registrationOpen, setRegistrationOpen] = useState(true);
+  const [emailSettings, setEmailSettings] = useState({
+    enabled: true, loginNotification: true, passwordChanged: true, securityAlerts: true,
+  });
 
   /* Invites */
   const [invites, setInvites] = useState([]);
@@ -137,7 +140,10 @@ export default function AdminPage({ onBack }) {
 
   useEffect(() => {
     loadStats(); loadUsers(); loadInvites();
-    apiFetch('/admin/settings').then(d => setRegistrationOpen(d.registrationOpen)).catch(() => {});
+    apiFetch('/admin/settings').then(d => {
+      setRegistrationOpen(d.registrationOpen);
+      if (d.email) setEmailSettings(d.email);
+    }).catch(() => {});
     setAuditLoading(true);
     apiFetch('/admin/audit').then(d => setAuditLogs(d.logs)).catch(() => {}).finally(() => setAuditLoading(false));
   }, [loadStats, loadUsers, loadInvites]);
@@ -157,6 +163,19 @@ export default function AdminPage({ onBack }) {
       setRegistrationOpen(d.registrationOpen);
       showFlash(`Registration ${d.registrationOpen ? 'opened' : 'closed'}`);
     } catch (e) { showFlash('Error: ' + e.message); }
+  };
+
+  const handleEmailSettingToggle = async (key) => {
+    const updated = { ...emailSettings, [key]: !emailSettings[key] };
+    setEmailSettings(updated);
+    try {
+      const d = await apiFetch('/admin/settings', { method: 'PUT', body: JSON.stringify({ email: { [key]: updated[key] } }) });
+      if (d.email) setEmailSettings(d.email);
+      showFlash(`Email setting updated`);
+    } catch (e) {
+      setEmailSettings(emailSettings);
+      showFlash('Error: ' + e.message);
+    }
   };
 
   const handleCreateInvite = async () => {
@@ -298,6 +317,30 @@ export default function AdminPage({ onBack }) {
                     <span className="ap-toggle-knob" />
                   </button>
                 </div>
+              </div>
+
+              <div className="ap-group">
+                <div className="ap-group-title">Email Notifications</div>
+                {[
+                  { key: 'enabled',           label: 'Email enabled',    sub: 'Master switch — disables all system emails when off' },
+                  { key: 'loginNotification', label: 'Sign-in alerts',   sub: 'Send users an email when a new device signs in' },
+                  { key: 'passwordChanged',   label: 'Password changes', sub: 'Notify users when their password is changed' },
+                  { key: 'securityAlerts',    label: 'Security alerts',  sub: 'Notify users for 2FA changes and account deletions' },
+                ].map(({ key, label, sub }) => (
+                  <div className="ap-row" key={key} style={ key !== 'enabled' && !emailSettings.enabled ? { opacity: 0.4, pointerEvents: 'none' } : {} }>
+                    <div className="ap-row-text">
+                      <div className="ap-row-title">{label}</div>
+                      <div className="ap-row-sub">{sub}</div>
+                    </div>
+                    <button
+                      className={`ap-toggle ${emailSettings[key] ? 'on' : ''}`}
+                      onClick={() => handleEmailSettingToggle(key)}
+                      aria-label={`Toggle ${label}`}
+                    >
+                      <span className="ap-toggle-knob" />
+                    </button>
+                  </div>
+                ))}
               </div>
 
               <div className="ap-group">
@@ -679,6 +722,11 @@ export default function AdminPage({ onBack }) {
         .ap-group {
           background: var(--bg-2); border: 1px solid var(--border);
           border-radius: 14px; overflow: hidden;
+        }
+        .ap-group-title {
+          font-size: 11px; font-weight: 600; color: var(--text-3);
+          text-transform: uppercase; letter-spacing: 0.06em;
+          padding: 12px 16px 4px;
         }
         .ap-group-scroll {
           max-height: 420px;

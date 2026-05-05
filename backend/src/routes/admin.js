@@ -278,8 +278,16 @@ router.get('/audit', async (req, res) => {
 // GET /api/admin/settings
 router.get('/settings', async (req, res) => {
   try {
-    const settings = await Settings.findOne() || { registrationOpen: true };
-    res.json({ registrationOpen: settings.registrationOpen });
+    const settings = await Settings.findOne() || {};
+    res.json({
+      registrationOpen: settings.registrationOpen ?? true,
+      email: {
+        enabled:           settings.email?.enabled           ?? true,
+        loginNotification: settings.email?.loginNotification ?? true,
+        passwordChanged:   settings.email?.passwordChanged   ?? true,
+        securityAlerts:    settings.email?.securityAlerts    ?? true,
+      },
+    });
   } catch {
     res.status(500).json({ error: 'Failed to fetch settings' });
   }
@@ -288,17 +296,43 @@ router.get('/settings', async (req, res) => {
 // PUT /api/admin/settings
 router.put('/settings', async (req, res) => {
   try {
-    const { registrationOpen } = req.body;
-    if (typeof registrationOpen !== 'boolean') {
-      return res.status(400).json({ error: 'registrationOpen must be a boolean' });
+    const { registrationOpen, email } = req.body;
+    const update = {};
+
+    if (typeof registrationOpen === 'boolean') update.registrationOpen = registrationOpen;
+
+    if (email && typeof email === 'object') {
+      for (const key of ['enabled', 'loginNotification', 'passwordChanged', 'securityAlerts']) {
+        if (typeof email[key] === 'boolean') update[`email.${key}`] = email[key];
+      }
     }
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided' });
+    }
+
     const settings = await Settings.findOneAndUpdate(
       {},
-      { registrationOpen },
+      { $set: update },
       { upsert: true, new: true }
     );
-    await audit(req, 'settings.registration_toggle', null, { registrationOpen });
-    res.json({ registrationOpen: settings.registrationOpen });
+
+    if (typeof registrationOpen === 'boolean') {
+      await audit(req, 'settings.registration_toggle', null, { registrationOpen });
+    }
+    if (email) {
+      await audit(req, 'settings.email_update', null, { email });
+    }
+
+    res.json({
+      registrationOpen: settings.registrationOpen ?? true,
+      email: {
+        enabled:           settings.email?.enabled           ?? true,
+        loginNotification: settings.email?.loginNotification ?? true,
+        passwordChanged:   settings.email?.passwordChanged   ?? true,
+        securityAlerts:    settings.email?.securityAlerts    ?? true,
+      },
+    });
   } catch {
     res.status(500).json({ error: 'Failed to update settings' });
   }
