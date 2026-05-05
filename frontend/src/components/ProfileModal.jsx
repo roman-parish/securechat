@@ -1178,7 +1178,7 @@ export default function ProfileModal({ onClose }) {
         .danger-zone-label { font-size: 11px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
         .danger-row { border: 1px solid rgba(255,87,87,0.2); border-radius: var(--radius); background: var(--red-dim); padding: 14px; }
         .danger-btn { background: transparent; border: 1px solid var(--red); color: var(--red); border-radius: var(--radius); padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
-        .danger-btn:hover { background: rgba(255,80,80,0.1); }
+        .danger-btn:hover { background: var(--red-dim); }
         .danger-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .danger-note { color: var(--red) !important; }
         .primary-btn {
@@ -1350,11 +1350,11 @@ export default function ProfileModal({ onClose }) {
         }
         .session-revoke-btn {
           font-size: 12px; color: var(--red); padding: 4px 10px;
-          border: 1px solid rgba(255,80,80,0.3); border-radius: 8px;
+          border: 1px solid rgba(255,87,87,0.3); border-radius: 8px;
           background: transparent; cursor: pointer; flex-shrink: 0;
           transition: all 150ms;
         }
-        .session-revoke-btn:hover { background: rgba(255,80,80,0.1); }
+        .session-revoke-btn:hover { background: var(--red-dim); }
         .session-revoke-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .logout-btn {
           display: flex; align-items: center; gap: 8px;
