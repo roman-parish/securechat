@@ -21,6 +21,9 @@ function AppInner() {
   const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
   const [resendState, setResendState] = useState('idle'); // 'idle' | 'loading' | 'sent'
 
+  // Unknown paths → 404
+  if (window.location.pathname !== '/') return <NotFoundPage />;
+
   const handleResendVerification = async () => {
     setResendState('loading');
     try {
@@ -243,6 +246,58 @@ function KeyUnlockScreen() {
           Sign out instead
         </button>
       </div>
+    </div>
+  );
+}
+
+function NotFoundPage() {
+  return (
+    <div className="auth-page">
+      <div className="auth-glow" />
+      <div className="auth-card" style={{ textAlign: 'center', alignItems: 'center' }}>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="11" width="18" height="11" rx="3" fill="var(--accent)" opacity="0.2"/>
+          <rect x="3" y="11" width="18" height="11" rx="3" stroke="var(--accent)" strokeWidth="1.5"/>
+          <path d="M7 11V7a5 5 0 0110 0v4" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
+          <circle cx="12" cy="16.5" r="1.5" fill="var(--accent)"/>
+        </svg>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <h1 style={{ fontSize: 48, fontWeight: 800, color: 'var(--accent)', letterSpacing: '-2px', lineHeight: 1 }}>404</h1>
+          <p style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-0)' }}>Page not found</p>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6 }}>
+            The link you followed may be broken or the page may have been removed.
+          </p>
+        </div>
+        <button
+          onClick={() => { window.location.href = '/'; }}
+          style={{
+            background: 'var(--accent)', color: 'white',
+            borderRadius: 'var(--radius)', padding: '12px 32px',
+            fontSize: 15, fontWeight: 600, marginTop: 8,
+            transition: 'opacity 0.15s',
+          }}
+        >
+          Go to SecureChat
+        </button>
+      </div>
+      <style>{`
+        .auth-page {
+          display: flex; align-items: center; justify-content: center;
+          flex: 1; background: var(--bg-0);
+          padding: 24px; position: relative; overflow: hidden;
+        }
+        .auth-glow {
+          position: absolute; width: 600px; height: 600px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%);
+          top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
+        }
+        .auth-card {
+          width: 100%; max-width: 400px; background: var(--bg-2);
+          border: 1px solid var(--border); border-radius: var(--radius-xl);
+          padding: 48px 32px; animation: slideUp 0.4s ease; position: relative; z-index: 1;
+          display: flex; flex-direction: column; gap: 24px;
+        }
+      `}</style>
     </div>
   );
 }
