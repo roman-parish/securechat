@@ -32,10 +32,11 @@ router.get('/search', authenticate, async (req, res) => {
     const me = await User.findById(req.user.userId).select('blockedUsers');
     const blocked = me?.blockedUsers || [];
 
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const users = await User.find({
       $or: [
-        { username: { $regex: q, $options: 'i' } },
-        { displayName: { $regex: q, $options: 'i' } },
+        { username: { $regex: escaped, $options: 'i' } },
+        { displayName: { $regex: escaped, $options: 'i' } },
       ],
       _id: { $ne: req.user.userId, $nin: blocked },
       blockedUsers: { $ne: req.user.userId },

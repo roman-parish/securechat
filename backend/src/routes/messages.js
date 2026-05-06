@@ -303,6 +303,9 @@ router.post('/:messageId/react', authenticate, async (req, res) => {
     const message = await Message.findById(req.params.messageId);
     if (!message) return res.status(404).json({ error: 'Message not found' });
 
+    const conv = await Conversation.findOne({ _id: message.conversationId, participants: req.user.userId }).lean();
+    if (!conv) return res.status(403).json({ error: 'Access denied' });
+
     const existing = message.reactions.find(
       r => r.emoji === emoji && String(r.userId) === req.user.userId
     );
@@ -319,7 +322,6 @@ router.post('/:messageId/react', authenticate, async (req, res) => {
     }
 
     const updated = await Message.findById(req.params.messageId);
-    const conv = await Conversation.findById(message.conversationId).select('participants');
     if (conv) {
       broadcastToConv(req.io, message.conversationId, conv.participants, 'message:reaction', {
         messageId: String(message._id),

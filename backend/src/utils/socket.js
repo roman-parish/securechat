@@ -33,7 +33,7 @@ export function setupSocketIO(io) {
     try {
       const token = socket.handshake.auth.token;
       if (!token) return next(new Error('Authentication required'));
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       socket.userId = decoded.userId;
       socket.username = decoded.username;
       socket.displayName = decoded.displayName || decoded.username;
@@ -63,8 +63,13 @@ export function setupSocketIO(io) {
       socket.emit('users:online-list', { userIds: [] });
     }
 
-    socket.on('conversation:join', (conversationId) => {
-      socket.join(`conversation:${conversationId}`);
+    socket.on('conversation:join', async (conversationId) => {
+      try {
+        const Conversation = (await import('../models/Conversation.js')).default;
+        const conv = await Conversation.findOne({ _id: conversationId, participants: socket.userId }).lean();
+        if (!conv) return;
+        socket.join(`conversation:${conversationId}`);
+      } catch { /* ignore invalid ids */ }
     });
 
     socket.on('conversation:leave', (conversationId) => {
