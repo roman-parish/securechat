@@ -147,12 +147,12 @@ export default function AdminPage({ onBack }) {
 
   // Users pagination & filters
   const [userPage, setUserPage] = useState(1);
-  const [userLimit, setUserLimit] = useState(25);
+  const [userLimit, setUserLimit] = useState(20);
   const [userStatus, setUserStatus] = useState('all');
   const [userTwoFa, setUserTwoFa] = useState('all');
   // Audit pagination & filters
   const [auditPage, setAuditPage] = useState(1);
-  const [auditLimit, setAuditLimit] = useState(50);
+  const [auditLimit, setAuditLimit] = useState(20);
   const [auditAction, setAuditAction] = useState('all');
   const [auditTotal, setAuditTotal] = useState(0);
 
@@ -160,7 +160,7 @@ export default function AdminPage({ onBack }) {
   const loadStats   = useCallback(async () => { try { setStats(await apiFetch('/admin/stats')); } catch {} }, []);
   const loadInvites = useCallback(async () => { try { setInvites((await apiFetch('/admin/invites')).invites); } catch {} }, []);
 
-  const loadUsers = useCallback(async (q = '', page = 1, limit = 25, status = 'all', twoFa = 'all') => {
+  const loadUsers = useCallback(async (q = '', page = 1, limit = 20, status = 'all', twoFa = 'all') => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ search: q, page, limit });
@@ -518,8 +518,7 @@ export default function AdminPage({ onBack }) {
                   <option value="disabled">2FA off</option>
                 </select>
                 <select className="ap-filter-select" value={String(userLimit)} onChange={e => { setUserLimit(Number(e.target.value)); setUserPage(1); }}>
-                  <option value="10">10 / page</option>
-                  <option value="25">25 / page</option>
+                  <option value="20">20 / page</option>
                   <option value="50">50 / page</option>
                   <option value="100">100 / page</option>
                 </select>
@@ -584,7 +583,7 @@ export default function AdminPage({ onBack }) {
                   <option value="settings.email_update">Email settings</option>
                 </select>
                 <select className="ap-filter-select" value={String(auditLimit)} onChange={e => { setAuditLimit(Number(e.target.value)); setAuditPage(1); }}>
-                  <option value="25">25 / page</option>
+                  <option value="20">20 / page</option>
                   <option value="50">50 / page</option>
                   <option value="100">100 / page</option>
                 </select>
@@ -1223,17 +1222,21 @@ export default function AdminPage({ onBack }) {
         /* Filter bar */
         .ap-filter-bar {
           display: flex; gap: 8px; flex-wrap: wrap;
+          background: var(--bg-2); border: 1px solid var(--border);
+          border-radius: 12px; padding: 10px 12px;
         }
         .ap-filter-select {
-          flex: 1; min-width: 100px;
-          background: var(--bg-2); border: 1px solid var(--border);
-          border-radius: 10px; padding: 9px 12px;
+          flex: 1; min-width: 110px;
+          background: var(--bg-3); border: 1px solid var(--border);
+          border-radius: 8px; padding: 8px 28px 8px 10px;
           font-size: 13px; color: var(--text-0); cursor: pointer;
           appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23666' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-          background-repeat: no-repeat; background-position: right 10px center;
-          padding-right: 28px;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23888' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+          background-repeat: no-repeat; background-position: right 8px center;
+          transition: border-color var(--transition);
         }
+        .ap-filter-select:focus { outline: none; border-color: var(--accent); }
+        .ap-filter-select option { background: var(--bg-2); }
         /* Pagination */
         .ap-pagination {
           display: flex; align-items: center; justify-content: center; gap: 12px;
