@@ -1154,11 +1154,11 @@ export default function ProfileModal({ onClose }) {
         .cp-actions .cancel-btn:hover { background: var(--bg-4); }
         .cp-actions .primary-btn { flex: 1; }
         .section-divider {
-          height: 1px; background: var(--border); margin: 4px 0;
+          height: 1px; background: var(--border); margin: 16px 0;
         }
         .section-label {
           font-size: 11px; font-weight: 600; color: var(--text-3);
-          text-transform: uppercase; letter-spacing: 0.06em; margin: 4px 0 2px;
+          text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 8px;
         }
         .change-password-form {
           display: flex; flex-direction: column; gap: 10px;

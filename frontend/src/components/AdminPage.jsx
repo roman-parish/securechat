@@ -539,10 +539,7 @@ export default function AdminPage({ onBack }) {
                       </div>
                       <div className="ap-user-info">
                         <div className="ap-user-name">{u.displayName || u.username}</div>
-                        <div className="ap-user-sub">
-                          @{u.username}
-                          {u.email && <span className="ap-user-email">&nbsp;· {u.email}</span>}
-                        </div>
+                        <div className="ap-user-sub">@{u.username}</div>
                       </div>
                       <div className="ap-user-end">
                         {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
@@ -669,16 +666,18 @@ export default function AdminPage({ onBack }) {
       {/* User action menu */}
       {menuUser && (
         <Sheet onClose={() => setMenuUser(null)}>
-          <div className="ap-sheet-header">
-            <div>
-              <span className="ap-sheet-title">{menuUser.displayName || menuUser.username}</span>
-              <span className="ap-sheet-handle">@{menuUser.username}</span>
-            </div>
-            <button className="ap-sheet-close" onClick={() => setMenuUser(null)}>
+          <div className="ap-sheet-header" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10, paddingBottom: 16, position: 'relative' }}>
+            <button className="ap-sheet-close" onClick={() => setMenuUser(null)} style={{ position: 'absolute', top: 0, right: 0 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
             </button>
+            <Avatar user={menuUser} size={64} />
+            <div>
+              <span className="ap-sheet-title">{menuUser.displayName || menuUser.username}</span>
+              <span className="ap-sheet-handle" style={{ display: 'block' }}>@{menuUser.username}</span>
+              {menuUser.email && <span className="ap-sheet-handle" style={{ display: 'block', marginTop: 2 }}>{menuUser.email}</span>}
+            </div>
           </div>
 
           <div className="ap-user-detail">
