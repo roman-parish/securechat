@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
+import Conversation from '../models/Conversation.js';
 import { isUserOnline } from '../utils/redis.js';
 
 const router = Router();
@@ -70,21 +71,22 @@ router.get('/:userId', authenticate, async (req, res) => {
 
 // Update own profile
 router.put('/me/profile', authenticate, async (req, res) => {
-  const { displayName, bio } = req.body;
+  const { displayName, bio, hideLastSeen } = req.body;
   try {
+    const update = { displayName, bio };
+    if (typeof hideLastSeen === 'boolean') update.hideLastSeen = hideLastSeen;
     const user = await User.findByIdAndUpdate(
       req.user.userId,
-      { displayName, bio },
+      update,
       { new: true, runValidators: true },
     );
-    // Broadcast to all connected clients so they update cached participant data
-    req.io.emit('user:updated', {
-      _id: user._id,
-      username: user.username,
-      displayName: user.displayName,
-      avatar: user.avatar,
-      bio: user.bio,
-    });
+    // Broadcast only to users who share a conversation with this user
+    const convs = await Conversation.find({ participants: user._id }).select('_id').lean();
+    const payload = { _id: user._id, username: user.username, displayName: user.displayName, avatar: user.avatar, bio: user.bio };
+    req.io.to(`user:${user._id}`).emit('user:updated', payload);
+    for (const conv of convs) {
+      req.io.to(`conversation:${conv._id}`).emit('user:updated', payload);
+    }
     res.json(user);
   } catch (err) {
     res.status(400).json({ error: err.message });

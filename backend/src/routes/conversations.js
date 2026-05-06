@@ -13,6 +13,20 @@ import User from '../models/User.js';
 
 const router = Router();
 
+const PARTICIPANT_FIELDS = 'username displayName avatar publicKey lastSeen hideLastSeen bio';
+
+// Strip lastSeen from participants who have opted out of sharing it
+function redactParticipants(participants, requestingUserId) {
+  return participants.map(p => {
+    const obj = p.toObject ? p.toObject() : { ...p };
+    if (obj.hideLastSeen && String(obj._id) !== String(requestingUserId)) {
+      obj.lastSeen = null;
+    }
+    delete obj.hideLastSeen;
+    return obj;
+  });
+}
+
 // Get all conversations for current user
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -28,11 +42,16 @@ router.get('/', authenticate, async (req, res) => {
     }
 
     const conversations = await Conversation.find(query)
-      .populate('participants', 'username displayName avatar publicKey lastSeen bio')
+      .populate('participants', PARTICIPANT_FIELDS)
       .populate({ path: 'lastMessage', populate: { path: 'sender', select: 'username displayName' } })
       .sort({ lastActivity: -1 });
 
-    res.json(conversations);
+    const result = conversations.map(conv => {
+      const obj = conv.toObject();
+      obj.participants = redactParticipants(conv.participants, req.user.userId);
+      return obj;
+    });
+    res.json(result);
   } catch {
     res.status(500).json({ error: 'Failed to get conversations' });
   }
@@ -79,7 +98,7 @@ router.post('/direct', authenticate, async (req, res) => {
     let conversation = await Conversation.findOne({
       type: 'direct',
       participants: { $all: [req.user.userId, userId], $size: 2 },
-    }).populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    }).populate('participants', PARTICIPANT_FIELDS);
 
     if (conversation) {
       return res.json(conversation);
@@ -90,7 +109,7 @@ router.post('/direct', authenticate, async (req, res) => {
       participants: [req.user.userId, userId],
     });
     await conversation.save();
-    await conversation.populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    await conversation.populate('participants', PARTICIPANT_FIELDS);
 
     res.status(201).json(conversation);
   } catch (err) {
@@ -124,7 +143,7 @@ router.post('/group', authenticate, async (req, res) => {
       invitations,
     });
     await conversation.save();
-    await conversation.populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    await conversation.populate('participants', PARTICIPANT_FIELDS);
 
     // Notify the creator
     req.io.to(`user:${req.user.userId}`).emit('conversation:new', conversation);
@@ -178,10 +197,12 @@ router.get('/:conversationId', authenticate, async (req, res) => {
     const conversation = await Conversation.findOne({
       _id: req.params.conversationId,
       participants: req.user.userId,
-    }).populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    }).populate('participants', PARTICIPANT_FIELDS);
 
     if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
-    res.json(conversation);
+    const obj = conversation.toObject();
+    obj.participants = redactParticipants(conversation.participants, req.user.userId);
+    res.json(obj);
   } catch {
     res.status(500).json({ error: 'Failed to get conversation' });
   }
@@ -224,7 +245,7 @@ router.put('/:conversationId', authenticate, async (req, res) => {
       req.params.conversationId,
       { ...(name && { name }), ...(description !== undefined && { description }) },
       { new: true }
-    ).populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    ).populate('participants', PARTICIPANT_FIELDS);
     req.io.to(`conversation:${conv._id}`).emit('conversation:updated', updated);
     for (const p of updated.participants) {
       req.io.to(`user:${p._id}`).emit('conversation:updated', updated);
@@ -251,7 +272,7 @@ router.delete('/:conversationId/participants/:userId', authenticate, async (req,
       $pull: { participants: req.params.userId, admins: req.params.userId },
     });
     const updated = await Conversation.findById(req.params.conversationId)
-      .populate('participants', 'username displayName avatar publicKey lastSeen bio');
+      .populate('participants', PARTICIPANT_FIELDS);
     // Tell the removed user their conversation is gone
     req.io.to(`user:${req.params.userId}`).emit('conversation:removed', {
       conversationId: req.params.conversationId,
@@ -284,7 +305,7 @@ router.put('/:conversationId/admins/:userId', authenticate, async (req, res) => 
       req.params.conversationId,
       { $addToSet: { admins: req.params.userId } },
       { new: true }
-    ).populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    ).populate('participants', PARTICIPANT_FIELDS);
     req.io.to(`conversation:${conv._id}`).emit('conversation:updated', updated);
     for (const p of updated.participants) {
       req.io.to(`user:${p._id}`).emit('conversation:updated', updated);
@@ -311,7 +332,7 @@ router.delete('/:conversationId/admins/:userId', authenticate, async (req, res) 
       req.params.conversationId,
       { $pull: { admins: req.params.userId } },
       { new: true }
-    ).populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    ).populate('participants', PARTICIPANT_FIELDS);
     req.io.to(`conversation:${conv._id}`).emit('conversation:updated', updated);
     for (const p of updated.participants) {
       req.io.to(`user:${p._id}`).emit('conversation:updated', updated);
@@ -409,7 +430,7 @@ router.post('/:conversationId/invitations/:invitationId/accept', authenticate, a
     }, { arrayFilters: [{ 'inv._id': inv._id }] });
 
     const updated = await Conversation.findById(req.params.conversationId)
-      .populate('participants', 'username displayName avatar publicKey lastSeen bio');
+      .populate('participants', PARTICIPANT_FIELDS);
 
     // Tell existing room members someone joined
     req.io.to(`conversation:${conv._id}`).emit('conversation:participant-joined', {
@@ -529,7 +550,7 @@ router.post('/:conversationId/leave', authenticate, async (req, res) => {
 
     // Delete group if no participants remain
     const updated = await Conversation.findById(req.params.conversationId)
-      .populate('participants', 'username displayName avatar publicKey lastSeen bio');
+      .populate('participants', PARTICIPANT_FIELDS);
     if (updated && updated.participants.length === 0) {
       await Message.deleteMany({ conversationId: conv._id });
       await Conversation.deleteOne({ _id: conv._id });

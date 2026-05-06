@@ -85,13 +85,14 @@ router.post('/avatar', authenticate, upload.single('avatar'), async (req, res) =
     { new: true },
   );
 
-  // Broadcast avatar change to all connected clients
-  req.io.emit('user:updated', {
-    _id: updated._id,
-    username: updated.username,
-    displayName: updated.displayName,
-    avatar: updated.avatar,
-  });
+  // Broadcast only to users who share a conversation with this user
+  const { default: Conversation } = await import('../models/Conversation.js');
+  const convs = await Conversation.find({ participants: updated._id }).select('_id').lean();
+  const payload = { _id: updated._id, username: updated.username, displayName: updated.displayName, avatar: updated.avatar };
+  req.io.to(`user:${updated._id}`).emit('user:updated', payload);
+  for (const conv of convs) {
+    req.io.to(`conversation:${conv._id}`).emit('user:updated', payload);
+  }
 
   res.json({ avatar: `/uploads/${req.file.filename}` });
 });

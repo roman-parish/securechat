@@ -18,6 +18,7 @@ export default function ProfileModal({ onClose }) {
   const [tab, setTab] = useState('profile');
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
+  const [hideLastSeen, setHideLastSeen] = useState(user?.hideLastSeen ?? false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -81,7 +82,7 @@ export default function ProfileModal({ onClose }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateProfile({ displayName, bio });
+      await updateProfile({ displayName, bio, hideLastSeen });
       setMsg('Profile saved!');
       setTimeout(() => setMsg(''), 2000);
     } catch (err) {
@@ -589,6 +590,22 @@ export default function ProfileModal({ onClose }) {
           {/* ── Security ── */}
           {tab === 'security' && (
             <>
+              <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
+                <div className="setting-text">
+                  <p className="setting-label">Hide Last Seen</p>
+                  <p className="setting-desc">Other users won't see when you were last online</p>
+                </div>
+                <button
+                  className={`ap-toggle ${hideLastSeen ? 'on' : ''}`}
+                  onClick={async () => {
+                    const next = !hideLastSeen;
+                    setHideLastSeen(next);
+                    try { await updateProfile({ displayName, bio, hideLastSeen: next }); } catch {}
+                  }}
+                  aria-label="Toggle hide last seen"
+                />
+              </div>
+
               <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
                 <div className="setting-text">
                   <p className="setting-label">Account Password</p>
