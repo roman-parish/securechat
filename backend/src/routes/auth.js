@@ -349,15 +349,12 @@ router.delete('/account', authenticate, async (req, res) => {
     const userId = req.user.userId;
     logger.info({ userId }, 'Account deletion started');
 
-    // Anonymize messages — keep conversations intact for other participants
+    // Delete all messages sent by this user
     try {
-      await Message.updateMany(
-        { sender: userId },
-        { $set: { 'sender': null, deletedForEveryone: true, contentType: 'deleted' } }
-      );
-      logger.info({ userId }, 'Account deletion: messages anonymized');
+      await Message.deleteMany({ sender: userId });
+      logger.info({ userId }, 'Account deletion: messages deleted');
     } catch (err) {
-      logger.error({ err, userId }, 'Account deletion: failed to anonymize messages — continuing');
+      logger.error({ err, userId }, 'Account deletion: failed to delete messages — continuing');
     }
 
     // Remove user from all conversations; delete conversations that become empty
@@ -373,6 +370,11 @@ router.delete('/account', authenticate, async (req, res) => {
             await Conversation.findByIdAndUpdate(conv._id, {
               $pull: { participants: userId, admins: userId },
             });
+            // Notify remaining participants so their UI removes the conversation
+            req.io.to(`conversation:${conv._id}`).emit('conversation:removed', { conversationId: conv._id });
+            for (const pid of remaining) {
+              req.io.to(`user:${String(pid)}`).emit('conversation:removed', { conversationId: conv._id });
+            }
           }
         } catch (err) {
           logger.error({ err, userId, convId: conv._id }, 'Account deletion: failed to update conversation — continuing');
