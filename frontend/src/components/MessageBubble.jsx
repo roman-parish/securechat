@@ -35,7 +35,7 @@ function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentU
       <div className="msg-attachment">
         {error
           ? <div className="attach-file attach-error">Failed to load audio</div>
-          : <AudioPlayer url={src} isOwn={isOwn} />
+          : <AudioPlayer url={src} isOwn={isOwn} initialDuration={attachment.duration} />
         }
       </div>
     );
@@ -110,11 +110,11 @@ function useAuthBlob(url, { encryptedKey, fileIv, mimetype, userId } = {}) {
   return { src, error };
 }
 
-function AudioPlayer({ url, isOwn }) {
+function AudioPlayer({ url, isOwn, initialDuration = 0 }) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [duration, setDuration] = useState(initialDuration);
   const [currentTime, setCurrentTime] = useState(0);
 
   const toggle = useCallback((e) => {
