@@ -524,25 +524,20 @@ export default function AdminPage({ onBack }) {
                 ) : users.map((u, idx) => (
                   <div key={u._id}>
                     {idx > 0 && <div className="ap-sep" />}
-                    <div className={`ap-user-row${u.banned ? ' banned' : ''}`}>
+                    <div
+                      className={`ap-user-row${u.banned ? ' banned' : ''}${!isMe(u) ? ' tappable' : ''}`}
+                      onClick={() => !isMe(u) && setMenuUser(u)}
+                    >
                       <div className="ap-avatar-wrap">
                         <Avatar user={u} size={42} showOnline={onlineUsers.has(String(u._id))} />
                       </div>
                       <div className="ap-user-info">
                         <div className="ap-user-name">{u.displayName || u.username}</div>
-                        <div className="ap-user-sub">@{u.username}</div>
+                        <div className="ap-user-sub">@{u.username}{isMe(u) ? ' · you' : ''}</div>
                       </div>
                       <div className="ap-user-end">
                         {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
                         <span className={`ap-badge ${u.banned ? 'red' : 'green'}`}>{u.banned ? 'Suspended' : 'Active'}</span>
-                        {isMe(u)
-                          ? <span className="ap-you">You</span>
-                          : (
-                            <button className="ap-menu-btn" onClick={() => setMenuUser(u)} aria-label="User actions">
-                              <IconDots />
-                            </button>
-                          )
-                        }
                       </div>
                     </div>
                   </div>
@@ -1054,8 +1049,11 @@ export default function AdminPage({ onBack }) {
         /* ── User row ── */
         .ap-user-row {
           display: flex; align-items: center; gap: 12px;
-          padding: 14px 16px;
+          padding: 14px 16px; transition: background var(--transition);
         }
+        .ap-user-row.tappable { cursor: pointer; }
+        .ap-user-row.tappable:active { background: var(--bg-3); }
+        @media(hover:hover){.ap-user-row.tappable:hover{background:var(--bg-3);}}
         .ap-user-row.banned { opacity: 0.5; }
 
         .ap-avatar-wrap { position: relative; flex-shrink: 0; }
@@ -1086,21 +1084,6 @@ export default function AdminPage({ onBack }) {
           font-size: 13px; color: var(--text-1); font-family: var(--font-mono);
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .ap-menu-btn {
-          width: 32px; height: 32px;
-          display: flex; align-items: center; justify-content: center;
-          border-radius: 8px; color: var(--text-3);
-          background: var(--bg-3);
-          transition: all var(--transition);
-        }
-        .ap-menu-btn:active { background: var(--accent-dim); color: var(--accent); }
-        @media(hover:hover){.ap-menu-btn:hover{background:var(--accent-dim);color:var(--accent);}}
-        .ap-you {
-          font-size: 11px; color: var(--accent);
-          background: var(--accent-dim); padding: 3px 9px;
-          border-radius: 20px; font-weight: 600;
-        }
-
         /* Badges */
         .ap-badge {
           display: inline-flex; align-items: center;
