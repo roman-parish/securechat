@@ -8,6 +8,15 @@
   "orientation": "portrait",
   "background_color": "#0f0f13",
   "theme_color": "#0f0f13",
+  "shortcuts": [
+    {
+      "name": "New Chat",
+      "short_name": "New Chat",
+      "description": "Start a new conversation",
+      "url": "/?action=new-chat",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-96.png",
