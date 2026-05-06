@@ -9,16 +9,15 @@
   <!-- Background -->
   <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <!-- Lock body -->
-  <rect x="506" y="218" width="188" height="132" rx="28" fill="#7c6cf8"/>
-  <!-- Lock shackle -->
-  <path d="M546 218V178a54 54 0 0 1 108 0v40" stroke="#7c6cf8" stroke-width="24" stroke-linecap="round" fill="none"/>
-  <!-- Keyhole dot -->
-  <circle cx="600" cy="278" r="19" fill="white"/>
+  <!-- Lock icon — same paths as favicon.svg, scaled 7x and centered -->
+  <g transform="translate(488, 118) scale(7)">
+    <path d="M10 16V11a6 6 0 0 1 12 0v5" stroke="#7c6cf8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect x="6" y="15" width="20" height="13" rx="3" fill="#7c6cf8"/>
+  </g>
 
   <!-- App name -->
-  <text x="600" y="430" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="56" font-weight="700" fill="white" text-anchor="middle" letter-spacing="-1">SecureChat</text>
+  <text x="600" y="440" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="56" font-weight="700" fill="white" text-anchor="middle" letter-spacing="-1">SecureChat</text>
 
   <!-- Tagline -->
-  <text x="600" y="488" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="26" font-weight="400" fill="#9b93fa" text-anchor="middle">End-to-end encrypted messaging</text>
+  <text x="600" y="496" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="26" font-weight="400" fill="#9b93fa" text-anchor="middle">End-to-end encrypted messaging</text>
 </svg>
