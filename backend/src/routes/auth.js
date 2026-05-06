@@ -205,8 +205,9 @@ router.post('/login', [
       const trustedToken = req.body.trustedToken;
       const userWithTrusted = await User.findById(user._id).select('+trustedDevices');
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const isTrusted = trustedToken && userWithTrusted.trustedDevices.some(
-        d => d.token === trustedToken && d.createdAt > cutoff
+      const trustedTokenHash = trustedToken ? createHash('sha256').update(trustedToken).digest('hex') : null;
+      const isTrusted = trustedTokenHash && userWithTrusted.trustedDevices.some(
+        d => d.token === trustedTokenHash && d.createdAt > cutoff
       );
       if (!isTrusted) {
         const tempToken = jwt.sign(
@@ -525,7 +526,8 @@ router.post('/2fa/authenticate', async (req, res) => {
     let trustedToken = null;
     if (trustDevice) {
       trustedToken = randomBytes(32).toString('hex');
-      user.trustedDevices.push({ token: trustedToken, userAgent: req.headers['user-agent'] });
+      const trustedTokenHash = createHash('sha256').update(trustedToken).digest('hex');
+      user.trustedDevices.push({ token: trustedTokenHash, userAgent: req.headers['user-agent'] });
       // Expire old trusted devices after 30 days
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       user.trustedDevices = user.trustedDevices.filter(d => d.createdAt > cutoff);
