@@ -95,14 +95,19 @@ router.get('/stats', async (req, res) => {
 // GET /api/admin/users
 router.get('/users', async (req, res) => {
   try {
-    const { search = '', page = 1, limit = 100 } = req.query;
-    const query = search
-      ? { $or: [
-          { username: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-          { displayName: { $regex: search, $options: 'i' } },
-        ]}
-      : {};
+    const { search = '', page = 1, limit = 25, status, twoFa } = req.query;
+    const query = {};
+    if (search) {
+      query.$or = [
+        { username: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { displayName: { $regex: search, $options: 'i' } },
+      ];
+    }
+    if (status === 'active') query.banned = { $ne: true };
+    if (status === 'banned') query.banned = true;
+    if (twoFa === 'enabled') query.twoFactorEnabled = true;
+    if (twoFa === 'disabled') query.twoFactorEnabled = { $ne: true };
 
     const users = await User.find(query)
       .select('username email displayName avatar lastSeen createdAt banned twoFactorEnabled emailVerified')
@@ -278,12 +283,13 @@ router.delete('/invites/:id', async (req, res) => {
 // GET /api/admin/audit
 router.get('/audit', async (req, res) => {
   try {
-    const { page = 1, limit = 50 } = req.query;
-    const logs = await AuditLog.find()
+    const { page = 1, limit = 50, action } = req.query;
+    const query = (action && action !== 'all') ? { action } : {};
+    const logs = await AuditLog.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
-    const total = await AuditLog.countDocuments();
+    const total = await AuditLog.countDocuments(query);
     res.json({ logs, total });
   } catch {
     res.status(500).json({ error: 'Failed to fetch audit log' });

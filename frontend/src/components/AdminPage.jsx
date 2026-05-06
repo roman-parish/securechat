@@ -90,6 +90,22 @@ const IconDots = () => (
   </svg>
 );
 
+function Pagination({ page, total, limit, onChange }) {
+  const pages = Math.ceil(total / limit);
+  if (pages <= 1) return null;
+  return (
+    <div className="ap-pagination">
+      <button className="ap-pg-btn" disabled={page <= 1} onClick={() => onChange(page - 1)}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </button>
+      <span className="ap-pg-info">{page} / {pages}</span>
+      <button className="ap-pg-btn" disabled={page >= pages} onClick={() => onChange(page + 1)}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </button>
+    </div>
+  );
+}
+
 export default function AdminPage({ onBack }) {
   const { user } = useAuth();
   const { onlineUsers } = useChat();
@@ -129,33 +145,65 @@ export default function AdminPage({ onBack }) {
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
+  // Users pagination & filters
+  const [userPage, setUserPage] = useState(1);
+  const [userLimit, setUserLimit] = useState(25);
+  const [userStatus, setUserStatus] = useState('all');
+  const [userTwoFa, setUserTwoFa] = useState('all');
+  // Audit pagination & filters
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditLimit, setAuditLimit] = useState(50);
+  const [auditAction, setAuditAction] = useState('all');
+  const [auditTotal, setAuditTotal] = useState(0);
+
   /* ── Data loading ── */
   const loadStats   = useCallback(async () => { try { setStats(await apiFetch('/admin/stats')); } catch {} }, []);
   const loadInvites = useCallback(async () => { try { setInvites((await apiFetch('/admin/invites')).invites); } catch {} }, []);
 
-  const loadUsers = useCallback(async (q = '') => {
+  const loadUsers = useCallback(async (q = '', page = 1, limit = 25, status = 'all', twoFa = 'all') => {
     setLoading(true);
     try {
-      const d = await apiFetch(`/admin/users?search=${encodeURIComponent(q)}&limit=100`);
+      const params = new URLSearchParams({ search: q, page, limit });
+      if (status !== 'all') params.set('status', status);
+      if (twoFa !== 'all') params.set('twoFa', twoFa);
+      const d = await apiFetch(`/admin/users?${params}`);
       setUsers(d.users); setTotal(d.total);
     } catch {} finally { setLoading(false); }
   }, []);
 
+  const loadAudit = useCallback(async (page = 1, limit = 50, action = 'all') => {
+    setAuditLoading(true);
+    try {
+      const params = new URLSearchParams({ page, limit });
+      if (action !== 'all') params.set('action', action);
+      const d = await apiFetch(`/admin/audit?${params}`);
+      setAuditLogs(d.logs);
+      setAuditTotal(d.total);
+    } catch {} finally { setAuditLoading(false); }
+  }, []);
+
   useEffect(() => {
-    loadStats(); loadUsers(); loadInvites();
+    loadStats(); loadUsers(); loadInvites(); loadAudit();
     apiFetch('/admin/stats/messages-chart').then(d => setMsgChart(d)).catch(() => {});
     apiFetch('/admin/settings').then(d => {
       setRegistrationOpen(d.registrationOpen);
       if (d.email) setEmailSettings(d.email);
     }).catch(() => {});
-    setAuditLoading(true);
-    apiFetch('/admin/audit').then(d => setAuditLogs(d.logs)).catch(() => {}).finally(() => setAuditLoading(false));
-  }, [loadStats, loadUsers, loadInvites]);
+  }, [loadStats, loadUsers, loadInvites, loadAudit]);
 
   useEffect(() => {
-    const t = setTimeout(() => loadUsers(search), 300);
+    setUserPage(1);
+    const t = setTimeout(() => loadUsers(search, 1, userLimit, userStatus, userTwoFa), 300);
     return () => clearTimeout(t);
-  }, [search, loadUsers]);
+  }, [search, userLimit, userStatus, userTwoFa, loadUsers]);
+
+  useEffect(() => {
+    loadUsers(search, userPage, userLimit, userStatus, userTwoFa);
+  }, [userPage]); // eslint-disable-line
+
+  useEffect(() => {
+    loadAudit(auditPage, auditLimit, auditAction);
+  }, [auditPage, auditLimit, auditAction, loadAudit]);
 
   /* ── Flash helper ── */
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(''), 3500); };
@@ -458,6 +506,25 @@ export default function AdminPage({ onBack }) {
                 {total > 0 && <span className="ap-count">{total}</span>}
               </div>
 
+              <div className="ap-filter-bar">
+                <select className="ap-filter-select" value={userStatus} onChange={e => { setUserStatus(e.target.value); setUserPage(1); }}>
+                  <option value="all">All users</option>
+                  <option value="active">Active</option>
+                  <option value="banned">Suspended</option>
+                </select>
+                <select className="ap-filter-select" value={userTwoFa} onChange={e => { setUserTwoFa(e.target.value); setUserPage(1); }}>
+                  <option value="all">Any 2FA</option>
+                  <option value="enabled">2FA on</option>
+                  <option value="disabled">2FA off</option>
+                </select>
+                <select className="ap-filter-select" value={String(userLimit)} onChange={e => { setUserLimit(Number(e.target.value)); setUserPage(1); }}>
+                  <option value="10">10 / page</option>
+                  <option value="25">25 / page</option>
+                  <option value="50">50 / page</option>
+                  <option value="100">100 / page</option>
+                </select>
+              </div>
+
               <div className="ap-group">
                 {loading ? (
                   <div className="ap-empty">Loading…</div>
@@ -494,36 +561,63 @@ export default function AdminPage({ onBack }) {
                   </div>
                 ))}
               </div>
+
+              <Pagination page={userPage} total={total} limit={userLimit} onChange={setUserPage} />
             </>
           )}
 
           {/* ════ AUDIT LOG ════ */}
           {activeTab === 'logs' && (
-            <div className="ap-group">
-              {auditLoading ? (
-                <div className="ap-empty">Loading…</div>
-              ) : auditLogs.length === 0 ? (
-                <div className="ap-empty">No activity yet</div>
-              ) : auditLogs.map((log, idx) => (
-                <div key={log._id}>
-                  {idx > 0 && <div className="ap-sep" />}
-                  <div className="ap-audit">
-                    <span className={`ap-badge audit-${log.action.replace('.', '-')}`}>
-                      {ACTION_LABELS[log.action] || log.action}
-                    </span>
-                    <span className="ap-audit-body">
-                      <span className="ap-audit-who">
-                        {log.performedByUsername}
-                        {log.targetUsername && <span className="ap-audit-target"> → {log.targetUsername}</span>}
-                        {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
-                        {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
+            <>
+              <div className="ap-filter-bar">
+                <select className="ap-filter-select" value={auditAction} onChange={e => { setAuditAction(e.target.value); setAuditPage(1); }}>
+                  <option value="all">All actions</option>
+                  <option value="user.ban">Suspended</option>
+                  <option value="user.unban">Unsuspended</option>
+                  <option value="user.delete">Deleted user</option>
+                  <option value="user.password_reset">Password reset</option>
+                  <option value="user.reset_2fa">2FA reset</option>
+                  <option value="user.verify_email">Email verified</option>
+                  <option value="invite.create">Invite created</option>
+                  <option value="invite.revoke">Invite revoked</option>
+                  <option value="settings.registration_toggle">Registration</option>
+                  <option value="settings.email_update">Email settings</option>
+                </select>
+                <select className="ap-filter-select" value={String(auditLimit)} onChange={e => { setAuditLimit(Number(e.target.value)); setAuditPage(1); }}>
+                  <option value="25">25 / page</option>
+                  <option value="50">50 / page</option>
+                  <option value="100">100 / page</option>
+                </select>
+              </div>
+
+              <div className="ap-group">
+                {auditLoading ? (
+                  <div className="ap-empty">Loading…</div>
+                ) : auditLogs.length === 0 ? (
+                  <div className="ap-empty">No activity yet</div>
+                ) : auditLogs.map((log, idx) => (
+                  <div key={log._id}>
+                    {idx > 0 && <div className="ap-sep" />}
+                    <div className="ap-audit">
+                      <span className={`ap-badge audit-${log.action.replace('.', '-')}`}>
+                        {ACTION_LABELS[log.action] || log.action}
                       </span>
-                      <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
-                    </span>
+                      <span className="ap-audit-body">
+                        <span className="ap-audit-who">
+                          {log.performedByUsername}
+                          {log.targetUsername && <span className="ap-audit-target"> → {log.targetUsername}</span>}
+                          {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
+                          {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
+                        </span>
+                        <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+
+              <Pagination page={auditPage} total={auditTotal} limit={auditLimit} onChange={setAuditPage} />
+            </>
           )}
 
         </div>
@@ -1125,6 +1219,35 @@ export default function AdminPage({ onBack }) {
         .ap-btn.danger { background: var(--red); color: white; }
         .ap-btn.danger:active { opacity: 0.85; }
         @media(hover:hover){.ap-btn.danger:hover{opacity:0.88;}}
+
+        /* Filter bar */
+        .ap-filter-bar {
+          display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        .ap-filter-select {
+          flex: 1; min-width: 100px;
+          background: var(--bg-2); border: 1px solid var(--border);
+          border-radius: 10px; padding: 9px 12px;
+          font-size: 13px; color: var(--text-0); cursor: pointer;
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23666' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+          background-repeat: no-repeat; background-position: right 10px center;
+          padding-right: 28px;
+        }
+        /* Pagination */
+        .ap-pagination {
+          display: flex; align-items: center; justify-content: center; gap: 12px;
+          padding: 8px 0;
+        }
+        .ap-pg-btn {
+          width: 36px; height: 36px; border-radius: 10px;
+          background: var(--bg-2); border: 1px solid var(--border);
+          display: flex; align-items: center; justify-content: center;
+          color: var(--text-2); transition: all var(--transition);
+        }
+        .ap-pg-btn:disabled { opacity: 0.35; cursor: default; }
+        .ap-pg-btn:not(:disabled):hover { background: var(--bg-3); color: var(--text-0); }
+        .ap-pg-info { font-size: 14px; color: var(--text-2); font-weight: 500; min-width: 60px; text-align: center; }
       `}</style>
     </div>
   );
