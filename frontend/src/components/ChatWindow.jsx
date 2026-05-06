@@ -759,9 +759,11 @@ export default function ChatWindow({ conversationId, onBack }) {
                   const prev = i > 0 ? msgs[i - 1] : null;
                   const next = i < msgs.length - 1 ? msgs[i + 1] : null;
                   const sameAsPrev = prev &&
+                    msg.sender?._id && prev.sender?._id &&
                     String(prev.sender._id) === String(msg.sender._id) &&
                     new Date(msg.createdAt) - new Date(prev.createdAt) < 5 * 60 * 1000;
                   const sameAsNext = next &&
+                    msg.sender?._id && next.sender?._id &&
                     String(next.sender._id) === String(msg.sender._id) &&
                     new Date(next.createdAt) - new Date(msg.createdAt) < 5 * 60 * 1000;
                   const isHighlighted = jumpHighlight === String(msg._id);
@@ -775,7 +777,7 @@ export default function ChatWindow({ conversationId, onBack }) {
                         msg={msg}
                         plaintext={decrypted[msg._id]}
                         replyPlaintext={msg.replyTo ? decrypted[String(msg.replyTo._id)] : null}
-                        isOwn={String(msg.sender._id) === myId}
+                        isOwn={String(msg.sender?._id) === myId}
                         isConsecutive={sameAsPrev}
                         isTail={!sameAsNext}
                         onReply={() => { setReplyTo(msg); setEditingMsg(null); textareaRef.current?.focus(); }}
