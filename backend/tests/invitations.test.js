@@ -8,7 +8,7 @@ async function createGroup(agent, participantIds = []) {
     name: 'Test Group',
     participantIds,
   });
-  return res.body;
+  return res.body.conversation;
 }
 
 describe('Group invitations', () => {

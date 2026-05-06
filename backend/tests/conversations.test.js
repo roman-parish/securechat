@@ -42,8 +42,8 @@ describe('Conversations — group', () => {
       participantIds: [userB._id],
     });
     expect(res.status).toBe(201);
-    expect(res.body.type).toBe('group');
-    expect(res.body.name).toBe('Test Group');
+    expect(res.body.conversation.type).toBe('group');
+    expect(res.body.conversation.name).toBe('Test Group');
   });
 
   it('rejects group creation without a name', async () => {
@@ -57,19 +57,19 @@ describe('Conversations — group', () => {
   });
 
   it('does not add duplicate participants', async () => {
-    const { agent } = await registerUser(app);
+    const { agent, user: userA } = await registerUser(app);
     const { user: userB } = await registerUser(app);
 
     const createRes = await agent.post('/api/conversations/group').send({
       name: 'Dup Test',
       participantIds: [userB._id],
     });
-    const convId = createRes.body._id;
+    const convId = createRes.body.conversation._id;
 
-    // Try to add userB again
+    // Try to add the creator (already a participant) again
     const addRes = await agent
       .post(`/api/conversations/${convId}/participants`)
-      .send({ userIds: [userB._id] });
+      .send({ userIds: [userA._id] });
     expect(addRes.status).toBe(400);
   });
 
@@ -81,7 +81,7 @@ describe('Conversations — group', () => {
       name: 'Admin Test',
       participantIds: [userB._id],
     });
-    const convId = createRes.body._id;
+    const convId = createRes.body.conversation._id;
 
     const res = await agent
       .delete(`/api/conversations/${convId}/participants/${userA._id}`);
