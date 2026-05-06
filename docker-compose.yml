@@ -78,6 +78,7 @@ services:
         VITE_WS_URL: ${VITE_WS_URL:-/ws}
         VITE_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
         VITE_ADMIN_USERNAMES: ${ADMIN_USERNAMES:-}
+        VITE_APP_URL: ${VITE_APP_URL:-}
     container_name: securechat-frontend
     restart: unless-stopped
     networks:
