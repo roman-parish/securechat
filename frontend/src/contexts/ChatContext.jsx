@@ -215,6 +215,13 @@ export function ChatProvider({ children }) {
     }
   }, []);
 
+  const leaveGroup = useCallback(async (id) => {
+    const strId = String(id);
+    await apiFetch(`/conversations/${strId}/leave`, { method: 'POST' });
+    setConversations(prev => prev.filter(c => String(c._id) !== strId));
+    setUnreadCounts(prev => { const n = { ...prev }; delete n[strId]; return n; });
+  }, []);
+
   const setActiveConversation = useCallback((id) => {
     const strId = id ? String(id) : null;
     setActiveConversationId(strId);
@@ -271,7 +278,7 @@ export function ChatProvider({ children }) {
     <ChatContext.Provider value={{
       conversations, archivedConversations, activeConversationId, setActiveConversation,
       onlineUsers, onlineListLoaded, typingMap, unreadCounts, totalUnread, loading,
-      loadConversations, addConversation, removeConversation, updateConversation,
+      loadConversations, addConversation, removeConversation, leaveGroup, updateConversation,
       archiveConversation, unarchiveConversation,
       blockUser, unblockUser,
       invitations, removeInvitation,

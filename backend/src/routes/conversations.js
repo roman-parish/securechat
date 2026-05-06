@@ -493,6 +493,44 @@ router.delete('/:conversationId/dissolve', authenticate, async (req, res) => {
   }
 });
 
+// Leave a group — removes self as participant
+router.post('/:conversationId/leave', authenticate, async (req, res) => {
+  try {
+    const conv = await Conversation.findOne({
+      _id: req.params.conversationId,
+      type: 'group',
+      participants: req.user.userId,
+    });
+    if (!conv) return res.status(404).json({ error: 'Group not found' });
+
+    const isAdmin = conv.admins.map(String).includes(String(req.user.userId));
+    const isLastAdmin = isAdmin && conv.admins.length === 1 && conv.participants.length > 1;
+    if (isLastAdmin) {
+      return res.status(400).json({ error: 'You are the only admin — promote another member before leaving' });
+    }
+
+    await Conversation.findByIdAndUpdate(req.params.conversationId, {
+      $pull: { participants: req.user.userId, admins: req.user.userId },
+    });
+
+    // Delete group if no participants remain
+    const updated = await Conversation.findById(req.params.conversationId);
+    if (updated && updated.participants.length === 0) {
+      await Message.deleteMany({ conversationId: conv._id });
+      await Conversation.deleteOne({ _id: conv._id });
+    }
+
+    req.io.to(`conversation:${conv._id}`).emit('conversation:participant-left', {
+      conversationId: String(conv._id),
+      userId: String(req.user.userId),
+    });
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to leave group' });
+  }
+});
+
 // Hide conversation from list (for this user only — messages stay for others)
 router.delete('/:conversationId', authenticate, async (req, res) => {
   try {

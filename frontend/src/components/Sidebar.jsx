@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 
 export default function Sidebar({ onSelectConversation, activeConversationId: activeConvIdProp, onRemoveActive, onOpenAdmin }) {
   const { user, logout } = useAuth();
-  const { conversations, archivedConversations, activeConversationId, onlineUsers, unreadCounts, loading, removeConversation, archiveConversation, unarchiveConversation, blockUser, typingMap, invitations, removeInvitation } = useChat();
+  const { conversations, archivedConversations, activeConversationId, onlineUsers, unreadCounts, loading, removeConversation, leaveGroup, archiveConversation, unarchiveConversation, blockUser, typingMap, invitations, removeInvitation } = useChat();
   const { connected } = useSocket();
   const [search, setSearch] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -144,6 +144,7 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
                 typingUsers={typingMap[String(conv._id)] || []}
                 onClick={() => onSelectConversation(conv._id)}
                 onRemove={() => removeConversation(conv._id)}
+                onLeave={() => leaveGroup(conv._id).catch(() => showToast('Failed to leave group — you may be the only admin'))}
                 onArchive={() => archiveConversation(conv._id)}
                 onBlock={async (userId) => { await blockUser(userId); removeConversation(conv._id); }}
                 onMuteToggle={handleMuteToggle}
@@ -174,6 +175,7 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
                 typingUsers={typingMap[String(conv._id)] || []}
                 onClick={() => onSelectConversation(conv._id)}
                 onRemove={() => removeConversation(conv._id)}
+                onLeave={() => leaveGroup(conv._id).catch(() => showToast('Failed to leave group — you may be the only admin'))}
                 onUnarchive={() => unarchiveConversation(conv._id)}
                 onMuteToggle={handleMuteToggle}
                 isArchived
@@ -264,7 +266,7 @@ function convPreview(conv, currentUser, hasUnread) {
   }
 }
 
-function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onArchive, onUnarchive, onBlock, onMuteToggle, isArchived }) {
+function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onLeave, onArchive, onUnarchive, onBlock, onMuteToggle, isArchived }) {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const menuRef = useRef(null);
@@ -402,12 +404,22 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
               </button>
             ) : null;
           })()}
-          <button onClick={() => { setShowMenu(false); onRemove(); }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Remove conversation
-          </button>
+          {conv.type === 'group' ? (
+            <button className="menu-btn-danger" onClick={() => { setShowMenu(false); onLeave(); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Leave group
+            </button>
+          ) : (
+            <button onClick={() => { setShowMenu(false); onRemove(); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Remove conversation
+            </button>
+          )}
         </div>
       )}
 
@@ -484,6 +496,7 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
           box-shadow: var(--shadow); z-index: 50; min-width: 180px;
           animation: slideUp 0.1s ease;
         }
+        .menu-btn-danger { color: var(--red) !important; }
         .mute-icon { color: var(--text-3); flex-shrink: 0; margin-left: 4px; }
         .muted-label { color: var(--text-3); font-style: italic; }
         .sidebar-toast {
