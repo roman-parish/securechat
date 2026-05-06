@@ -34,6 +34,7 @@ export default function AuthPage() {
   const [forgotStatus, setForgotStatus] = useState('idle'); // idle | loading | sent
   const [registrationOpen, setRegistrationOpen] = useState(true);
   const [inviteToken, setInviteToken] = useState(null);
+  const [invitedBy, setInvitedBy] = useState(null);
   const { login, completeTwoFactorLogin, register } = useAuth();
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function AuthPage() {
             setInviteToken(token);
             setMode('register');
             if (d.email) setForm(f => ({ ...f, email: d.email }));
+            if (d.invitedBy) setInvitedBy(d.invitedBy);
           }
         })
         .catch(() => {});
@@ -201,6 +203,15 @@ export default function AuthPage() {
           <h1>SecureChat</h1>
           <p>{forgotMode ? 'Reset your password' : 'End-to-end encrypted messaging'}</p>
         </div>
+
+        {inviteToken && (
+          <div className="invite-banner">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {invitedBy ? `${invitedBy} invited you to SecureChat` : 'You've been invited to SecureChat'}
+          </div>
+        )}
 
         {sslError ? (
           <div className="ssl-error-box">
@@ -437,6 +448,14 @@ export default function AuthPage() {
           transition: all var(--transition);
         }
         .ssl-reload-btn:hover { background: var(--accent-light); }
+        .invite-banner {
+          display: flex; align-items: center; gap: 8px;
+          background: var(--accent-dim, rgba(124,108,248,0.12));
+          border: 1px solid var(--accent);
+          border-radius: var(--radius-md);
+          padding: 10px 14px;
+          font-size: 13px; font-weight: 500; color: var(--accent);
+        }
       `}</style>
     </div>
   );

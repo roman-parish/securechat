@@ -55,9 +55,10 @@ function generateTokens(user) {
 router.get('/invite/:token', async (req, res) => {
   try {
     const tokenHash = createHash('sha256').update(req.params.token).digest('hex');
-    const invite = await Invite.findOne({ tokenHash, usedAt: null, expiresAt: { $gt: new Date() } });
+    const invite = await Invite.findOne({ tokenHash, usedAt: null, expiresAt: { $gt: new Date() } })
+      .populate('createdBy', 'displayName username');
     if (!invite) return res.status(404).json({ valid: false });
-    res.json({ valid: true, email: invite.email, expiresAt: invite.expiresAt });
+    res.json({ valid: true, email: invite.email, expiresAt: invite.expiresAt, invitedBy: invite.createdBy?.displayName || invite.createdBy?.username || null });
   } catch {
     res.status(500).json({ valid: false });
   }
