@@ -98,10 +98,11 @@ router.get('/users', async (req, res) => {
     const { search = '', page = 1, limit = 25, status, twoFa } = req.query;
     const query = {};
     if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { username: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { displayName: { $regex: search, $options: 'i' } },
+        { username: { $regex: escaped, $options: 'i' } },
+        { email: { $regex: escaped, $options: 'i' } },
+        { displayName: { $regex: escaped, $options: 'i' } },
       ];
     }
     if (status === 'active') query.banned = { $ne: true };
