@@ -241,7 +241,6 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
   }, [showActions, showPicker, showMenu]);
 
   const handleReact = async (emoji) => {
-    setShowPicker(false);
     setShowActions(false);
     try {
       await apiFetch(`/messages/${msg._id}/react`, {
