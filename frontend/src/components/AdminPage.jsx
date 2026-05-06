@@ -668,23 +668,10 @@ export default function AdminPage({ onBack }) {
             <div>
               <span className="ap-sheet-title">{menuUser.displayName || menuUser.username}</span>
               <span className="ap-sheet-handle" style={{ display: 'block' }}>@{menuUser.username}</span>
-              {menuUser.email && <span className="ap-sheet-handle" style={{ display: 'block', marginTop: 2 }}>{menuUser.email}</span>}
             </div>
           </div>
 
           <div className="ap-user-detail">
-            {menuUser.email && (
-              <div className="ap-detail-row">
-                <span className="ap-detail-label">Email</span>
-                <span className="ap-detail-value" style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                  <span>{menuUser.email}</span>
-                  {menuUser.emailVerified
-                    ? <span className="ap-badge green" style={{ fontSize: 10 }}>Verified</span>
-                    : <span className="ap-badge" style={{ fontSize: 10, background: 'var(--bg-4)', color: 'var(--text-3)' }}>Unverified</span>
-                  }
-                </span>
-              </div>
-            )}
             <div className="ap-detail-row">
               <span className="ap-detail-label">Joined</span>
               <span className="ap-detail-value">{new Date(menuUser.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
