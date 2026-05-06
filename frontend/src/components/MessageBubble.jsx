@@ -188,7 +188,11 @@ function AudioPlayer({ url, isOwn }) {
       <div className="audio-track" onClick={seek}>
         <div className="audio-track-fill" style={{ width: `${progress}%` }} />
       </div>
-      <span className="audio-time">{fmt(currentTime)}{duration ? ` / ${fmt(duration)}` : ''}</span>
+      <span className="audio-time">
+        {playing || currentTime > 0
+          ? `${fmt(currentTime)} / ${fmt(duration || 0)}`
+          : duration ? fmt(duration) : '—:——'}
+      </span>
     </div>
   );
 }
