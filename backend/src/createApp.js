@@ -124,6 +124,8 @@ export function createApp(ioRef = mockIo) {
 
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
+  app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
+
   app.use('/uploads', express.static('/app/uploads'));
 
   app.use((err, _req, res, _next) => {
