@@ -44,6 +44,7 @@ const messageSchema = new mongoose.Schema({
     size: Number,
     url: String,
     fileIv: String,
+    duration: Number,
   },
   replyTo: {
     type: mongoose.Schema.Types.ObjectId,
