@@ -250,13 +250,17 @@ router.delete('/:conversationId/participants/:userId', authenticate, async (req,
     await Conversation.findByIdAndUpdate(req.params.conversationId, {
       $pull: { participants: req.params.userId, admins: req.params.userId },
     });
+    const updated = await Conversation.findById(req.params.conversationId)
+      .populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    // Tell the removed user their conversation is gone
     req.io.to(`user:${req.params.userId}`).emit('conversation:removed', {
       conversationId: req.params.conversationId,
     });
-    req.io.to(`conversation:${conv._id}`).emit('conversation:participant-left', {
-      conversationId: req.params.conversationId,
-      userId: req.params.userId,
-    });
+    // Update remaining members' participant lists in real-time
+    req.io.to(`conversation:${conv._id}`).emit('conversation:updated', updated);
+    for (const p of updated.participants) {
+      req.io.to(`user:${String(p._id)}`).emit('conversation:updated', updated);
+    }
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed to remove participant' });
@@ -359,6 +363,16 @@ router.post('/:conversationId/invite', authenticate, async (req, res) => {
       i => String(i.userId) === String(userId) && i.status === 'pending'
     );
     if (alreadyInvited) return res.status(400).json({ error: 'User already has a pending invitation' });
+
+    // Block check — don't allow inviting someone who has blocked the inviter or vice versa
+    const inviter = await User.findById(req.user.userId).select('blockedUsers');
+    const invitee = await User.findById(userId).select('blockedUsers');
+    if (!invitee) return res.status(404).json({ error: 'User not found' });
+    const inviterBlocked = inviter.blockedUsers.map(String).includes(String(userId));
+    const inviteeBlocked = invitee.blockedUsers.map(String).includes(String(req.user.userId));
+    if (inviterBlocked || inviteeBlocked) {
+      return res.status(403).json({ error: 'Cannot invite this user' });
+    }
 
     await Conversation.findByIdAndUpdate(req.params.conversationId, {
       $push: { invitations: { userId, invitedBy: req.user.userId } },
@@ -514,16 +528,18 @@ router.post('/:conversationId/leave', authenticate, async (req, res) => {
     });
 
     // Delete group if no participants remain
-    const updated = await Conversation.findById(req.params.conversationId);
+    const updated = await Conversation.findById(req.params.conversationId)
+      .populate('participants', 'username displayName avatar publicKey lastSeen bio');
     if (updated && updated.participants.length === 0) {
       await Message.deleteMany({ conversationId: conv._id });
       await Conversation.deleteOne({ _id: conv._id });
+    } else if (updated) {
+      // Update remaining members' participant lists in real-time
+      req.io.to(`conversation:${conv._id}`).emit('conversation:updated', updated);
+      for (const p of updated.participants) {
+        req.io.to(`user:${String(p._id)}`).emit('conversation:updated', updated);
+      }
     }
-
-    req.io.to(`conversation:${conv._id}`).emit('conversation:participant-left', {
-      conversationId: String(conv._id),
-      userId: String(req.user.userId),
-    });
 
     res.json({ success: true });
   } catch {
