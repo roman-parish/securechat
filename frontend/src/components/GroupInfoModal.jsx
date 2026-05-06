@@ -7,11 +7,13 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { useChat } from '../contexts/ChatContext.jsx';
 import { apiFetch } from '../utils/api.js';
 import Avatar from './Avatar.jsx';
 
 export default function GroupInfoModal({ conversation, onClose, onUpdated, onDeleted }) {
   const { user } = useAuth();
+  const { onlineUsers } = useChat();
   const [name, setName] = useState(conversation.name || '');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
@@ -174,7 +176,7 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
                   className={`gi-member-row ${isAdmin && !isMe ? 'tappable' : ''}`}
                   onClick={() => isAdmin && !isMe && setSelectedMember(p)}
                 >
-                  <Avatar user={p} size={36} />
+                  <Avatar user={p} size={36} showOnline={onlineUsers.has(String(p._id))} />
                   <div className="gi-member-info">
                     <span className="gi-member-name">{p.displayName || p.username}</span>
                     <span className="gi-member-sub">@{p.username}{isMe ? ' · You' : ''}</span>
