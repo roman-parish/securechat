@@ -19,7 +19,8 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
   const [inviteResults, setInviteResults] = useState([]);
   const [inviteSearching, setInviteSearching] = useState(false);
   const [pendingInvites, setPendingInvites] = useState([]);
-  const [confirmRemove, setConfirmRemove] = useState(null); // participant object
+  const [confirmRemove, setConfirmRemove] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null); // member action sheet
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -167,34 +168,19 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
               const pid = String(p._id);
               const isMe = pid === myId;
               const memberIsAdmin = conversation.admins?.some(a => String(a) === pid || String(a._id) === pid);
-              const isLastAdmin = memberIsAdmin && (conversation.admins?.length === 1);
               return (
-                <div key={pid} className="gi-member-row">
+                <div
+                  key={pid}
+                  className={`gi-member-row ${isAdmin && !isMe ? 'tappable' : ''}`}
+                  onClick={() => isAdmin && !isMe && setSelectedMember(p)}
+                >
                   <Avatar user={p} size={36} />
                   <div className="gi-member-info">
                     <span className="gi-member-name">{p.displayName || p.username}</span>
-                    <span className="gi-member-sub">@{p.username}</span>
+                    <span className="gi-member-sub">@{p.username}{isMe ? ' · You' : ''}</span>
                   </div>
                   {memberIsAdmin && (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: 20, flexShrink: 0 }}>Admin</span>
-                  )}
-                  {isAdmin && !isMe && (
-                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                      {!isLastAdmin && (
-                        <button
-                          className="ghost-action-btn"
-                          title={memberIsAdmin ? 'Remove admin' : 'Make admin'}
-                          onClick={() => handleToggleAdmin(p)}
-                        >
-                          {memberIsAdmin ? (
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M9 12l2 2 4-4" stroke="var(--red)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          ) : (
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          )}
-                        </button>
-                      )}
-                      <button className="danger-btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setConfirmRemove(p)}>Remove</button>
-                    </div>
+                    <span className="gi-admin-badge">Admin</span>
                   )}
                 </div>
               );
@@ -262,6 +248,52 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
           )}
         </div>
       </div>
+
+      {/* Member action sheet */}
+      {selectedMember && (() => {
+        const pid = String(selectedMember._id);
+        const memberIsAdmin = conversation.admins?.some(a => String(a) === pid || String(a._id) === pid);
+        const isLastAdmin = memberIsAdmin && conversation.admins?.length === 1;
+        return (
+          <div className="cp-overlay" onClick={() => setSelectedMember(null)}>
+            <div className="cp-modal" onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 20px 16px', gap: 8, borderBottom: '1px solid var(--border)' }}>
+                <Avatar user={selectedMember} size={56} />
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-0)' }}>{selectedMember.displayName || selectedMember.username}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 2 }}>@{selectedMember.username}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 12 }}>
+                {!isLastAdmin && (
+                  <button
+                    className={`gi-action-item ${memberIsAdmin ? 'orange' : 'blue'}`}
+                    onClick={() => { setSelectedMember(null); handleToggleAdmin(selectedMember); }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                      <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    {memberIsAdmin ? 'Remove admin role' : 'Make admin'}
+                  </button>
+                )}
+                <button
+                  className="gi-action-item red"
+                  onClick={() => { setSelectedMember(null); setConfirmRemove(selectedMember); }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M23 11l-6 6M17 11l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  Remove from group
+                </button>
+                <button className="cancel-btn" style={{ marginTop: 4, textAlign: 'center' }} onClick={() => setSelectedMember(null)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Remove member confirmation */}
       {confirmRemove && (
@@ -343,7 +375,24 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
           padding: 8px; border-radius: var(--radius);
           transition: background var(--transition);
         }
-        .gi-member-row:hover { background: var(--bg-3); }
+        .gi-member-row.tappable { cursor: pointer; }
+        .gi-member-row.tappable:hover { background: var(--bg-3); }
+        .gi-member-row.tappable:active { background: var(--bg-4); }
+        .gi-admin-badge {
+          font-size: 11px; font-weight: 600; color: var(--accent);
+          background: var(--accent-dim); padding: 2px 8px;
+          border-radius: 20px; flex-shrink: 0;
+        }
+        .gi-action-item {
+          display: flex; align-items: center; gap: 12px;
+          padding: 13px 14px; border-radius: 10px;
+          font-size: 15px; font-weight: 500;
+          transition: filter var(--transition); cursor: pointer;
+        }
+        .gi-action-item:active { filter: brightness(1.1); }
+        .gi-action-item.blue { background: var(--accent-dim); color: var(--accent); }
+        .gi-action-item.orange { background: rgba(255,160,60,0.12); color: #f59e0b; }
+        .gi-action-item.red { background: var(--red-dim); color: var(--red); }
         .gi-member-info { flex: 1; min-width: 0; }
         .gi-member-name { display: block; font-size: 14px; font-weight: 500; color: var(--text-0); }
         .gi-member-sub { display: block; font-size: 12px; color: var(--text-3); }
@@ -365,8 +414,6 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
         .field input:focus { border-color: var(--accent); outline: none; }
         .field input:disabled { opacity: 0.5; }
         .section-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
-        .ghost-action-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); color: var(--text-3); background: var(--bg-3); transition: all var(--transition); }
-        .ghost-action-btn:hover { background: var(--bg-4); color: var(--text-0); }
         .primary-btn { background: var(--accent); color: white; border-radius: var(--radius); padding: 9px 18px; font-size: 13px; font-weight: 500; transition: all var(--transition); }
         .primary-btn:hover:not(:disabled) { background: #8b84ff; }
         .primary-btn:disabled { opacity: 0.5; }
