@@ -23,24 +23,29 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
   const [showNewChat, setShowNewChat] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [toast, setToast] = useState('');
   const { updateConversation } = useChat();
+
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3500);
+  }, []);
 
   const handleMuteToggle = useCallback(async (convId, currentlyMuted) => {
     try {
       await apiFetch(`/conversations/${convId}/mute`, {
         method: currentlyMuted ? 'DELETE' : 'POST',
       });
-      // Optimistically update local conversation mutedBy state
       updateConversation(convId, conv => ({
         ...conv,
         mutedBy: currentlyMuted
           ? (conv.mutedBy || []).filter(m => String(m.userId) !== String(user._id))
           : [...(conv.mutedBy || []), { userId: user._id, until: null }],
       }));
-    } catch (err) {
-      console.error('Mute toggle failed:', err);
+    } catch {
+      showToast('Failed to update mute — please try again');
     }
-  }, [user._id, updateConversation]);
+  }, [user._id, updateConversation, showToast]);
 
   const filtered = conversations.filter(conv => {
     const name = getConvName(conv, user);
@@ -93,6 +98,8 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
         </div>
       </div>
 
+      {toast && <div className="sidebar-toast">{toast}</div>}
+
       {invitations.length > 0 && (
         <InvitationPanel
           invitations={invitations}
@@ -101,16 +108,16 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
               const conv = await apiFetch(`/conversations/${inv.conversationId}/invitations/${inv._id}/accept`, { method: 'POST' });
               removeInvitation(inv._id);
               onSelectConversation(conv._id);
-            } catch (err) {
-              console.error('Accept failed:', err);
+            } catch {
+              showToast('Failed to accept invitation');
             }
           }}
           onDecline={async (inv) => {
             try {
               await apiFetch(`/conversations/${inv.conversationId}/invitations/${inv._id}/decline`, { method: 'POST' });
               removeInvitation(inv._id);
-            } catch (err) {
-              console.error('Decline failed:', err);
+            } catch {
+              showToast('Failed to decline invitation');
             }
           }}
         />
@@ -264,6 +271,9 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
 
   const mutedEntry = conv.mutedBy?.find(m => String(m.userId) === String(user._id));
   const isMuted = !!(mutedEntry && (!mutedEntry.until || new Date(mutedEntry.until) > new Date()));
+  const muteLabel = isMuted && mutedEntry?.until
+    ? `Muted until ${format(new Date(mutedEntry.until), 'MMM d, h:mm a')}`
+    : isMuted ? 'Muted' : null;
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -326,6 +336,8 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
               <span className="typing-dots-inline"><span/><span/><span/></span>
               {typingUsers.map(u => u.username).join(', ')} typing
             </span>
+          ) : isMuted && muteLabel && !hasUnread ? (
+            <span className="conv-preview muted-label">{muteLabel}</span>
           ) : (
             <span className={`conv-preview ${hasUnread ? 'unread' : ''}`}>
               {convPreview(conv, user, hasUnread)}
@@ -473,6 +485,14 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
           animation: slideUp 0.1s ease;
         }
         .mute-icon { color: var(--text-3); flex-shrink: 0; margin-left: 4px; }
+        .muted-label { color: var(--text-3); font-style: italic; }
+        .sidebar-toast {
+          margin: 6px 8px 0;
+          background: var(--red-dim); border: 1px solid rgba(255,87,87,0.25);
+          border-radius: var(--radius); padding: 8px 12px;
+          font-size: 13px; color: var(--red); text-align: center;
+          animation: slideUp 0.2s ease;
+        }
         .conv-menu button {
           display: flex; align-items: center; gap: 8px;
           width: 100%; padding: 8px 10px; border-radius: var(--radius-sm);

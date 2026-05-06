@@ -97,6 +97,23 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
     }
   };
 
+  const handleToggleAdmin = async (p) => {
+    const pid = String(p._id);
+    const memberIsAdmin = conversation.admins?.some(a => String(a) === pid || String(a._id) === pid);
+    try {
+      const updated = await apiFetch(
+        `/conversations/${conversation._id}/admins/${pid}`,
+        { method: memberIsAdmin ? 'DELETE' : 'PUT' }
+      );
+      onUpdated?.(updated);
+      setMsg(memberIsAdmin ? `${p.displayName || p.username} is no longer an admin` : `${p.displayName || p.username} is now an admin`);
+      setTimeout(() => setMsg(''), 2500);
+    } catch (err) {
+      setMsg(err.message || 'Failed to update admin status');
+      setTimeout(() => setMsg(''), 3000);
+    }
+  };
+
   const handleDeleteGroup = async () => {
     setDeleting(true);
     try {
@@ -150,15 +167,34 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
               const pid = String(p._id);
               const isMe = pid === myId;
               const memberIsAdmin = conversation.admins?.some(a => String(a) === pid || String(a._id) === pid);
+              const isLastAdmin = memberIsAdmin && (conversation.admins?.length === 1);
               return (
                 <div key={pid} className="gi-member-row">
                   <Avatar user={p} size={36} />
                   <div className="gi-member-info">
                     <span className="gi-member-name">{p.displayName || p.username}</span>
-                    <span className="gi-member-sub">@{p.username}{memberIsAdmin ? ' · Admin' : ''}</span>
+                    <span className="gi-member-sub">@{p.username}</span>
                   </div>
+                  {memberIsAdmin && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: 20, flexShrink: 0 }}>Admin</span>
+                  )}
                   {isAdmin && !isMe && (
-                    <button className="danger-btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setConfirmRemove(p)}>Remove</button>
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      {!isLastAdmin && (
+                        <button
+                          className="ghost-action-btn"
+                          title={memberIsAdmin ? 'Remove admin' : 'Make admin'}
+                          onClick={() => handleToggleAdmin(p)}
+                        >
+                          {memberIsAdmin ? (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M9 12l2 2 4-4" stroke="var(--red)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          ) : (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 3L4 7v6c0 4.4 3.4 8.5 8 9.5C16.6 21.5 20 17.4 20 13V7l-8-4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          )}
+                        </button>
+                      )}
+                      <button className="danger-btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setConfirmRemove(p)}>Remove</button>
+                    </div>
                   )}
                 </div>
               );
@@ -329,6 +365,8 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
         .field input:focus { border-color: var(--accent); outline: none; }
         .field input:disabled { opacity: 0.5; }
         .section-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+        .ghost-action-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); color: var(--text-3); background: var(--bg-3); transition: all var(--transition); }
+        .ghost-action-btn:hover { background: var(--bg-4); color: var(--text-0); }
         .primary-btn { background: var(--accent); color: white; border-radius: var(--radius); padding: 9px 18px; font-size: 13px; font-weight: 500; transition: all var(--transition); }
         .primary-btn:hover:not(:disabled) { background: #8b84ff; }
         .primary-btn:disabled { opacity: 0.5; }

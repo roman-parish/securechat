@@ -247,6 +247,61 @@ router.delete('/:conversationId/participants/:userId', authenticate, async (req,
   }
 });
 
+// Promote participant to admin — admins only
+router.put('/:conversationId/admins/:userId', authenticate, async (req, res) => {
+  try {
+    const conv = await Conversation.findOne({
+      _id: req.params.conversationId,
+      type: 'group',
+      admins: req.user.userId,
+      participants: req.params.userId,
+    });
+    if (!conv) return res.status(403).json({ error: 'Not authorized or user not in group' });
+    if (conv.admins.map(String).includes(req.params.userId)) {
+      return res.status(400).json({ error: 'User is already an admin' });
+    }
+    const updated = await Conversation.findByIdAndUpdate(
+      req.params.conversationId,
+      { $addToSet: { admins: req.params.userId } },
+      { new: true }
+    ).populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    req.io.to(`conversation:${conv._id}`).emit('conversation:updated', updated);
+    for (const p of updated.participants) {
+      req.io.to(`user:${p._id}`).emit('conversation:updated', updated);
+    }
+    res.json(updated);
+  } catch {
+    res.status(500).json({ error: 'Failed to promote admin' });
+  }
+});
+
+// Demote admin to regular member — admins only (cannot demote last admin)
+router.delete('/:conversationId/admins/:userId', authenticate, async (req, res) => {
+  try {
+    const conv = await Conversation.findOne({
+      _id: req.params.conversationId,
+      type: 'group',
+      admins: req.user.userId,
+    });
+    if (!conv) return res.status(403).json({ error: 'Not authorized' });
+    if (conv.admins.length === 1 && conv.admins.map(String).includes(req.params.userId)) {
+      return res.status(400).json({ error: 'Cannot demote the only admin' });
+    }
+    const updated = await Conversation.findByIdAndUpdate(
+      req.params.conversationId,
+      { $pull: { admins: req.params.userId } },
+      { new: true }
+    ).populate('participants', 'username displayName avatar publicKey lastSeen bio');
+    req.io.to(`conversation:${conv._id}`).emit('conversation:updated', updated);
+    for (const p of updated.participants) {
+      req.io.to(`user:${p._id}`).emit('conversation:updated', updated);
+    }
+    res.json(updated);
+  } catch {
+    res.status(500).json({ error: 'Failed to demote admin' });
+  }
+});
+
 // List pending invitations for a group — admins only
 router.get('/:conversationId/invitations', authenticate, async (req, res) => {
   try {
