@@ -596,14 +596,14 @@ export default function ProfileModal({ onClose }) {
                   <p className="setting-desc">Other users won't see when you were last online</p>
                 </div>
                 <button
-                  className={`ap-toggle ${hideLastSeen ? 'on' : ''}`}
+                  className={`toggle ${hideLastSeen ? 'on' : ''}`}
                   onClick={async () => {
                     const next = !hideLastSeen;
                     setHideLastSeen(next);
                     try { await updateProfile({ displayName, bio, hideLastSeen: next }); } catch {}
                   }}
                   aria-label="Toggle hide last seen"
-                />
+                ><span /></button>
               </div>
 
               <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
