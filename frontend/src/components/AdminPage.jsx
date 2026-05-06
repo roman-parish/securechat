@@ -680,6 +680,18 @@ export default function AdminPage({ onBack }) {
               <span className="ap-detail-label">Last seen</span>
               <span className="ap-detail-value">{menuUser.lastSeen ? formatDistanceToNow(new Date(menuUser.lastSeen), { addSuffix: true }) : 'Never'}</span>
             </div>
+            {menuUser.email && (
+              <div className="ap-detail-row">
+                <span className="ap-detail-label">Email</span>
+                <span className="ap-detail-value" style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  <span>{menuUser.email}</span>
+                  {menuUser.emailVerified
+                    ? <span className="ap-badge green" style={{ fontSize: 10 }}>Verified</span>
+                    : <span className="ap-badge" style={{ fontSize: 10, background: 'var(--bg-4)', color: 'var(--text-3)' }}>Unverified</span>
+                  }
+                </span>
+              </div>
+            )}
             <div className="ap-detail-row">
               <span className="ap-detail-label">2FA</span>
               <span className={`ap-detail-value ${menuUser.twoFactorEnabled ? 'text-green' : ''}`}>{menuUser.twoFactorEnabled ? '✓ Enabled' : 'Disabled'}</span>
