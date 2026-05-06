@@ -526,8 +526,7 @@ export default function AdminPage({ onBack }) {
                     {idx > 0 && <div className="ap-sep" />}
                     <div className={`ap-user-row${u.banned ? ' banned' : ''}`}>
                       <div className="ap-avatar-wrap">
-                        <Avatar user={u} size={42} />
-                        {onlineUsers.has(String(u._id)) && <span className="ap-dot" />}
+                        <Avatar user={u} size={42} showOnline={onlineUsers.has(String(u._id))} />
                       </div>
                       <div className="ap-user-info">
                         <div className="ap-user-name">{u.displayName || u.username}</div>
@@ -1060,12 +1059,6 @@ export default function AdminPage({ onBack }) {
         .ap-user-row.banned { opacity: 0.5; }
 
         .ap-avatar-wrap { position: relative; flex-shrink: 0; }
-        .ap-dot {
-          position: absolute; bottom: 0; right: 0;
-          width: 11px; height: 11px; border-radius: 50%;
-          background: var(--green); border: 2px solid var(--bg-2);
-        }
-
         .ap-user-info { flex: 1; min-width: 0; }
         .ap-user-name {
           font-size: 15px; font-weight: 600; color: var(--text-0);
