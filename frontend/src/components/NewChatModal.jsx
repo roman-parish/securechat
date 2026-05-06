@@ -64,13 +64,18 @@ export default function NewChatModal({ onClose }) {
           body: JSON.stringify({ userId: selected[0]._id }),
         });
       } else {
-        conv = await apiFetch('/conversations/group', {
+        const result = await apiFetch('/conversations/group', {
           method: 'POST',
           body: JSON.stringify({
             name: groupName.trim(),
             participantIds: selected.map(u => u._id),
           }),
         });
+        conv = result.conversation;
+        addConversation(conv);
+        setActiveConversation(conv._id);
+        onClose();
+        return;
       }
       addConversation(conv);
       setActiveConversation(conv._id);
@@ -186,10 +191,10 @@ export default function NewChatModal({ onClose }) {
             disabled={!canCreate || creating}
           >
             {creating
-              ? 'Creating…'
+              ? 'Sending invites…'
               : tab === 'direct'
                 ? 'Open Chat'
-                : `Create Group${selected.length > 0 ? ` (${selected.length})` : ''}`
+                : `Create & Invite${selected.length > 0 ? ` (${selected.length})` : ''}`
             }
           </button>
         </div>

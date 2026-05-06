@@ -106,24 +106,40 @@ router.post('/group', authenticate, async (req, res) => {
   }
 
   try {
-    const allParticipants = [...new Set([req.user.userId, ...participantIds])];
+    // Only the creator joins immediately — everyone else gets an invitation
+    const inviteeIds = [...new Set(participantIds.map(String))].filter(id => id !== String(req.user.userId));
+
+    const invitations = inviteeIds.map(userId => ({
+      userId,
+      invitedBy: req.user.userId,
+      status: 'pending',
+    }));
 
     const conversation = new Conversation({
       type: 'group',
       name,
       description,
-      participants: allParticipants,
+      participants: [req.user.userId],
       admins: [req.user.userId],
+      invitations,
     });
     await conversation.save();
     await conversation.populate('participants', 'username displayName avatar publicKey lastSeen bio');
 
-    // Notify all participants
-    allParticipants.forEach(pid => {
-      req.io.to(`user:${pid}`).emit('conversation:new', conversation);
+    // Notify the creator
+    req.io.to(`user:${req.user.userId}`).emit('conversation:new', conversation);
+
+    // Send invitation events to all invitees
+    const invitedBy = await User.findById(req.user.userId).select('username displayName');
+    inviteeIds.forEach(uid => {
+      req.io.to(`user:${uid}`).emit('invitation:new', {
+        conversationId: conversation._id,
+        conversationName: conversation.name,
+        invitedBy,
+      });
     });
 
-    res.status(201).json(conversation);
+    res.status(201).json({ conversation, inviteCount: inviteeIds.length });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create group' });
   }
