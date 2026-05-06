@@ -135,6 +135,7 @@ export default function AdminPage({ onBack }) {
 
   /* Invites */
   const [invites, setInvites] = useState([]);
+  const [showInviteManager, setShowInviteManager] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteExpiry, setInviteExpiry] = useState('24');
@@ -447,19 +448,10 @@ export default function AdminPage({ onBack }) {
                     <div className="ap-row-title">Invite Links</div>
                     <div className="ap-row-sub">{invites.length} active invite{invites.length !== 1 ? 's' : ''}</div>
                   </div>
-                  <button className="ap-pill-btn" onClick={() => { setInviteEmail(''); setInviteExpiry('24'); setInviteResult(null); setShowInviteForm(true); }}>
-                    + Create
+                  <button className="ap-pill-btn" onClick={() => setShowInviteManager(true)}>
+                    Manage
                   </button>
                 </div>
-                {invites.map(inv => (
-                  <div key={inv._id} className="ap-invite-item">
-                    <div className="ap-row-text">
-                      <div className="ap-invite-email">{inv.email || 'No email — link only'}</div>
-                      <div className="ap-row-sub">Expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}</div>
-                    </div>
-                    <button className="ap-ghost-btn" onClick={() => handleRevokeInvite(inv._id)}>Revoke</button>
-                  </div>
-                ))}
               </div>
 
               <div className="ap-group">
@@ -750,6 +742,47 @@ export default function AdminPage({ onBack }) {
               <span className="ap-action-label">Delete user</span>
             </button>
           </div>
+        </Sheet>
+      )}
+
+      {/* Manage invite links */}
+      {showInviteManager && (
+        <Sheet onClose={() => setShowInviteManager(false)}>
+          <div className="ap-sheet-header">
+            <span className="ap-sheet-title">Invite Links</span>
+            <button className="ap-sheet-close" onClick={() => setShowInviteManager(false)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          {invites.length === 0 ? (
+            <p className="ap-sheet-sub" style={{ textAlign: 'center', padding: '8px 0' }}>No active invite links</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: 'var(--bg-3)', borderRadius: 'var(--radius)' }}>
+              {invites.map((inv, idx) => (
+                <div key={inv._id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderTop: idx > 0 ? '1px solid var(--border)' : 'none' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: 'var(--text-1)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {inv.email || 'No email — link only'}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                      Expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}
+                    </div>
+                  </div>
+                  <button className="ap-ghost-btn" onClick={() => handleRevokeInvite(inv._id)}>Revoke</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            className="ap-btn accent"
+            onClick={() => { setShowInviteManager(false); setInviteEmail(''); setInviteExpiry('24'); setInviteResult(null); setShowInviteForm(true); }}
+          >
+            + Create new invite
+          </button>
         </Sheet>
       )}
 
