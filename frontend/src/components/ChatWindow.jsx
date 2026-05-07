@@ -55,6 +55,7 @@ export default function ChatWindow({ conversationId, onBack }) {
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showDisappearing, setShowDisappearing] = useState(false);
+  const disappearingRef = useRef(null);
   const [attachment, setAttachment] = useState(null); // { file, previewUrl, type }
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -361,7 +362,11 @@ export default function ChatWindow({ conversationId, onBack }) {
 
   useEffect(() => {
     if (!showDisappearing) return;
-    const handler = () => setShowDisappearing(false);
+    const handler = (e) => {
+      if (disappearingRef.current && !disappearingRef.current.contains(e.target)) {
+        setShowDisappearing(false);
+      }
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showDisappearing]);
@@ -683,7 +688,7 @@ export default function ChatWindow({ conversationId, onBack }) {
               background: 'var(--bg-2)', border: '1px solid var(--border)',
               borderRadius: 12, padding: 12, zIndex: 50, minWidth: 180,
               boxShadow: 'var(--shadow-lg)',
-            }} onClick={e => e.stopPropagation()}>
+            }} ref={disappearingRef}>
               <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Disappearing Messages</p>
               {[[0,'Off'],[3600,'1 hour'],[86400,'24 hours'],[604800,'7 days'],[2592000,'30 days']].map(([val, label]) => (
                 <button
@@ -697,12 +702,16 @@ export default function ChatWindow({ conversationId, onBack }) {
                   }}
                   onClick={async () => {
                     try {
-                      await apiFetch(`/conversations/${conversationId}/disappearing`, {
+                      const result = await apiFetch(`/conversations/${conversationId}/disappearing`, {
                         method: 'PUT',
                         body: JSON.stringify({ duration: val }),
                       });
+                      setConversation(prev => ({ ...prev, disappearingMessages: result.disappearingMessages }));
+                      conversationRef.current = { ...conversationRef.current, disappearingMessages: result.disappearingMessages };
                       setShowDisappearing(false);
-                    } catch {}
+                    } catch (err) {
+                      setSendError(err.message || 'Failed to update disappearing messages');
+                    }
                   }}
                 >{label}</button>
               ))}
