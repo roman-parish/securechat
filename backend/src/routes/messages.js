@@ -87,6 +87,10 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
       }
     }
 
+    const expiresAt = conversation.disappearingMessages > 0
+      ? new Date(Date.now() + conversation.disappearingMessages * 1000)
+      : null;
+
     const message = new Message({
       conversationId: conversation._id,
       sender: req.user.userId,
@@ -95,6 +99,7 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
       replyTo: replyTo || null,
       attachment: attachment || undefined,
       readBy: [{ userId: req.user.userId }],
+      ...(expiresAt && { expiresAt }),
     });
     await message.save();
     await message.populate('sender', 'username displayName avatar');

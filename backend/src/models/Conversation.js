@@ -69,6 +69,7 @@ const conversationSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending' },
     createdAt: { type: Date, default: Date.now },
   }],
+  disappearingMessages: { type: Number, default: 0 }, // seconds; 0 = off
 }, {
   timestamps: true,
 });

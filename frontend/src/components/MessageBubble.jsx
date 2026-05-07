@@ -206,7 +206,7 @@ function replyPreviewText(replyTo, plaintext) {
   return 'Message';
 }
 
-export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId }) {
+export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId, participantCount = 2 }) {
   const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
@@ -425,24 +425,34 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
                 {msg.editedAt && <span className="edited-tag">edited</span>}
                 <span className="msg-time">{format(new Date(msg.createdAt), 'h:mm a')}</span>
                 {isOwn && (() => {
-                  const isRead = msg.readBy?.length > 1;
+                  const isGroup = participantCount > 2;
+                  const readCount = (msg.readBy?.length ?? 1) - 1; // exclude self
+                  const total = participantCount - 1;
+                  const allRead = readCount >= total;
                   const isDelivered = msg.deliveredTo?.length > 0;
-                  const color = isRead
+                  const color = (allRead || readCount > 0)
                     ? 'rgba(255,255,255,0.95)'
                     : isDelivered
                       ? 'rgba(255,255,255,0.55)'
                       : 'rgba(255,255,255,0.35)';
                   return (
-                    <svg width="15" height="10" viewBox="0 0 15 10" fill="none" style={{ color }}>
-                      {(isRead || isDelivered) ? (
-                        <>
-                          <path d="M1 5L4 8.5L9.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M5.5 5L8.5 8.5L14 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </>
-                      ) : (
-                        <path d="M1 5L4 8.5L9.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      {isGroup && readCount > 0 && (
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
+                          {allRead ? 'Seen by all' : `Seen by ${readCount}`}
+                        </span>
                       )}
-                    </svg>
+                      <svg width="15" height="10" viewBox="0 0 15 10" fill="none" style={{ color }}>
+                        {(allRead || readCount > 0 || isDelivered) ? (
+                          <>
+                            <path d="M1 5L4 8.5L9.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M5.5 5L8.5 8.5L14 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </>
+                        ) : (
+                          <path d="M1 5L4 8.5L9.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        )}
+                      </svg>
+                    </span>
                   );
                 })()}
               </div>

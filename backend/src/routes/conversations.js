@@ -468,6 +468,34 @@ router.post('/:conversationId/invitations/:invitationId/decline', authenticate, 
   }
 });
 
+// Update disappearing messages setting — admins only for groups, any participant for direct
+router.put('/:conversationId/disappearing', authenticate, async (req, res) => {
+  const { duration } = req.body; // seconds: 0=off, 3600=1h, 86400=1d, 604800=7d, 2592000=30d
+  const allowed = [0, 3600, 86400, 604800, 2592000];
+  if (!allowed.includes(Number(duration))) {
+    return res.status(400).json({ error: 'Invalid duration' });
+  }
+  try {
+    const conv = await Conversation.findOne({ _id: req.params.conversationId, participants: req.user.userId });
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    if (conv.type === 'group' && !conv.admins.map(String).includes(String(req.user.userId))) {
+      return res.status(403).json({ error: 'Only admins can change this setting' });
+    }
+    const updated = await Conversation.findByIdAndUpdate(
+      req.params.conversationId,
+      { disappearingMessages: Number(duration) },
+      { new: true }
+    ).populate('participants', PARTICIPANT_FIELDS);
+    req.io.to(`conversation:${conv._id}`).emit('conversation:updated', updated);
+    for (const p of updated.participants) {
+      req.io.to(`user:${String(p._id)}`).emit('conversation:updated', updated);
+    }
+    res.json({ disappearingMessages: updated.disappearingMessages });
+  } catch {
+    res.status(500).json({ error: 'Failed to update disappearing messages' });
+  }
+});
+
 // Mute conversation
 router.post('/:conversationId/mute', authenticate, async (req, res) => {
   const { until } = req.body; // optional ISO date string; omit for indefinite

@@ -25,6 +25,7 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
   const [selectedMember, setSelectedMember] = useState(null); // member action sheet
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [disappearing, setDisappearing] = useState(conversation.disappearingMessages ?? 0);
 
   const handleInviteSearch = useCallback(async (q) => {
     setInviteSearch(q);
@@ -162,6 +163,39 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
             </div>
           </div>
           {msg && <p style={{ fontSize: 13, marginTop: 6, color: msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('error') ? 'var(--red)' : 'var(--green)' }}>{msg}</p>}
+
+          {/* Disappearing messages */}
+          {isAdmin && (
+            <div style={{ marginTop: 16 }}>
+              <p className="section-label">Disappearing Messages</p>
+              <select
+                className="field input"
+                style={{ marginTop: 6, padding: '9px 12px', borderRadius: 'var(--radius)', background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--text-0)', fontSize: 14, width: '100%' }}
+                value={disappearing}
+                onChange={async e => {
+                  const val = Number(e.target.value);
+                  setDisappearing(val);
+                  try {
+                    await apiFetch(`/conversations/${conversation._id}/disappearing`, {
+                      method: 'PUT',
+                      body: JSON.stringify({ duration: val }),
+                    });
+                    setMsg(val === 0 ? 'Disappearing messages off' : 'Disappearing messages updated');
+                    setTimeout(() => setMsg(''), 2000);
+                  } catch {
+                    setMsg('Failed to update');
+                    setTimeout(() => setMsg(''), 2000);
+                  }
+                }}
+              >
+                <option value={0}>Off</option>
+                <option value={3600}>1 hour</option>
+                <option value={86400}>24 hours</option>
+                <option value={604800}>7 days</option>
+                <option value={2592000}>30 days</option>
+              </select>
+            </div>
+          )}
 
           {/* Members */}
           <p className="section-label" style={{ marginTop: 20 }}>Members · {conversation.participants?.length}</p>

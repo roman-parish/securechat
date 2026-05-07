@@ -54,6 +54,7 @@ export default function ChatWindow({ conversationId, onBack }) {
   const atBottomRef = useRef(true);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showDisappearing, setShowDisappearing] = useState(false);
   const [attachment, setAttachment] = useState(null); // { file, previewUrl, type }
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -354,6 +355,13 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   }, [conversationId]);
 
+  useEffect(() => {
+    if (!showDisappearing) return;
+    const handler = () => setShowDisappearing(false);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showDisappearing]);
+
   const autoResize = (el) => {
     if (!el) return;
     el.style.height = 'auto';
@@ -653,6 +661,50 @@ export default function ChatWindow({ conversationId, onBack }) {
             <path d="M16.5 16.5l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </button>
+        <div style={{ position: 'relative' }}>
+          <button
+            className={`header-btn${conv?.disappearingMessages > 0 ? ' active' : ''}`}
+            onClick={() => setShowDisappearing(s => !s)}
+            title="Disappearing messages"
+            style={conv?.disappearingMessages > 0 ? { color: 'var(--accent)' } : {}}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          {showDisappearing && (
+            <div style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: 8,
+              background: 'var(--bg-2)', border: '1px solid var(--border)',
+              borderRadius: 12, padding: 12, zIndex: 50, minWidth: 180,
+              boxShadow: 'var(--shadow-lg)',
+            }} onClick={e => e.stopPropagation()}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Disappearing Messages</p>
+              {[[0,'Off'],[3600,'1 hour'],[86400,'24 hours'],[604800,'7 days'],[2592000,'30 days']].map(([val, label]) => (
+                <button
+                  key={val}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '8px 10px', borderRadius: 8, fontSize: 14,
+                    color: conv?.disappearingMessages === val ? 'var(--accent)' : 'var(--text-0)',
+                    background: conv?.disappearingMessages === val ? 'var(--accent-dim)' : 'transparent',
+                    fontWeight: conv?.disappearingMessages === val ? 600 : 400,
+                  }}
+                  onClick={async () => {
+                    try {
+                      await apiFetch(`/conversations/${conversationId}/disappearing`, {
+                        method: 'PUT',
+                        body: JSON.stringify({ duration: val }),
+                      });
+                      setShowDisappearing(false);
+                    } catch {}
+                  }}
+                >{label}</button>
+              ))}
+            </div>
+          )}
+        </div>
         {conv?.type === 'group' && (
           <button className="header-btn" onClick={() => setShowGroupInfo(true)} title="Group info">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -784,6 +836,7 @@ export default function ChatWindow({ conversationId, onBack }) {
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         currentUserId={myId}
+                        participantCount={conv?.participants?.length ?? 2}
                       />
                     </div>
                   );
