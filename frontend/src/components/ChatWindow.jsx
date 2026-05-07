@@ -231,12 +231,16 @@ export default function ChatWindow({ conversationId, onBack }) {
     const onTypingStart = ({ userId: tid, username, conversationId: cid }) => {
       if (String(cid) !== String(conversationId)) return;
       if (String(tid) === String(userIdRef.current)) return;
-      setTypingUsers(prev => prev.includes(username) ? prev : [...prev, username]);
+      setTypingUsers(prev =>
+        prev.find(u => String(u.userId) === String(tid))
+          ? prev
+          : [...prev, { userId: tid, username }]
+      );
     };
 
     const onTypingStop = ({ conversationId: cid, userId: tid }) => {
       if (String(cid) !== String(conversationId)) return;
-      setTypingUsers([]);
+      setTypingUsers(prev => prev.filter(u => String(u.userId) !== String(tid)));
     };
 
     const onReaction = ({ messageId, reactions }) => {
@@ -846,7 +850,7 @@ export default function ChatWindow({ conversationId, onBack }) {
             {typingUsers.length > 0 && (
               <div className="typing-indicator">
                 <div className="typing-dots"><span /><span /><span /></div>
-                <span>{typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing…</span>
+                <span>{typingUsers.map(u => u.username).join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing…</span>
               </div>
             )}
             <div ref={messagesEndRef} />
