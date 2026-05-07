@@ -442,7 +442,7 @@ router.post('/:conversationId/invitations/:invitationId/accept', authenticate, a
 
     res.json(updated);
   } catch (err) {
-    console.error(err);
+    console.error('[conversations] accept invitation:', err);
     res.status(500).json({ error: 'Failed to accept invitation' });
   }
 });

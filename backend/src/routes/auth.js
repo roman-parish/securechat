@@ -59,7 +59,8 @@ router.get('/invite/:token', async (req, res) => {
       .populate('createdBy', 'displayName username');
     if (!invite) return res.status(404).json({ valid: false });
     res.json({ valid: true, email: invite.email, expiresAt: invite.expiresAt, invitedBy: invite.createdBy?.displayName || invite.createdBy?.username || null });
-  } catch {
+  } catch (err) {
+    console.error('[auth] invite token lookup:', err);
     res.status(500).json({ valid: false });
   }
 });
@@ -69,7 +70,8 @@ router.get('/registration-status', async (req, res) => {
   try {
     const settings = await Settings.findOne();
     res.json({ registrationOpen: settings ? settings.registrationOpen : true });
-  } catch {
+  } catch (err) {
+    console.error('[auth] registration status lookup:', err);
     res.json({ registrationOpen: true });
   }
 });

@@ -15,7 +15,7 @@ import Invite from '../models/Invite.js';
 import AuditLog from '../models/AuditLog.js';
 import { sendInviteEmail } from '../utils/email.js';
 import { randomBytes, createHash } from 'crypto';
-import bcrypt from 'bcryptjs';
+
 
 async function audit(req, action, targetUser = null, metadata = {}) {
   try {

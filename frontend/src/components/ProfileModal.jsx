@@ -173,7 +173,9 @@ export default function ProfileModal({ onClose }) {
     try {
       await apiFetch(`/users/${userId}/block`, { method: 'DELETE' });
       setBlockedUsers(prev => prev.filter(u => String(u._id) !== String(userId)));
-    } catch {}
+    } catch (err) {
+      console.error('[ProfileModal] unblock failed:', err);
+    }
     setUnblocking(null);
   };
 
@@ -600,7 +602,7 @@ export default function ProfileModal({ onClose }) {
                   onClick={async () => {
                     const next = !hideLastSeen;
                     setHideLastSeen(next);
-                    try { await updateProfile({ displayName, bio, hideLastSeen: next }); } catch {}
+                    try { await updateProfile({ displayName, bio, hideLastSeen: next }); } catch { setHideLastSeen(!next); }
                   }}
                   aria-label="Toggle hide last seen"
                 ><span /></button>
