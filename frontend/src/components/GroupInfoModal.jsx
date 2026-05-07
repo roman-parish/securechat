@@ -15,6 +15,7 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
   const { user } = useAuth();
   const { onlineUsers } = useChat();
   const [name, setName] = useState(conversation.name || '');
+  const [description, setDescription] = useState(conversation.description || '');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [inviteSearch, setInviteSearch] = useState('');
@@ -75,7 +76,7 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
     try {
       const updated = await apiFetch(`/conversations/${conversation._id}`, {
         method: 'PUT',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, description }),
       });
       setMsg('Saved!');
       onUpdated?.(updated);
@@ -162,6 +163,23 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
               )}
             </div>
           </div>
+          {/* Description */}
+          <div className="field" style={{ marginTop: 12 }}>
+            <label>Description</label>
+            {isAdmin ? (
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Add a group description…"
+                maxLength={300}
+                rows={2}
+                style={{ resize: 'vertical', minHeight: 60 }}
+              />
+            ) : description ? (
+              <p style={{ fontSize: 14, color: 'var(--text-1)', lineHeight: 1.5, margin: 0 }}>{description}</p>
+            ) : null}
+          </div>
+
           {msg && <p style={{ fontSize: 13, marginTop: 6, color: msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('error') ? 'var(--red)' : 'var(--green)' }}>{msg}</p>}
 
           {/* Disappearing messages */}
@@ -441,13 +459,14 @@ export default function GroupInfoModal({ conversation, onClose, onUpdated, onDel
         /* Reuse ProfileModal patterns */
         .field { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
         .field label { font-size: 13px; color: var(--text-2); font-weight: 500; }
-        .field input {
+        .field input, .field textarea {
           background: var(--bg-3); border: 1px solid var(--border);
           border-radius: var(--radius); padding: 9px 12px;
           font-size: 14px; color: var(--text-0); width: 100%;
           transition: border-color var(--transition); font-family: var(--font-sans);
+          box-sizing: border-box;
         }
-        .field input:focus { border-color: var(--accent); outline: none; }
+        .field input:focus, .field textarea:focus { border-color: var(--accent); outline: none; }
         .field input:disabled { opacity: 0.5; }
         .section-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
         .primary-btn { background: var(--accent); color: white; border-radius: var(--radius); padding: 9px 18px; font-size: 13px; font-weight: 500; transition: all var(--transition); }

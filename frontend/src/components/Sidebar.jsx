@@ -6,6 +6,7 @@
  * https://github.com/roman-parish/securechat
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useChat } from '../contexts/ChatContext.jsx';
 import { useSocket } from '../contexts/SocketContext.jsx';
@@ -269,6 +270,7 @@ function convPreview(conv, currentUser, hasUnread) {
 function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onLeave, onArchive, onUnarchive, onBlock, onMuteToggle, isArchived }) {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const menuRef = useRef(null);
 
   const mutedEntry = conv.mutedBy?.find(m => String(m.userId) === String(user._id));
@@ -405,7 +407,7 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
             ) : null;
           })()}
           {conv.type === 'group' ? (
-            <button className="menu-btn-danger" onClick={() => { setShowMenu(false); onLeave(); }}>
+            <button className="menu-btn-danger" onClick={() => { setShowMenu(false); setConfirmLeave(true); }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -421,6 +423,30 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
             </button>
           )}
         </div>
+      )}
+
+      {confirmLeave && createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setConfirmLeave(false)}>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, maxWidth: 320, width: '100%' }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-0)', marginBottom: 8 }}>Leave group?</p>
+            <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 20, lineHeight: 1.5 }}>
+              You'll need an invite to rejoin <strong>{conv.name}</strong>.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmLeave(false)}
+                style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--bg-3)', color: 'var(--text-1)', fontSize: 14, fontWeight: 500 }}>
+                Cancel
+              </button>
+              <button onClick={() => { setConfirmLeave(false); onLeave(); }}
+                style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--red)', color: 'white', fontSize: 14, fontWeight: 500 }}>
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       <style>{`
