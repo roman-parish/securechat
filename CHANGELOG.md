@@ -1,5 +1,52 @@
 # Changelog
 
+## [1.2.6] — 2026-05-06
+
+### New Features
+
+- **Disappearing messages** — set a per-conversation auto-delete timer (1 hour, 24 hours, 7 days, 30 days); messages expire automatically via MongoDB TTL index; clock icon in chat header with active indicator when enabled
+- **Hide Last Seen** — privacy toggle in profile settings; when enabled, contacts see no last online timestamp for you
+- **Granular group read receipts** — group messages now show "Seen by X of Y" with a per-member seen list instead of a single read tick
+- **Group description** — admins can set and edit a group description visible to all members in Group Settings
+- **Group admin promote/demote** — admins can promote members to admin and demote other admins from Group Settings
+- **Leave group confirmation** — confirmation dialog before leaving a group to prevent accidental exits
+- **Reaction picker stays open** — multi-react to a message without reopening the picker each time
+- **Audio message duration** — total recording length displayed on the audio player before and during playback
+- **Online status in Group Settings** — member avatars in Group Settings show the live green online indicator
+- **Email verification flow** — admin-controlled email verification; admins can resend verification emails or manually verify users from the admin panel
+- **Group deletion** — group admins can permanently dissolve a group from Group Settings
+- **OG social preview** — Open Graph image and meta tags for proper link previews when sharing
+- **Invite context banner** — auth page shows who invited you when opening a time-limited invite link
+- **Branded 404 page** — unknown routes show a styled 404 page instead of a blank screen
+- **Admin pagination & filters** — user list and audit log now have pagination, search filters, and per-page controls
+
+### Security
+
+- **Block bypass fix** — blocked users can no longer be added to groups via invite links; both directions of the block are checked
+- **JWT algorithm confusion fix** — tokens now lock the expected algorithm to prevent algorithm-switching attacks
+- **Socket room auth** — users can only join socket rooms for conversations they are participants of
+- **Reaction IDOR fix** — reaction add/remove now verifies the message belongs to the conversation
+- **Regex injection fix** — admin user search input is escaped before use in MongoDB regex queries
+- **Message type enum** — message type field is now validated against an allowlist on the server
+- **Trusted device token hashing** — trusted device tokens stored as SHA-256 hashes; plaintext only held in-memory briefly
+- **CORS wildcard fix** — wildcard origin fallback removed; CORS is now locked to `CLIENT_URL`
+- **Upload rate limiting** — file upload endpoint now has its own rate limit
+- **Password reset rate limiting** — forgot password and reset endpoints rate-limited to prevent abuse
+- **Frontend security headers** — additional CSP and security headers applied at the nginx layer
+- **Scoped presence broadcasts** — profile and avatar update socket events sent only to mutual contacts, not all connected users
+
+### Bug Fixes & Polish
+
+- **GDPR account deletion** — deleting an account now hard-deletes all messages instead of anonymizing them; conversations with no remaining participants are also removed
+- **Crash on deleted user messages** — opening a conversation containing messages from a deleted user no longer crashes with a null sender error
+- **Typing indicator in groups** — stopping typing no longer cleared all typing users; now removes only the individual user who stopped
+- **Real-time member list** — removing or leaving a group now immediately updates the member list for all remaining participants via socket
+- **Admin user list** — rows are now tappable to open the action sheet, consistent with Group Settings; removed the separate ··· button
+- **Mute expiry in sidebar** — muted conversations show the mute expiry time in the preview row
+- **Sidebar error toasts** — group operation errors (leave, remove, etc.) now surface as dismissible toast messages
+
+---
+
 ## [1.2.1] — 2026-05-03
 
 ### Bug Fixes

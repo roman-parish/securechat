@@ -32,18 +32,19 @@ Run it on your own server in minutes with Docker. Invite friends via time-limite
 ### Messaging
 - 🔒 **End-to-end encryption** — RSA-OAEP 2048-bit key exchange + AES-256-GCM message encryption
 - 💬 **Real-time messaging** — instant delivery via Socket.IO
-- 🎤 **Encrypted voice messages** — record and send voice clips, encrypted before upload
+- 🎤 **Encrypted voice messages** — record and send voice clips with duration display, encrypted before upload
 - 🖼️ **Encrypted image & file sharing** — files encrypted client-side, auth-protected downloads, full-screen lightbox
 - 📋 **Paste to attach** — paste an image from clipboard directly into the chat input
-- ↩️ **Replies, reactions, edit & delete** — full message management
+- ↩️ **Replies, reactions, edit & delete** — full message management; reaction picker stays open for multi-react
 - 📱 **Swipe to reply** — swipe right on any message on mobile
-- ✅ **Delivery receipts** — sent, delivered, and read tick states
+- ✅ **Delivery receipts** — sent, delivered, and read tick states; group chats show "Seen by X of Y"
 - 🔍 **Message search** — search by sender or filename with jump-to-message
+- ⏱️ **Disappearing messages** — set a per-conversation auto-delete timer (1 hour to 30 days)
 
 ### Conversations
-- 👥 **Group chats** — admin controls, member management, online member count
-- 📨 **Group invitations** — invite users with an accept/decline flow
-- 🔕 **Conversation muting** — suppress push notifications per conversation
+- 👥 **Group chats** — admin controls, member management, promote/demote admins, group description, online member count
+- 📨 **Group invitations** — invite users with an accept/decline flow; blocked users cannot be invited
+- 🔕 **Conversation muting** — suppress push notifications per conversation with optional expiry
 - 📦 **Conversation archive** — hide conversations without deleting; auto-unarchives on new message
 - 🚫 **User blocking** — block users from messaging you; manage from profile settings
 - 💬 **Unread jump button** — shows unread count, jumps to first unread message
@@ -51,22 +52,24 @@ Run it on your own server in minutes with Docker. Invite friends via time-limite
 ### Notifications & Presence
 - 🔔 **Push notifications** — desktop and iOS (16.4+)
 - 📧 **Email notifications** — login alerts, password changes, account deletion (via Resend)
-- 👁️ **Last seen timestamps** — shows when a contact was last online
+- 👁️ **Last seen timestamps** — shows when a contact was last online; hide your own with the privacy toggle
 - ⌨️ **Typing indicators** — real-time typing state per conversation
 
 ### Privacy & Account
 - 🔐 **Two-factor authentication** — TOTP with recovery codes, trusted devices, and admin reset
 - 🔑 **Password reset via email** — self-serve password reset link with 1-hour expiry
-- 🗑️ **Account self-deletion** — permanently delete your account and all data (GDPR compliant)
+- 🗑️ **Account self-deletion** — permanently deletes your account and all messages (GDPR compliant)
+- 🙈 **Hide Last Seen** — privacy toggle to prevent contacts from seeing your last online time
 - 🔑 **Password-protected key backup** — log in from any device, keys restore automatically
 - 🌙 **Light/dark mode** — per-user preference saved locally
 
 ### Platform
 - 📱 **PWA** — installable on iOS (Safari → Share → Add to Home Screen) and Android (Chrome → Install App); works offline
-- 🛡️ **Admin panel** — user management, ban/suspend, reset passwords, 2FA reset, usage stats
-- 📋 **Audit log** — full log of admin actions with timestamps
-- 🔗 **Invite links** — time-limited single-use invite links with optional email delivery
+- 🛡️ **Admin panel** — user management, ban/suspend, reset passwords, 2FA reset, usage stats, pagination and search
+- 📋 **Audit log** — full log of admin actions with timestamps, filters, and pagination
+- 🔗 **Invite links** — time-limited single-use invite links with optional email delivery; invite context banner on auth page
 - 🔒 **Registration control** — open or close registration from the admin panel
+- ✉️ **Email verification** — admin-controlled email verification with resend and manual override
 - 🔐 **Let's Encrypt SSL** — automatic HTTPS via setup script
 
 ## Encryption Architecture
