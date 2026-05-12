@@ -586,24 +586,34 @@ export default function AdminPage({ onBack }) {
               {purgeConfirm && createPortal(
                 <div
                   onClick={() => setPurgeConfirm(null)}
-                  style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+                  style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.15s ease' }}
                 >
                   <div
                     onClick={e => e.stopPropagation()}
-                    style={{ background: 'var(--bg-2)', borderRadius: 16, padding: 24, maxWidth: 340, width: '100%', boxShadow: 'var(--shadow-lg)' }}
+                    style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: 24, width: '100%', maxWidth: 400, animation: 'slideUp 0.2s ease' }}
                   >
-                    <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 8, color: 'var(--text-0)' }}>
-                      Purge {purgeConfirm === 'messages' ? 'all messages' : 'all audit logs'}?
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-0)' }}>
+                        Purge {purgeConfirm === 'messages' ? 'All Messages' : 'Audit Logs'}
+                      </h3>
+                      <button onClick={() => setPurgeConfirm(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', padding: 4 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <p style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1.6, marginBottom: 16, padding: '10px 12px', background: 'var(--bg-3)', borderRadius: 'var(--radius)' }}>
+                      This cannot be undone. All {purgeConfirm === 'messages' ? 'messages' : 'audit log entries'} will be permanently deleted from the server.
                     </p>
-                    <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20 }}>
-                      This cannot be undone. All {purgeConfirm === 'messages' ? 'messages' : 'audit log entries'} will be permanently deleted.
-                    </p>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <button className="ap-pill-btn" style={{ flex: 1 }} onClick={() => setPurgeConfirm(null)}>Cancel</button>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                      <button
+                        onClick={() => setPurgeConfirm(null)}
+                        style={{ flex: 1, padding: 10, borderRadius: 'var(--radius)', background: 'var(--bg-3)', color: 'var(--text-1)', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer' }}
+                      >Cancel</button>
                       <button
                         onClick={handlePurge}
                         disabled={purging}
-                        style={{ flex: 1, background: 'transparent', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--radius)', padding: '8px 14px', fontSize: 13, fontWeight: 500, cursor: purging ? 'not-allowed' : 'pointer', opacity: purging ? 0.5 : 1 }}
+                        style={{ flex: 1, background: 'transparent', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--radius)', padding: 10, fontSize: 14, fontWeight: 500, cursor: purging ? 'not-allowed' : 'pointer', opacity: purging ? 0.5 : 1 }}
                       >
                         {purging ? 'Purging…' : 'Delete everything'}
                       </button>
