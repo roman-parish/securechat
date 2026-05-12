@@ -216,7 +216,7 @@ export default function NewChatModal({ onClose }) {
           background: var(--bg-2); border: 1px solid var(--border);
           border-radius: 20px 20px 0 0;
           padding: 20px;
-          padding-bottom: max(20px, var(--bsa));
+          padding-bottom: max(20px, var(--bsa), env(safe-area-inset-bottom, 0px));
           display: flex; flex-direction: column; gap: 12px;
           max-height: 92dvh;
           animation: ncUp 0.22s ease;

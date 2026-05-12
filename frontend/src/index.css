@@ -79,14 +79,14 @@
 
 html {
   height: 100%;
-  /* iOS PWA: -webkit-fill-available correctly fills the actual usable
-     screen including safe area zones, avoiding dvh/vh chin-gap bugs */
-  height: -webkit-fill-available;
+  height: -webkit-fill-available; /* iOS: fills actual usable screen */
   overflow: hidden;
+  background: var(--bg-1); /* fills safe-area zones before React renders */
 }
 
 body {
   height: 100%;
+  height: -webkit-fill-available;
   font-family: var(--font-sans);
   background: var(--bg-1);
   color: var(--text-0);
@@ -95,15 +95,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* --bsa: bottom safe area inset used by all bottom-edge elements.
-   In standalone PWA mode, env() can return 0 on some iOS versions even
-   though the home indicator is present — fall back to 34px (standard height). */
+/* --bsa: bottom safe area (home indicator height).
+   env() can silently return 0 on some iOS standalone versions even when
+   the home indicator is present. The JS measurement in main.jsx overrides
+   this via an inline style when it succeeds; the @media standalone rule
+   ensures a 34px floor when it doesn't. */
 :root {
   --bsa: env(safe-area-inset-bottom, 0px);
 }
 @media (display-mode: standalone) {
   :root {
-    --bsa: env(safe-area-inset-bottom, 34px);
+    /* max() ensures we get at least 34px in standalone even if env() returns 0 */
+    --bsa: max(env(safe-area-inset-bottom, 34px), 34px);
   }
 }
 
@@ -112,16 +115,13 @@ body {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-1);
-  /* height (not min-height) gives flex children a definite height so
-     height:100% / flex:1 chains resolve all the way to the viewport edge */
   height: 100dvh;
+  min-height: -webkit-fill-available; /* iOS fallback: no gap at bottom */
   padding-top: env(safe-area-inset-top, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
-}
-/* Ensure the status bar background colour matches the app */
-html {
-  background: var(--bg-1);
+  /* Bottom safe area is handled per-component so each bar's background
+     visually fills behind the home indicator. */
 }
 
 button {

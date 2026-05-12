@@ -6,50 +6,20 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      strategies: 'generateSW',
+      // injectManifest: VitePWA processes src/sw.js, injects the precache
+      // manifest, and outputs /sw.js — our push handler is preserved.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
-      injectRegister: null,
-      includeAssets: ['favicon.ico', 'icons/*.png'],
-      manifest: {
-        name: 'SecureChat',
-        short_name: 'SecureChat',
-        description: 'End-to-end encrypted messaging',
-        theme_color: '#0f0f13',
-        background_color: '#0f0f13',
-        display: 'standalone',
-        orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
-        icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-        ],
-        categories: ['social', 'productivity'],
-      },
-      workbox: {
+      injectRegister: null, // we register manually in main.jsx
+      // Don't generate a manifest — we own public/manifest.json
+      manifest: false,
+      injectManifest: {
+        // Only precache JS/CSS; HTML is served network-first so response
+        // headers (CSP etc.) stay fresh.
         globPatterns: ['**/*.{js,css}'],
-        navigateFallback: null,
-        clientsClaim: true,
-        skipWaiting: true,
-        runtimeCaching: [
-          {
-            // Always fetch HTML from network so CSP/response headers stay fresh.
-            // Falls back to cached copy only when offline.
-            urlPattern: ({ request }) => request.mode === 'navigate',
-            handler: 'NetworkFirst',
-            options: { cacheName: 'pages-cache', networkTimeoutSeconds: 3, expiration: { maxEntries: 5, maxAgeSeconds: 86400 } },
-          },
-          {
-            urlPattern: /^https?:\/\/.*\/api\//,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'api-cache', expiration: { maxEntries: 50, maxAgeSeconds: 300 } },
-          },
-          {
-            urlPattern: /\/uploads\//,
-            handler: 'CacheFirst',
-            options: { cacheName: 'uploads-cache', expiration: { maxEntries: 200, maxAgeSeconds: 86400 } },
-          },
-        ],
+        globIgnores: ['sw.js'],
       },
     }),
   ],

@@ -8,6 +8,7 @@
   "orientation": "portrait",
   "background_color": "#0f0f13",
   "theme_color": "#0f0f13",
+  "categories": ["social", "productivity"],
   "shortcuts": [
     {
       "name": "New Chat",

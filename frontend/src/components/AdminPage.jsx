@@ -1063,7 +1063,7 @@ export default function AdminPage({ onBack }) {
           display: flex;
           background: var(--bg-1);
           border-top: 1px solid var(--border);
-          padding-bottom: var(--bsa);
+          padding-bottom: max(var(--bsa), env(safe-area-inset-bottom, 0px));
         }
         .ap-tab {
           flex: 1; display: flex; flex-direction: column;
@@ -1270,7 +1270,7 @@ export default function AdminPage({ onBack }) {
           width: 100%; background: var(--bg-2);
           border: 1px solid var(--border); border-radius: 20px 20px 0 0;
           padding: 20px;
-          padding-bottom: max(20px, var(--bsa));
+          padding-bottom: max(20px, var(--bsa), env(safe-area-inset-bottom, 0px));
           display: flex; flex-direction: column; gap: 12px;
           max-height: 90dvh; overflow-y: auto;
           animation: apUp 0.2s ease;
