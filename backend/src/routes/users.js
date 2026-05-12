@@ -55,6 +55,16 @@ router.get('/search', authenticate, async (req, res) => {
   }
 });
 
+// Server retention policy (shown to authenticated users in profile settings)
+router.get('/retention', authenticate, async (req, res) => {
+  try {
+    const settings = await Settings.findOne();
+    res.json({ messageRetentionDays: settings?.messageRetentionDays ?? 0 });
+  } catch {
+    res.json({ messageRetentionDays: 0 });
+  }
+});
+
 // Get user profile
 router.get('/:userId', authenticate, async (req, res) => {
   try {
@@ -133,18 +143,6 @@ router.delete('/:userId/block', authenticate, async (req, res) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed to unblock user' });
-  }
-});
-
-// Public — server retention policy (shown to authenticated users in profile settings)
-router.get('/retention', authenticate, async (req, res) => {
-  try {
-    const settings = await Settings.findOne();
-    res.json({
-      messageRetentionDays:  settings?.messageRetentionDays  ?? 0,
-    });
-  } catch {
-    res.json({ messageRetentionDays: 0 });
   }
 });
 

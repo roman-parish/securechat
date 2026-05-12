@@ -158,7 +158,7 @@ export default function ProfileModal({ onClose }) {
 
   useEffect(() => {
     if (tab !== 'security' || serverRetention !== null) return;
-    apiFetch('/settings/retention').then(d => setServerRetention(d)).catch(() => setServerRetention({}));
+    apiFetch('/users/retention').then(d => setServerRetention(d)).catch(() => setServerRetention({}));
   }, [tab, serverRetention]);
 
   useEffect(() => {
