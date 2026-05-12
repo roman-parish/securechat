@@ -905,6 +905,7 @@ export default function ChatWindow({ conversationId, onBack }) {
                         isConsecutive={sameAsPrev}
                         isTail={!sameAsNext}
                         onReply={() => { setReplyTo(msg); setEditingMsg(null); textareaRef.current?.focus(); }}
+                        onJumpToReply={msg.replyTo ? () => jumpToMessage(msg.replyTo._id, msg.replyTo.createdAt) : undefined}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         currentUserId={myId}

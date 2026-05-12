@@ -220,7 +220,7 @@ function replyPreviewText(replyTo, plaintext) {
   return 'Message';
 }
 
-export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId, currentUsername, participantCount = 2 }) {
+export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, onReply, onJumpToReply, onEdit, onDelete, currentUserId, currentUsername, participantCount = 2 }) {
   const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
@@ -417,7 +417,7 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
           ) : (
             <>
               {msg.replyTo && (
-                <div className="reply-preview-bubble">
+                <div className="reply-preview-bubble" onClick={e => { e.stopPropagation(); onJumpToReply?.(); }}>
                   <div className="reply-bar-inner" />
                   <div>
                     <span className="reply-author">{msg.replyTo.sender?.displayName || msg.replyTo.sender?.username || 'Someone'}</span>
@@ -627,10 +627,13 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
         .decrypt-dots span:nth-child(2) { animation-delay: 0.2s; }
         .decrypt-dots span:nth-child(3) { animation-delay: 0.4s; }
         .reply-preview-bubble {
-          display: flex; gap: 8px;
+          display: flex; gap: 8px; cursor: pointer;
           background: rgba(0,0,0,0.12); border-radius: var(--radius-sm); padding: 5px 8px;
+          transition: background 0.15s;
         }
+        .reply-preview-bubble:hover { background: rgba(0,0,0,0.22); }
         .bubble:not(.own) .reply-preview-bubble { background: var(--bg-4); }
+        .bubble:not(.own) .reply-preview-bubble:hover { background: var(--bg-3); }
         .reply-bar-inner { width: 2px; background: rgba(255,255,255,0.4); border-radius: 2px; flex-shrink: 0; }
         .bubble:not(.own) .reply-bar-inner { background: var(--accent); }
         .reply-author { display: block; font-size: 11px; opacity: 0.7; font-weight: 500; }
