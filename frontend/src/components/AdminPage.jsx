@@ -563,21 +563,23 @@ export default function AdminPage({ onBack }) {
                 </div>
               </div>
 
-              <div className="ap-group">
-                <div className="ap-group-title">Danger Zone</div>
-                <div className="ap-row">
-                  <div className="ap-row-text">
-                    <div className="ap-row-title">Purge All Messages</div>
-                    <div className="ap-row-sub">Permanently delete every message on the server</div>
+              <div style={{ marginTop: 8 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Danger Zone</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(255,87,87,0.2)', borderRadius: 'var(--radius)', background: 'var(--red-dim)', padding: 14 }}>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-0)', marginBottom: 2 }}>Purge All Messages</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-2)' }}>Permanently delete every message on the server</p>
+                    </div>
+                    <button style={{ background: 'transparent', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--radius)', padding: '8px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }} onClick={() => setPurgeConfirm('messages')}>Purge</button>
                   </div>
-                  <button className="ap-pill-btn" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => setPurgeConfirm('messages')}>Purge</button>
-                </div>
-                <div className="ap-row">
-                  <div className="ap-row-text">
-                    <div className="ap-row-title">Purge Audit Logs</div>
-                    <div className="ap-row-sub">Permanently delete all audit log entries</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(255,87,87,0.2)', borderRadius: 'var(--radius)', background: 'var(--red-dim)', padding: 14 }}>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-0)', marginBottom: 2 }}>Purge Audit Logs</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-2)' }}>Permanently delete all audit log entries</p>
+                    </div>
+                    <button style={{ background: 'transparent', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--radius)', padding: '8px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }} onClick={() => setPurgeConfirm('audit-logs')}>Purge</button>
                   </div>
-                  <button className="ap-pill-btn" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => setPurgeConfirm('audit-logs')}>Purge</button>
                 </div>
               </div>
 
