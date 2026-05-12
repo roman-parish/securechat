@@ -19,6 +19,7 @@ export default function ProfileModal({ onClose }) {
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [hideLastSeen, setHideLastSeen] = useState(user?.hideLastSeen ?? false);
+  const [hideReadReceipts, setHideReadReceipts] = useState(user?.hideReadReceipts ?? false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -612,6 +613,22 @@ export default function ProfileModal({ onClose }) {
                     try { await updateProfile({ displayName, bio, hideLastSeen: next }); } catch { setHideLastSeen(!next); }
                   }}
                   aria-label="Toggle hide last seen"
+                ><span /></button>
+              </div>
+
+              <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
+                <div className="setting-text">
+                  <p className="setting-label">Hide Read Receipts</p>
+                  <p className="setting-desc">Other users won't see when you've read their messages</p>
+                </div>
+                <button
+                  className={`toggle ${hideReadReceipts ? 'on' : ''}`}
+                  onClick={async () => {
+                    const next = !hideReadReceipts;
+                    setHideReadReceipts(next);
+                    try { await updateProfile({ displayName, bio, hideReadReceipts: next }); } catch { setHideReadReceipts(!next); }
+                  }}
+                  aria-label="Toggle hide read receipts"
                 ><span /></button>
               </div>
 

@@ -65,6 +65,7 @@ const userSchema = new mongoose.Schema({
 
   lastSeen: { type: Date, default: Date.now },
   hideLastSeen: { type: Boolean, default: false },
+  hideReadReceipts: { type: Boolean, default: false },
   banned: { type: Boolean, default: false },
   refreshTokens: {
     type: [{

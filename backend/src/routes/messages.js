@@ -164,6 +164,9 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
 // Mark messages as read — emit read receipts
 router.post('/:conversationId/read', authenticate, async (req, res) => {
   try {
+    const currentUser = await User.findById(req.user.userId).select('hideReadReceipts');
+    if (currentUser?.hideReadReceipts) return res.json({ success: true });
+
     const unread = await Message.find({
       conversationId: req.params.conversationId,
       'readBy.userId': { $ne: req.user.userId },

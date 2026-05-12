@@ -82,10 +82,11 @@ router.get('/:userId', authenticate, async (req, res) => {
 
 // Update own profile
 router.put('/me/profile', authenticate, async (req, res) => {
-  const { displayName, bio, hideLastSeen } = req.body;
+  const { displayName, bio, hideLastSeen, hideReadReceipts } = req.body;
   try {
     const update = { displayName, bio };
     if (typeof hideLastSeen === 'boolean') update.hideLastSeen = hideLastSeen;
+    if (typeof hideReadReceipts === 'boolean') update.hideReadReceipts = hideReadReceipts;
     const user = await User.findByIdAndUpdate(
       req.user.userId,
       update,
