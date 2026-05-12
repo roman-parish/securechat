@@ -19,6 +19,15 @@ const OPTIONAL_WARN = [
   'RESEND_API_KEY',
 ];
 
+// Refuse to start in production with these docker-compose fallback placeholders.
+// If any of these reach a live deployment the app is trivially exploitable.
+const INSECURE_DEFAULTS = new Set([
+  'change_this_jwt_secret_in_production',
+  'change_this_refresh_secret_in_production',
+  'securechat_secret',
+  'redis_secret',
+]);
+
 export function validateEnv(logger) {
   const missing = REQUIRED.filter(key => !process.env[key]);
 
@@ -27,6 +36,16 @@ export function validateEnv(logger) {
     if (logger) logger.fatal({ missing }, msg);
     else console.error(`\n❌ FATAL: ${msg}\n`);
     process.exit(1);
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    const insecure = REQUIRED.filter(key => INSECURE_DEFAULTS.has(process.env[key]));
+    if (insecure.length > 0) {
+      const msg = `Production startup blocked — default placeholder secrets detected: ${insecure.join(', ')}. Set real values in your .env file.`;
+      if (logger) logger.fatal({ insecure }, msg);
+      else console.error(`\n❌ FATAL: ${msg}\n`);
+      process.exit(1);
+    }
   }
 
   const missingOptional = OPTIONAL_WARN.filter(key => !process.env[key]);
