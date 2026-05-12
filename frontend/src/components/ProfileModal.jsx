@@ -774,15 +774,15 @@ export default function ProfileModal({ onClose }) {
               </div>
 
               {serverRetention?.messageRetentionDays > 0 && (
-                <div className="setting-section">
-                  <p className="setting-section-title">Server Policy</p>
+                <>
+                  <p className="sessions-label">Server Policy</p>
                   <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
                     <div className="setting-text">
                       <p className="setting-label">Message Retention</p>
                       <p className="setting-desc">This server automatically deletes messages older than {serverRetention.messageRetentionDays} day{serverRetention.messageRetentionDays !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
-                </div>
+                </>
               )}
 
               <div className="danger-zone">
