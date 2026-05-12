@@ -600,7 +600,11 @@ export default function AdminPage({ onBack }) {
                     </p>
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button className="ap-pill-btn" style={{ flex: 1 }} onClick={() => setPurgeConfirm(null)}>Cancel</button>
-                      <button className="ap-pill-btn" style={{ flex: 1, background: 'var(--danger)', color: '#fff' }} onClick={handlePurge} disabled={purging}>
+                      <button
+                        onClick={handlePurge}
+                        disabled={purging}
+                        style={{ flex: 1, background: 'transparent', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--radius)', padding: '8px 14px', fontSize: 13, fontWeight: 500, cursor: purging ? 'not-allowed' : 'pointer', opacity: purging ? 0.5 : 1 }}
+                      >
                         {purging ? 'Purging…' : 'Delete everything'}
                       </button>
                     </div>
