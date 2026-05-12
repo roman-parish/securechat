@@ -582,9 +582,15 @@ export default function AdminPage({ onBack }) {
               </div>
 
               {purgeConfirm && createPortal(
-                <div className="modal-overlay" onClick={() => setPurgeConfirm(null)}>
-                  <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxWidth: 340 }}>
-                    <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 8 }}>
+                <div
+                  onClick={() => setPurgeConfirm(null)}
+                  style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+                >
+                  <div
+                    onClick={e => e.stopPropagation()}
+                    style={{ background: 'var(--bg-2)', borderRadius: 16, padding: 24, maxWidth: 340, width: '100%', boxShadow: 'var(--shadow-lg)' }}
+                  >
+                    <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 8, color: 'var(--text-0)' }}>
                       Purge {purgeConfirm === 'messages' ? 'all messages' : 'all audit logs'}?
                     </p>
                     <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20 }}>
