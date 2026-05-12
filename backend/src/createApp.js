@@ -42,27 +42,14 @@ export function createApp(ioRef = mockIo) {
 
   app.set('trust proxy', 1);
 
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        imgSrc: ["'self'", "blob:", "data:"],
-        mediaSrc: ["'self'", "blob:"],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        workerSrc: ["'self'"],
-        frameAncestors: ["'none'"],
-        baseUri: ["'self'"],
-        formAction: ["'self'"],
-      },
-    },
-  }));
+  // CSP is set authoritatively by the nginx reverse proxy — disable helmet's
+  // to prevent a conflicting second header (browser enforces the intersection,
+  // which drops wss: and breaks WebSocket connections).
+  app.use(helmet({ contentSecurityPolicy: false }));
   const allowedOrigin = process.env.CLIENT_URL || 'http://localhost';
   app.use(cors({ origin: allowedOrigin, credentials: true }));
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // Relaxed rate limits in test environment
   const limiter = rateLimit({
@@ -135,8 +122,6 @@ export function createApp(ioRef = mockIo) {
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
-
-  app.use('/uploads', express.static('/app/uploads'));
 
   app.use((err, _req, res, _next) => {
     res.status(err.status || 500).json({

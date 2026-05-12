@@ -16,29 +16,46 @@ const router = Router();
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || '/app/uploads';
 
-const storage = multer.diskStorage({
+// Encrypted message attachments — stored without any extension so the stored
+// filename is never influenced by client input. Served exclusively as
+// application/octet-stream via /api/uploads/secure/:filename (auth-gated).
+const attachmentStorage = multer.diskStorage({
+  destination: UPLOAD_DIR,
+  filename: (_req, _file, cb) => cb(null, uuidv4()),
+});
+
+const upload = multer({
+  storage: attachmentStorage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    // Only accept encrypted blobs — anything else is a client error
+    if (file.mimetype === 'application/octet-stream') {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed'));
+    }
+  },
+});
+
+// Avatar uploads — image-only, extension derived from a server-side whitelist
+// (never from the client-supplied filename).
+const SAFE_IMAGE_EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp' };
+const avatarStorage = multer.diskStorage({
   destination: UPLOAD_DIR,
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
+    const ext = SAFE_IMAGE_EXT[file.mimetype] ?? '.jpg';
     cb(null, `${uuidv4()}${ext}`);
   },
 });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB — avatars don't need more
   fileFilter: (_req, file, cb) => {
-    const allowed = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-      'application/pdf', 'text/plain',
-      'audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp4',
-      'video/webm', 'video/mp4',
-      'application/octet-stream', // encrypted file blobs
-    ];
-    if (allowed.includes(file.mimetype)) {
+    if (Object.hasOwn(SAFE_IMAGE_EXT, file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('File type not allowed'));
+      cb(new Error('Only JPEG, PNG, GIF, or WebP allowed for avatars'));
     }
   },
 });
@@ -66,7 +83,7 @@ router.post('/', authenticate, upload.single('file'), async (req, res) => {
 });
 
 // Upload avatar
-router.post('/avatar', authenticate, upload.single('avatar'), async (req, res) => {
+router.post('/avatar', authenticate, avatarUpload.single('avatar'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   // Import User model dynamically to avoid circular deps
