@@ -9,7 +9,10 @@ RUN npm install --only=production
 
 COPY src/ ./src/
 
-RUN mkdir -p uploads
+# Create uploads dir owned by node so the process can write to it without root
+RUN mkdir -p uploads && chown -R node:node /app
+
+USER node
 
 EXPOSE 3001
 

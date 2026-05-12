@@ -86,6 +86,8 @@ export function setupSocketIO(io) {
     });
 
     socket.on('typing:start', ({ conversationId }) => {
+      // Only relay if this socket has already joined the room (membership verified in conversation:join)
+      if (!socket.rooms.has(`conversation:${conversationId}`)) return;
       socket.to(`conversation:${conversationId}`).emit('typing:start', {
         userId: socket.userId,
         username: socket.displayName || socket.username,
@@ -94,6 +96,7 @@ export function setupSocketIO(io) {
     });
 
     socket.on('typing:stop', ({ conversationId }) => {
+      if (!socket.rooms.has(`conversation:${conversationId}`)) return;
       socket.to(`conversation:${conversationId}`).emit('typing:stop', {
         userId: socket.userId,
         conversationId,
@@ -101,6 +104,7 @@ export function setupSocketIO(io) {
     });
 
     socket.on('message:read', ({ messageId, conversationId }) => {
+      if (!socket.rooms.has(`conversation:${conversationId}`)) return;
       socket.to(`conversation:${conversationId}`).emit('message:read', {
         messageId,
         userId: socket.userId,

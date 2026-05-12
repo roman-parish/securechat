@@ -109,7 +109,8 @@ router.post('/register', [
     const shouldVerify = email && process.env.RESEND_API_KEY && (settings?.email?.requireEmailVerification === true);
     if (shouldVerify) {
       verificationToken = randomBytes(32).toString('hex');
-      user.emailVerificationToken = verificationToken;
+      // Store hash only — same pattern as passwordResetToken
+      user.emailVerificationToken = createHash('sha256').update(verificationToken).digest('hex');
     }
 
     await user.save();
@@ -146,7 +147,8 @@ router.get('/verify-email', async (req, res) => {
   const { token } = req.query;
   if (!token) return res.status(400).json({ error: 'Token required' });
   try {
-    const user = await User.findOne({ emailVerificationToken: token }).select('+emailVerificationToken');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({ emailVerificationToken: tokenHash }).select('+emailVerificationToken');
     if (!user) return res.status(404).json({ error: 'Invalid or already-used verification token' });
     user.emailVerified = true;
     user.emailVerificationToken = null;
@@ -166,7 +168,7 @@ router.post('/resend-verification', authenticate, async (req, res) => {
     if (user.emailVerified === true) return res.status(400).json({ error: 'Email already verified' });
     if (!user.email) return res.status(400).json({ error: 'No email address on file' });
     const token = randomBytes(32).toString('hex');
-    user.emailVerificationToken = token;
+    user.emailVerificationToken = createHash('sha256').update(token).digest('hex');
     await user.save();
     const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost'}/?verify=${token}`;
     sendEmailVerification({
