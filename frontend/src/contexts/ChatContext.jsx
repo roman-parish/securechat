@@ -28,10 +28,14 @@ export function ChatProvider({ children }) {
 
   useEffect(() => { activeConvRef.current = activeConversationId; }, [activeConversationId]);
 
-  // Tab title unread count
+  // Tab title + app icon badge
   useEffect(() => {
     const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
     document.title = total > 0 ? `(${total}) SecureChat` : 'SecureChat';
+    if ('setAppBadge' in navigator) {
+      if (total > 0) navigator.setAppBadge(total).catch(() => {});
+      else navigator.clearAppBadge().catch(() => {});
+    }
   }, [unreadCounts]);
 
   const loadConversations = useCallback(async () => {

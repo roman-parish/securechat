@@ -17,6 +17,8 @@ export default function ChatLayout({ onOpenAdmin }) {
   const [activeConversationId, setActive] = useState(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [switcherQuery, setSwitcherQuery] = useState('');
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
   // Use a ref so the SW message handler always has the latest version
   const handleSelectRef = useRef(null);
 
@@ -60,6 +62,42 @@ export default function ChatLayout({ onOpenAdmin }) {
     return () => window.removeEventListener('sw:notification-click', handler);
   }, []); // empty deps — ref keeps it fresh
 
+  // Capture install prompt — show banner once, suppress if user already dismissed
+  useEffect(() => {
+    if (localStorage.getItem('sc_install_dismissed')) return;
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      setShowInstallBanner(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => setShowInstallBanner(false));
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') setShowInstallBanner(false);
+    setInstallPrompt(null);
+  };
+
+  const dismissInstall = () => {
+    setShowInstallBanner(false);
+    localStorage.setItem('sc_install_dismissed', '1');
+  };
+
+  // Handle ?action=new-chat from manifest shortcut
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'new-chat') {
+      window.history.replaceState({}, '', '/');
+      // Trigger the new conversation button in Sidebar via a custom event
+      window.dispatchEvent(new CustomEvent('app:new-chat'));
+    }
+  }, []);
+
   const switcherResults = (() => {
     if (!conversations) return [];
     const q = switcherQuery.toLowerCase();
@@ -90,6 +128,22 @@ export default function ChatLayout({ onOpenAdmin }) {
           <EmptyState />
         )}
       </div>
+
+      {showInstallBanner && (
+        <div className="install-banner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M12 2v13M8 11l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <span>Install SecureChat for a better experience</span>
+          <button className="install-btn" onClick={handleInstall}>Install</button>
+          <button className="install-dismiss" onClick={dismissInstall} aria-label="Dismiss">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+      )}
 
       {switcherOpen && (
         <div className="switcher-overlay" onClick={() => setSwitcherOpen(false)}>
@@ -172,6 +226,30 @@ export default function ChatLayout({ onOpenAdmin }) {
           .hidden-mobile { display: none !important; }
           .main-panel { width: 100%; }
         }
+
+        /* ── Install banner ── */
+        .install-banner {
+          position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+          display: flex; align-items: center; gap: 10px;
+          background: var(--bg-2); border: 1px solid var(--border-strong);
+          border-radius: var(--radius-xl); padding: 10px 14px;
+          box-shadow: var(--shadow-lg); z-index: 1000;
+          font-size: 13px; color: var(--text-1);
+          white-space: nowrap;
+          animation: slideUp 0.2s ease;
+        }
+        .install-btn {
+          background: var(--accent); color: #fff;
+          border-radius: var(--radius); padding: 5px 12px;
+          font-size: 12px; font-weight: 600;
+          transition: opacity 0.15s;
+        }
+        .install-btn:hover { opacity: 0.85; }
+        .install-dismiss {
+          color: var(--text-3); display: flex; align-items: center;
+          padding: 2px; transition: color 0.15s;
+        }
+        .install-dismiss:hover { color: var(--text-1); }
 
         /* ── Cmd+K Switcher ── */
         .switcher-overlay {

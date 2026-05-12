@@ -32,6 +32,13 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
     setTimeout(() => setToast(''), 3500);
   }, []);
 
+  // Handle ?action=new-chat from manifest shortcut
+  useEffect(() => {
+    const handler = () => setShowNewChat(true);
+    window.addEventListener('app:new-chat', handler);
+    return () => window.removeEventListener('app:new-chat', handler);
+  }, []);
+
   const handleMuteToggle = useCallback(async (convId, currentlyMuted) => {
     try {
       await apiFetch(`/conversations/${convId}/mute`, {
