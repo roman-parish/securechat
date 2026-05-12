@@ -34,7 +34,7 @@ export default function ChatWindow({ conversationId, onBack }) {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [decrypted, setDecrypted] = useState({});
-  const [text, setText] = useState('');
+  const [text, setText] = useState(() => localStorage.getItem(`sc_draft_${conversationId}`) || '');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
   const [blockedByOther, setBlockedByOther] = useState(false);
@@ -78,6 +78,11 @@ export default function ChatWindow({ conversationId, onBack }) {
     decryptedRef.current[id] = text;
     setDecrypted(prev => ({ ...prev, [id]: text }));
   }, []);
+
+  useEffect(() => {
+    if (text) localStorage.setItem(`sc_draft_${conversationId}`, text);
+    else localStorage.removeItem(`sc_draft_${conversationId}`);
+  }, [text, conversationId]);
 
   const userIdRef = useRef(null);
   useEffect(() => { userIdRef.current = user?._id; }, [user]);

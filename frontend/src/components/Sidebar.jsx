@@ -340,6 +340,10 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
               <span className="typing-dots-inline"><span/><span/><span/></span>
               {typingUsers.map(u => u.username).join(', ')} typing
             </span>
+          ) : !active && localStorage.getItem(`sc_draft_${conv._id}`) ? (
+            <span className="conv-preview draft-preview">
+              Draft: {localStorage.getItem(`sc_draft_${conv._id}`).slice(0, 40)}
+            </span>
           ) : isMuted && muteLabel && !hasUnread ? (
             <span className="conv-preview muted-label">{muteLabel}</span>
           ) : (
@@ -525,6 +529,7 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
         .menu-btn-danger { color: var(--red) !important; }
         .mute-icon { color: var(--text-3); flex-shrink: 0; margin-left: 4px; }
         .muted-label { color: var(--text-3); font-style: italic; }
+        .draft-preview { color: var(--accent); }
         .sidebar-toast {
           margin: 6px 8px 0;
           background: var(--red-dim); border: 1px solid rgba(255,87,87,0.25);
