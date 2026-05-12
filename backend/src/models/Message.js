@@ -67,6 +67,7 @@ const messageSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     deliveredAt: { type: Date, default: Date.now },
   }],
+  mentions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   editedAt: {
     type: Date,
     default: null,

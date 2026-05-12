@@ -13,6 +13,20 @@ import { decryptFile } from '../utils/crypto.js';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
+function renderText(text, currentUsername) {
+  if (!currentUsername) return text;
+  const parts = text.split(/(@[a-zA-Z0-9_]+)/g);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    if (part.startsWith('@')) {
+      const uname = part.slice(1);
+      const isMe = uname.toLowerCase() === currentUsername.toLowerCase();
+      return <span key={i} className={isMe ? 'mention mention-me' : 'mention'}>{part}</span>;
+    }
+    return part;
+  });
+}
+
 function AttachmentView({ attachment, isOwn, onLightbox, encryptedKeys, currentUserId }) {
   const myKey = encryptedKeys?.find(k => String(k.userId) === String(currentUserId))?.encryptedKey;
   const decryptOpts = { encryptedKey: myKey, fileIv: attachment.fileIv, mimetype: attachment.mimetype, userId: currentUserId };
@@ -206,7 +220,7 @@ function replyPreviewText(replyTo, plaintext) {
   return 'Message';
 }
 
-export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId, participantCount = 2 }) {
+export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, isConsecutive, onReply, onEdit, onDelete, currentUserId, currentUsername, participantCount = 2 }) {
   const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
@@ -420,7 +434,7 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
                   currentUserId={currentUserId}
                 />
               )}
-              {plaintext && plaintext !== '📎' && plaintext !== '🎤' && <p className="msg-text">{plaintext}</p>}
+              {plaintext && plaintext !== '📎' && plaintext !== '🎤' && <p className="msg-text">{renderText(plaintext, currentUsername)}</p>}
               <div className="msg-meta">
                 {msg.editedAt && <span className="edited-tag">edited</span>}
                 <span className="msg-time">{format(new Date(msg.createdAt), 'h:mm a')}</span>
@@ -595,6 +609,10 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
           -webkit-user-select: text; user-select: text;
         }
         .bubble.own .msg-text { color: white; }
+        .mention { color: var(--accent); font-weight: 500; }
+        .mention-me { background: var(--accent-dim); border-radius: 3px; padding: 0 2px; }
+        .bubble.own .mention { color: rgba(255,255,255,0.9); }
+        .bubble.own .mention-me { background: rgba(255,255,255,0.2); color: white; }
         .msg-meta { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
         .msg-time { font-size: 11px; color: rgba(255,255,255,0.45); }
         .bubble:not(.own) .msg-time { color: var(--text-3); }

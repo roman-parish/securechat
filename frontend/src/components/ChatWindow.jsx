@@ -56,6 +56,9 @@ export default function ChatWindow({ conversationId, onBack }) {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showDisappearing, setShowDisappearing] = useState(false);
   const disappearingRef = useRef(null);
+  const [mentionQuery, setMentionQuery] = useState(null); // null = closed, string = filtering
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const mentionRef = useRef(null);
   const [attachment, setAttachment] = useState(null); // { file, previewUrl, type }
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -378,8 +381,23 @@ export default function ChatWindow({ conversationId, onBack }) {
   };
 
   const handleTyping = (e) => {
-    setText(e.target.value);
+    const val = e.target.value;
+    setText(val);
     autoResize(e.target);
+
+    // @mention detection — only in group chats
+    if (conv?.type === 'group') {
+      const pos = e.target.selectionStart;
+      const before = val.slice(0, pos);
+      const match = before.match(/@([a-zA-Z0-9_]*)$/);
+      if (match) {
+        setMentionQuery(match[1]);
+        setMentionIndex(0);
+      } else {
+        setMentionQuery(null);
+      }
+    }
+
     if (socket) {
       socket.emit('typing:start', { conversationId, userId: user?._id, username: user?.displayName || user?.username });
       clearTimeout(typingTimerRef.current);
@@ -504,6 +522,7 @@ export default function ChatWindow({ conversationId, onBack }) {
 
     setSending(true);
     setText('');
+    setMentionQuery(null);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     const pendingAttachment = attachment;
     setAttachment(null);
@@ -531,6 +550,10 @@ export default function ChatWindow({ conversationId, onBack }) {
       const payload = await buildEncryptedPayload(msgContent || (pendingAttachment ? '📎' : ''), conv.participants, userIdRef.current, aesKey);
       if (replyTo) payload.replyTo = replyTo._id;
       if (uploadedAttachment) payload.attachment = uploadedAttachment;
+      if (conv.type === 'group') {
+        const mentioned = [...(msgContent.matchAll(/@([a-zA-Z0-9_]+)/g))].map(m => m[1]);
+        if (mentioned.length) payload.mentionedUsernames = [...new Set(mentioned)];
+      }
       const msg = await apiFetch(`/messages/${conversationId}`, {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -555,7 +578,33 @@ export default function ChatWindow({ conversationId, onBack }) {
     }
   };
 
+  const mentionMembersRef = useRef([]);
+
+  const insertMention = (username) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const pos = ta.selectionStart;
+    const val = ta.value;
+    const before = val.slice(0, pos);
+    const replaced = before.replace(/@([a-zA-Z0-9_]*)$/, `@${username} `);
+    const newVal = replaced + val.slice(pos);
+    setText(newVal);
+    setMentionQuery(null);
+    setTimeout(() => {
+      ta.focus();
+      const newPos = replaced.length;
+      ta.setSelectionRange(newPos, newPos);
+      autoResize(ta);
+    }, 0);
+  };
+
   const handleKeyDown = (e) => {
+    if (mentionQuery !== null && mentionMembersRef.current.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(i => (i + 1) % mentionMembersRef.current.length); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(i => (i - 1 + mentionMembersRef.current.length) % mentionMembersRef.current.length); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertMention(mentionMembersRef.current[mentionIndex]?.username); return; }
+      if (e.key === 'Escape') { setMentionQuery(null); return; }
+    }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e); }
     if (e.key === 'Escape') { setEditingMsg(null); setReplyTo(null); setText(''); }
   };
@@ -604,6 +653,16 @@ export default function ChatWindow({ conversationId, onBack }) {
   const otherUser = conv?.type === 'direct'
     ? conv.participants?.find(p => String(p._id) !== myId)
     : null;
+
+  const mentionMembers = conv?.type === 'group' && mentionQuery !== null
+    ? (conv.participants || [])
+        .filter(p => String(p._id) !== myId && (
+          mentionQuery === '' ||
+          p.username?.toLowerCase().startsWith(mentionQuery.toLowerCase()) ||
+          p.displayName?.toLowerCase().startsWith(mentionQuery.toLowerCase())
+        ))
+    : [];
+  mentionMembersRef.current = mentionMembers;
   const convName = conv
     ? conv.type === 'group' ? conv.name
       : otherUser?.displayName || otherUser?.username || 'Unknown'
@@ -849,6 +908,7 @@ export default function ChatWindow({ conversationId, onBack }) {
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         currentUserId={myId}
+                        currentUsername={user?.username}
                         participantCount={conv?.participants?.length ?? 2}
                       />
                     </div>
@@ -996,6 +1056,25 @@ export default function ChatWindow({ conversationId, onBack }) {
               <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
+        </div>
+      )}
+
+      {/* @mention picker */}
+      {mentionMembers.length > 0 && (
+        <div ref={mentionRef} className="mention-picker">
+          {mentionMembers.map((p, i) => (
+            <button
+              key={p._id}
+              type="button"
+              className={`mention-item${i === mentionIndex ? ' active' : ''}`}
+              onMouseEnter={() => setMentionIndex(i)}
+              onMouseDown={e => { e.preventDefault(); insertMention(p.username); }}
+            >
+              <Avatar user={p} size={24} />
+              <span className="mention-name">{p.displayName || p.username}</span>
+              <span className="mention-username">@{p.username}</span>
+            </button>
+          ))}
         </div>
       )}
 
@@ -1312,6 +1391,22 @@ export default function ChatWindow({ conversationId, onBack }) {
         .context-text { display: block; font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .context-bar > button { color: var(--text-3); padding: 4px; border-radius: var(--radius-sm); }
         .context-bar > button:hover { color: var(--text-0); background: var(--bg-3); }
+        .mention-picker {
+          position: relative; z-index: 10;
+          background: var(--bg-2); border: 1px solid var(--border);
+          border-bottom: none;
+          max-height: 200px; overflow-y: auto;
+          flex-shrink: 0;
+        }
+        .mention-item {
+          display: flex; align-items: center; gap: 10px;
+          width: 100%; padding: 8px 14px;
+          text-align: left; transition: background var(--transition);
+          color: var(--text-0);
+        }
+        .mention-item.active, .mention-item:hover { background: var(--bg-3); }
+        .mention-name { font-size: 14px; font-weight: 500; }
+        .mention-username { font-size: 12px; color: var(--text-3); margin-left: auto; }
         .chat-input-bar {
           display: flex; align-items: flex-end; gap: 10px;
           padding: 10px 14px;

@@ -63,7 +63,7 @@ router.get('/:conversationId', authenticate, async (req, res) => {
 
 // Send a message
 router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
-  const { encryptedContent, iv, encryptedKeys, type = 'text', replyTo, attachment } = req.body;
+  const { encryptedContent, iv, encryptedKeys, type = 'text', replyTo, attachment, mentionedUsernames = [] } = req.body;
   if (!encryptedContent || !iv) return res.status(400).json({ error: 'Encrypted content and IV required' });
   if (!encryptedKeys?.length) return res.status(400).json({ error: 'encryptedKeys array is required' });
 
@@ -91,6 +91,13 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
       ? new Date(Date.now() + conversation.disappearingMessages * 1000)
       : null;
 
+    // Resolve @mentions to user IDs — only participants can be mentioned
+    const mentionedIds = mentionedUsernames.length > 0
+      ? conversation.participants
+          .filter(p => mentionedUsernames.includes(p.username) && String(p._id) !== String(req.user.userId))
+          .map(p => p._id)
+      : [];
+
     const message = new Message({
       conversationId: conversation._id,
       sender: req.user.userId,
@@ -99,6 +106,7 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
       replyTo: replyTo || null,
       attachment: attachment || undefined,
       readBy: [{ userId: req.user.userId }],
+      ...(mentionedIds.length && { mentions: mentionedIds }),
       ...(expiresAt && { expiresAt }),
     });
     await message.save();
@@ -141,13 +149,16 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
       }
       const mutedEntry = conversation.mutedBy?.find(m => String(m.userId) === String(p._id));
       const isMuted = mutedEntry && (!mutedEntry.until || new Date(mutedEntry.until) > new Date());
-      if (shouldPush && !isMuted) {
+      const isMentioned = mentionedIds.some(id => String(id) === String(p._id));
+      if (shouldPush && (!isMuted || isMentioned)) {
         await sendPushToUser(p._id, {
-          type: 'new_message',
+          type: isMentioned ? 'mention' : 'new_message',
           title: conversation.type === 'group' ? conversation.name : sender.displayName || sender.username,
-          body: conversation.type === 'group'
-            ? `${sender.displayName || sender.username}: New message`
-            : 'New message',
+          body: isMentioned
+            ? `${sender.displayName || sender.username} mentioned you`
+            : conversation.type === 'group'
+              ? `${sender.displayName || sender.username}: New message`
+              : 'New message',
           conversationId: conversation._id.toString(),
           url: '/',
         });
