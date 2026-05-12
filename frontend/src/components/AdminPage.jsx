@@ -24,6 +24,9 @@ const ACTION_LABELS = {
   'invite.revoke': 'Revoked invite',
   'settings.registration_toggle': 'Registration',
   'settings.email_update': 'Email settings',
+  'settings.message_retention': 'Message retention',
+  'settings.auditlog_retention': 'Audit log retention',
+  'purge.messages': 'Purged messages',
 };
 
 function formatBytes(bytes) {
@@ -132,6 +135,11 @@ export default function AdminPage({ onBack }) {
   const [emailSettings, setEmailSettings] = useState({
     enabled: true, loginNotification: true, passwordChanged: true, securityAlerts: true,
   });
+  const [messageRetentionDays, setMessageRetentionDays] = useState(0);
+  const [auditLogRetentionDays, setAuditLogRetentionDays] = useState(0);
+  const [retentionInput, setRetentionInput] = useState({ message: '0', auditLog: '0' });
+  const [purgeConfirm, setPurgeConfirm] = useState(null); // 'messages' | 'audit-logs'
+  const [purging, setPurging] = useState(false);
 
   /* Invites */
   const [invites, setInvites] = useState([]);
@@ -189,6 +197,11 @@ export default function AdminPage({ onBack }) {
     apiFetch('/admin/settings').then(d => {
       setRegistrationOpen(d.registrationOpen);
       if (d.email) setEmailSettings(d.email);
+      const msgDays = d.messageRetentionDays ?? 0;
+      const auditDays = d.auditLogRetentionDays ?? 0;
+      setMessageRetentionDays(msgDays);
+      setAuditLogRetentionDays(auditDays);
+      setRetentionInput({ message: String(msgDays), auditLog: String(auditDays) });
     }).catch(() => {});
   }, [loadStats, loadUsers, loadInvites, loadAudit]);
 
@@ -229,6 +242,30 @@ export default function AdminPage({ onBack }) {
       setEmailSettings(emailSettings);
       showFlash('Error: ' + e.message);
     }
+  };
+
+  const handleSaveRetention = async (type) => {
+    const raw = type === 'message' ? retentionInput.message : retentionInput.auditLog;
+    const days = parseInt(raw, 10);
+    if (isNaN(days) || days < 0) return showFlash('Enter a valid number of days (0 = forever)');
+    try {
+      const body = type === 'message' ? { messageRetentionDays: days } : { auditLogRetentionDays: days };
+      const d = await apiFetch('/admin/settings', { method: 'PUT', body: JSON.stringify(body) });
+      if (type === 'message') setMessageRetentionDays(d.messageRetentionDays);
+      else setAuditLogRetentionDays(d.auditLogRetentionDays);
+      showFlash(days === 0 ? 'Retention disabled — data kept forever' : `Retention set to ${days} days`);
+    } catch (e) { showFlash('Error: ' + e.message); }
+  };
+
+  const handlePurge = async () => {
+    if (!purgeConfirm) return;
+    setPurging(true);
+    try {
+      const d = await apiFetch(`/admin/purge/${purgeConfirm}`, { method: 'POST' });
+      showFlash(`Purged ${d.deleted.toLocaleString()} records`);
+      if (purgeConfirm === 'audit-logs') setAuditLogs([]);
+    } catch (e) { showFlash('Error: ' + e.message); }
+    finally { setPurging(false); setPurgeConfirm(null); }
   };
 
   const handleCreateInvite = async () => {
@@ -477,6 +514,92 @@ export default function AdminPage({ onBack }) {
                   </div>
                 ))}
               </div>
+
+              <div className="ap-group">
+                <div className="ap-group-title">Data Retention</div>
+                <div className="ap-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+                  <div className="ap-row-text">
+                    <div className="ap-row-title">Message Retention</div>
+                    <div className="ap-row-sub">
+                      {messageRetentionDays > 0
+                        ? `Messages older than ${messageRetentionDays} day${messageRetentionDays !== 1 ? 's' : ''} are automatically deleted`
+                        : 'Messages are kept forever'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={retentionInput.message}
+                      onChange={e => setRetentionInput(p => ({ ...p, message: e.target.value }))}
+                      style={{ width: 80, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-1)', color: 'var(--text-0)', fontSize: 14 }}
+                    />
+                    <span style={{ fontSize: 14, color: 'var(--text-2)' }}>days (0 = forever)</span>
+                    <button className="ap-pill-btn" onClick={() => handleSaveRetention('message')}>Save</button>
+                  </div>
+                </div>
+                <div className="ap-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+                  <div className="ap-row-text">
+                    <div className="ap-row-title">Audit Log Retention</div>
+                    <div className="ap-row-sub">
+                      {auditLogRetentionDays > 0
+                        ? `Audit logs older than ${auditLogRetentionDays} day${auditLogRetentionDays !== 1 ? 's' : ''} are automatically deleted`
+                        : 'Audit logs are kept forever'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={retentionInput.auditLog}
+                      onChange={e => setRetentionInput(p => ({ ...p, auditLog: e.target.value }))}
+                      style={{ width: 80, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-1)', color: 'var(--text-0)', fontSize: 14 }}
+                    />
+                    <span style={{ fontSize: 14, color: 'var(--text-2)' }}>days (0 = forever)</span>
+                    <button className="ap-pill-btn" onClick={() => handleSaveRetention('auditLog')}>Save</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ap-group">
+                <div className="ap-group-title">Danger Zone</div>
+                <div className="ap-row">
+                  <div className="ap-row-text">
+                    <div className="ap-row-title">Purge All Messages</div>
+                    <div className="ap-row-sub">Permanently delete every message on the server</div>
+                  </div>
+                  <button className="ap-pill-btn" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => setPurgeConfirm('messages')}>Purge</button>
+                </div>
+                <div className="ap-row">
+                  <div className="ap-row-text">
+                    <div className="ap-row-title">Purge Audit Logs</div>
+                    <div className="ap-row-sub">Permanently delete all audit log entries</div>
+                  </div>
+                  <button className="ap-pill-btn" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => setPurgeConfirm('audit-logs')}>Purge</button>
+                </div>
+              </div>
+
+              {purgeConfirm && createPortal(
+                <div className="modal-overlay" onClick={() => setPurgeConfirm(null)}>
+                  <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxWidth: 340 }}>
+                    <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 8 }}>
+                      Purge {purgeConfirm === 'messages' ? 'all messages' : 'all audit logs'}?
+                    </p>
+                    <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20 }}>
+                      This cannot be undone. All {purgeConfirm === 'messages' ? 'messages' : 'audit log entries'} will be permanently deleted.
+                    </p>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button className="ap-pill-btn" style={{ flex: 1 }} onClick={() => setPurgeConfirm(null)}>Cancel</button>
+                      <button className="ap-pill-btn" style={{ flex: 1, background: 'var(--danger)', color: '#fff' }} onClick={handlePurge} disabled={purging}>
+                        {purging ? 'Purging…' : 'Delete everything'}
+                      </button>
+                    </div>
+                  </div>
+                </div>,
+                document.body
+              )}
             </>
           )}
 

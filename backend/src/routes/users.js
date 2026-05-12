@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Conversation from '../models/Conversation.js';
+import Settings from '../models/Settings.js';
 import { isUserOnline } from '../utils/redis.js';
 
 const router = Router();
@@ -132,6 +133,18 @@ router.delete('/:userId/block', authenticate, async (req, res) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed to unblock user' });
+  }
+});
+
+// Public — server retention policy (shown to authenticated users in profile settings)
+router.get('/retention', authenticate, async (req, res) => {
+  try {
+    const settings = await Settings.findOne();
+    res.json({
+      messageRetentionDays:  settings?.messageRetentionDays  ?? 0,
+    });
+  } catch {
+    res.json({ messageRetentionDays: 0 });
   }
 });
 

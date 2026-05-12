@@ -14,6 +14,7 @@ const auditLogSchema = new mongoose.Schema({
   targetUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   targetUsername: { type: String, default: null },
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+  expiresAt: { type: Date, default: null, index: { expireAfterSeconds: 0 } },
 }, { timestamps: true });
 
 export default mongoose.models.AuditLog || mongoose.model('AuditLog', auditLogSchema);

@@ -16,6 +16,8 @@ const settingsSchema = new mongoose.Schema({
     securityAlerts:          { type: Boolean, default: true },
     requireEmailVerification: { type: Boolean, default: false },
   },
+  messageRetentionDays:  { type: Number, default: 0 }, // 0 = forever
+  auditLogRetentionDays: { type: Number, default: 0 }, // 0 = forever
 }, { timestamps: true });
 
 export default mongoose.models.Settings || mongoose.model('Settings', settingsSchema);

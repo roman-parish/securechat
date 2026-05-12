@@ -148,11 +148,18 @@ export default function ProfileModal({ onClose }) {
     }
   };
 
+  const [serverRetention, setServerRetention] = useState(null); // null = not loaded yet
+
   // Load sessions and recovery code count when security tab is opened
   useEffect(() => {
     if (tab !== 'security' || !twoFactorEnabled || remainingCodes !== null) return;
     apiFetch('/auth/2fa/recovery-codes/count').then(d => setRemainingCodes(d.remaining)).catch(() => {});
   }, [tab, twoFactorEnabled, remainingCodes]);
+
+  useEffect(() => {
+    if (tab !== 'security' || serverRetention !== null) return;
+    apiFetch('/settings/retention').then(d => setServerRetention(d)).catch(() => setServerRetention({}));
+  }, [tab, serverRetention]);
 
   useEffect(() => {
     if (tab !== 'security' || sessions !== null) return;
@@ -765,6 +772,18 @@ export default function ProfileModal({ onClose }) {
                   <p>Log in from any device with your password to restore your keys automatically.</p>
                 </div>
               </div>
+
+              {serverRetention?.messageRetentionDays > 0 && (
+                <div className="setting-section">
+                  <p className="setting-section-title">Server Policy</p>
+                  <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
+                    <div className="setting-text">
+                      <p className="setting-label">Message Retention</p>
+                      <p className="setting-desc">This server automatically deletes messages older than {serverRetention.messageRetentionDays} day{serverRetention.messageRetentionDays !== 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="danger-zone">
                 <p className="danger-zone-label">Danger Zone</p>

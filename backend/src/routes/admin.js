@@ -340,6 +340,8 @@ router.get('/settings', async (req, res) => {
         securityAlerts:           settings.email?.securityAlerts           ?? true,
         requireEmailVerification: settings.email?.requireEmailVerification ?? false,
       },
+      messageRetentionDays:  settings.messageRetentionDays  ?? 0,
+      auditLogRetentionDays: settings.auditLogRetentionDays ?? 0,
     });
   } catch {
     res.status(500).json({ error: 'Failed to fetch settings' });
@@ -349,7 +351,7 @@ router.get('/settings', async (req, res) => {
 // PUT /api/admin/settings
 router.put('/settings', async (req, res) => {
   try {
-    const { registrationOpen, email } = req.body;
+    const { registrationOpen, email, messageRetentionDays, auditLogRetentionDays } = req.body;
     const update = {};
 
     if (typeof registrationOpen === 'boolean') update.registrationOpen = registrationOpen;
@@ -358,6 +360,14 @@ router.put('/settings', async (req, res) => {
       for (const key of ['enabled', 'loginNotification', 'passwordChanged', 'securityAlerts', 'requireEmailVerification']) {
         if (typeof email[key] === 'boolean') update[`email.${key}`] = email[key];
       }
+    }
+
+    if (typeof messageRetentionDays === 'number' && messageRetentionDays >= 0) {
+      update.messageRetentionDays = Math.floor(messageRetentionDays);
+    }
+
+    if (typeof auditLogRetentionDays === 'number' && auditLogRetentionDays >= 0) {
+      update.auditLogRetentionDays = Math.floor(auditLogRetentionDays);
     }
 
     if (Object.keys(update).length === 0) {
@@ -369,6 +379,39 @@ router.put('/settings', async (req, res) => {
       { $set: update },
       { upsert: true, new: true }
     );
+
+    // When retention changes, immediately apply expiresAt to existing documents
+    if (typeof update.messageRetentionDays !== 'undefined') {
+      const days = update.messageRetentionDays;
+      if (days > 0) {
+        const cutoff = new Date(Date.now() - days * 86400000);
+        await Message.updateMany(
+          { expiresAt: null, createdAt: { $lt: cutoff } },
+          [{ $set: { expiresAt: { $add: ['$createdAt', days * 86400000] } } }]
+        );
+      } else {
+        // Retention turned off — clear server-level expiresAt (preserve per-conversation ones)
+        await Message.updateMany(
+          { expiresAt: { $ne: null } },
+          { $set: { expiresAt: null } }
+        );
+      }
+      await audit(req, 'settings.message_retention', null, { messageRetentionDays: days });
+    }
+
+    if (typeof update.auditLogRetentionDays !== 'undefined') {
+      const days = update.auditLogRetentionDays;
+      if (days > 0) {
+        const cutoff = new Date(Date.now() - days * 86400000);
+        await AuditLog.updateMany(
+          { expiresAt: null, createdAt: { $lt: cutoff } },
+          [{ $set: { expiresAt: { $add: ['$createdAt', days * 86400000] } } }]
+        );
+      } else {
+        await AuditLog.updateMany({}, { $set: { expiresAt: null } });
+      }
+      await audit(req, 'settings.auditlog_retention', null, { auditLogRetentionDays: days });
+    }
 
     if (typeof registrationOpen === 'boolean') {
       await audit(req, 'settings.registration_toggle', null, { registrationOpen });
@@ -386,9 +429,36 @@ router.put('/settings', async (req, res) => {
         securityAlerts:           settings.email?.securityAlerts           ?? true,
         requireEmailVerification: settings.email?.requireEmailVerification ?? false,
       },
+      messageRetentionDays:  settings.messageRetentionDays  ?? 0,
+      auditLogRetentionDays: settings.auditLogRetentionDays ?? 0,
     });
-  } catch {
+  } catch (err) {
+    console.error('[admin] settings update:', err);
     res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// POST /api/admin/purge/messages — immediately delete all messages
+router.post('/purge/messages', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const result = await Message.deleteMany({});
+    await audit(req, 'purge.messages', null, { count: result.deletedCount });
+    res.json({ deleted: result.deletedCount });
+  } catch (err) {
+    console.error('[admin] purge messages:', err);
+    res.status(500).json({ error: 'Failed to purge messages' });
+  }
+});
+
+// POST /api/admin/purge/audit-logs — immediately delete all audit logs
+router.post('/purge/audit-logs', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const result = await AuditLog.deleteMany({});
+    // Don't audit a purge of audit logs — there's nothing to write to
+    res.json({ deleted: result.deletedCount });
+  } catch (err) {
+    console.error('[admin] purge audit logs:', err);
+    res.status(500).json({ error: 'Failed to purge audit logs' });
   }
 });
 
