@@ -13,6 +13,7 @@ import Conversation from '../models/Conversation.js';
 import Settings from '../models/Settings.js';
 import Invite from '../models/Invite.js';
 import AuditLog from '../models/AuditLog.js';
+import logger from '../utils/logger.js';
 import { sendInviteEmail } from '../utils/email.js';
 import { randomBytes, createHash } from 'crypto';
 
@@ -433,7 +434,7 @@ router.put('/settings', async (req, res) => {
       auditLogRetentionDays: settings.auditLogRetentionDays ?? 0,
     });
   } catch (err) {
-    console.error('[admin] settings update:', err);
+    logger.error({ err }, 'Failed to update admin settings');
     res.status(500).json({ error: 'Failed to update settings' });
   }
 });
@@ -445,7 +446,7 @@ router.post('/purge/messages', authenticate, requireAdmin, async (req, res) => {
     await audit(req, 'purge.messages', null, { count: result.deletedCount });
     res.json({ deleted: result.deletedCount });
   } catch (err) {
-    console.error('[admin] purge messages:', err);
+    logger.error({ err }, 'Failed to purge messages');
     res.status(500).json({ error: 'Failed to purge messages' });
   }
 });
@@ -457,7 +458,7 @@ router.post('/purge/audit-logs', authenticate, requireAdmin, async (req, res) =>
     // Don't audit a purge of audit logs — there's nothing to write to
     res.json({ deleted: result.deletedCount });
   } catch (err) {
-    console.error('[admin] purge audit logs:', err);
+    logger.error({ err }, 'Failed to purge audit logs');
     res.status(500).json({ error: 'Failed to purge audit logs' });
   }
 });

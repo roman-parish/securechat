@@ -10,6 +10,7 @@ import { authenticate } from '../middleware/auth.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import User from '../models/User.js';
+import logger from '../utils/logger.js';
 
 const router = Router();
 
@@ -442,7 +443,7 @@ router.post('/:conversationId/invitations/:invitationId/accept', authenticate, a
 
     res.json(updated);
   } catch (err) {
-    console.error('[conversations] accept invitation:', err);
+    logger.error({ err, conversationId: req.params.conversationId, userId: req.user?.userId }, 'Failed to accept invitation');
     res.status(500).json({ error: 'Failed to accept invitation' });
   }
 });

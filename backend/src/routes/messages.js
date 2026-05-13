@@ -13,6 +13,7 @@ import Conversation from '../models/Conversation.js';
 import { isUserOnline } from '../utils/redis.js';
 import { sendPushToUser, isUserBackgrounded } from '../utils/socket.js';
 import User from '../models/User.js';
+import logger from '../utils/logger.js';
 
 const sendLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -167,7 +168,7 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
 
     res.status(201).json(message);
   } catch (err) {
-    console.error(err);
+    logger.error({ err, conversationId: req.params.conversationId, userId: req.user?.userId }, 'Failed to send message');
     res.status(500).json({ error: 'Failed to send message' });
   }
 });
@@ -310,7 +311,7 @@ router.get('/:conversationId/search', authenticate, async (req, res) => {
 
     res.json(results);
   } catch (err) {
-    console.error('[search]', err);
+    logger.error({ err, conversationId: req.params.conversationId }, 'Message search failed');
     res.status(500).json({ error: 'Search failed' });
   }
 });

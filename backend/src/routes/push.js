@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import PushSubscription from '../models/PushSubscription.js';
 import webpush from 'web-push';
+import logger from '../utils/logger.js';
 
 const router = Router();
 
@@ -50,10 +51,10 @@ router.post('/subscribe', authenticate, async (req, res) => {
     );
     const ua = req.headers['user-agent'] || '';
     const isIOS = /iPhone|iPad|iPod/.test(ua);
-    console.log(`[push] ✅ Subscription saved for user ${req.user.userId} (${isIOS ? 'iOS' : 'desktop'}) endpoint: ${subscription.endpoint.slice(0, 60)}...`);
+    logger.info({ userId: req.user.userId, platform: isIOS ? 'iOS' : 'desktop', endpoint: subscription.endpoint.slice(0, 60) }, 'Push subscription saved');
     res.json({ success: true });
   } catch (err) {
-    console.error('[push] Save subscription error:', err);
+    logger.error({ err }, 'Failed to save push subscription');
     res.status(500).json({ error: 'Failed to save subscription' });
   }
 });
@@ -88,7 +89,7 @@ router.post('/test', authenticate, async (req, res) => {
     });
   }
 
-  console.log(`[push] Sending test to ${subscriptions.length} subscription(s) for user ${req.user.userId}`);
+  logger.info({ userId: req.user.userId, count: subscriptions.length }, 'Sending test push notifications');
 
   const results = await Promise.allSettled(
     subscriptions.map(async (sub) => {
@@ -102,13 +103,12 @@ router.post('/test', authenticate, async (req, res) => {
             url: '/',
           }),
         );
-        console.log(`[push] Test sent to ${sub.subscription.endpoint.slice(0, 50)}...`);
+        logger.debug({ endpoint: sub.subscription.endpoint.slice(0, 50) }, 'Test push sent');
       } catch (err) {
-        console.error(`[push] Send failed (${err.statusCode}):`, err.body || err.message);
-        // Clean up expired subscriptions
+        logger.error({ endpoint: sub.subscription.endpoint.slice(0, 50), statusCode: err.statusCode }, 'Test push failed');
         if (err.statusCode === 410 || err.statusCode === 404) {
           await PushSubscription.deleteOne({ _id: sub._id });
-          console.log('[push] Removed expired subscription');
+          logger.info({ endpoint: sub.subscription.endpoint.slice(0, 50) }, 'Removed expired push subscription');
         }
         throw err;
       }
