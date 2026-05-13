@@ -72,6 +72,7 @@ export default function ProfileModal({ onClose }) {
   useEffect(() => { isPrivateMode().then(setIsPrivate); }, []);
   const [blockedUsers, setBlockedUsers] = useState(null);
   const [unblocking, setUnblocking] = useState(null);
+  const [showEncryptionDetails, setShowEncryptionDetails] = useState(false);
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -172,7 +173,7 @@ export default function ProfileModal({ onClose }) {
   }, [tab, sessions]);
 
   useEffect(() => {
-    if (tab !== 'security' || blockedUsers !== null) return;
+    if ((tab !== 'security' && tab !== 'privacy') || blockedUsers !== null) return;
     apiFetch('/users/me/blocked').then(setBlockedUsers).catch(() => setBlockedUsers([]));
   }, [tab, blockedUsers]);
 
@@ -406,7 +407,7 @@ export default function ProfileModal({ onClose }) {
         </div>
 
         <div className="tab-row">
-          {['profile', 'notifications', 'appearance', 'security'].map(t => (
+          {['profile', 'privacy', 'notifications', 'appearance', 'security'].map(t => (
             <button key={t} className={tab === t ? 'active' : ''} onClick={() => { setTab(t); setMsg(''); }}>
               {t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
@@ -555,6 +556,68 @@ export default function ProfileModal({ onClose }) {
             </>
           )}
 
+          {/* ── Privacy ── */}
+          {tab === 'privacy' && (
+            <>
+              <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
+                <div className="setting-text">
+                  <p className="setting-label">Hide Last Seen</p>
+                  <p className="setting-desc">Other users won't see when you were last online</p>
+                </div>
+                <button
+                  className={`toggle ${hideLastSeen ? 'on' : ''}`}
+                  onClick={async () => {
+                    const next = !hideLastSeen;
+                    setHideLastSeen(next);
+                    try { await updateProfile({ displayName, bio, hideLastSeen: next }); } catch { setHideLastSeen(!next); }
+                  }}
+                  aria-label="Toggle hide last seen"
+                ><span /></button>
+              </div>
+
+              <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
+                <div className="setting-text">
+                  <p className="setting-label">Hide Read Receipts</p>
+                  <p className="setting-desc">Other users won't see when you've read their messages</p>
+                </div>
+                <button
+                  className={`toggle ${hideReadReceipts ? 'on' : ''}`}
+                  onClick={async () => {
+                    const next = !hideReadReceipts;
+                    setHideReadReceipts(next);
+                    try { await updateProfile({ displayName, bio, hideReadReceipts: next }); } catch { setHideReadReceipts(!next); }
+                  }}
+                  aria-label="Toggle hide read receipts"
+                ><span /></button>
+              </div>
+
+              <div className="sessions-section">
+                <p className="sessions-label">Blocked Users</p>
+                {blockedUsers === null ? (
+                  <div className="sessions-loading">Loading…</div>
+                ) : blockedUsers.length === 0 ? (
+                  <div className="sessions-loading">No blocked users</div>
+                ) : (
+                  blockedUsers.map(u => (
+                    <div key={u._id} className="session-row">
+                      <div className="session-info" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span className="session-device">{u.displayName || u.username}</span>
+                        <span className="session-meta">@{u.username}</span>
+                      </div>
+                      <button
+                        className="session-revoke-btn"
+                        onClick={() => handleUnblock(u._id)}
+                        disabled={unblocking === String(u._id)}
+                      >
+                        {unblocking === String(u._id) ? '…' : 'Unblock'}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
           {/* ── Appearance ── */}
           {tab === 'appearance' && (
             <>
@@ -602,50 +665,18 @@ export default function ProfileModal({ onClose }) {
             <>
               <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
                 <div className="setting-text">
-                  <p className="setting-label">Hide Last Seen</p>
-                  <p className="setting-desc">Other users won't see when you were last online</p>
-                </div>
-                <button
-                  className={`toggle ${hideLastSeen ? 'on' : ''}`}
-                  onClick={async () => {
-                    const next = !hideLastSeen;
-                    setHideLastSeen(next);
-                    try { await updateProfile({ displayName, bio, hideLastSeen: next }); } catch { setHideLastSeen(!next); }
-                  }}
-                  aria-label="Toggle hide last seen"
-                ><span /></button>
-              </div>
-
-              <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
-                <div className="setting-text">
-                  <p className="setting-label">Hide Read Receipts</p>
-                  <p className="setting-desc">Other users won't see when you've read their messages</p>
-                </div>
-                <button
-                  className={`toggle ${hideReadReceipts ? 'on' : ''}`}
-                  onClick={async () => {
-                    const next = !hideReadReceipts;
-                    setHideReadReceipts(next);
-                    try { await updateProfile({ displayName, bio, hideReadReceipts: next }); } catch { setHideReadReceipts(!next); }
-                  }}
-                  aria-label="Toggle hide read receipts"
-                ><span /></button>
-              </div>
-
-              <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
-                <div className="setting-text">
                   <p className="setting-label">Account Password</p>
                   <p className="setting-desc">Change your login and encryption password</p>
                 </div>
                 <button className="secondary-btn" onClick={() => { setShowChangePassword(true); setPwMsg(''); setPasswords({ current: '', newPass: '', confirm: '' }); }}>
-                  🔑 Change
+                  Change
                 </button>
               </div>
 
               <div className="setting-row" style={{ background: 'var(--bg-3)', borderRadius: 'var(--radius)', padding: '14px' }}>
                 <div className="setting-text">
                   <p className="setting-label">Two-Factor Authentication</p>
-                  <p className="setting-desc">{twoFactorEnabled ? 'Enabled — your account is protected with TOTP' : 'Add an extra layer of security with an authenticator app'}</p>
+                  <p className="setting-desc">{twoFactorEnabled ? 'Enabled — account protected with TOTP' : 'Add an extra layer of security with an authenticator app'}</p>
                 </div>
                 {twoFactorEnabled ? (
                   <button className="danger-btn" onClick={() => { setShowTwoFactorDisable(true); setTwoFactorCode(''); setTwoFactorMsg(''); }}>
@@ -714,92 +745,69 @@ export default function ProfileModal({ onClose }) {
                 )}
               </div>
 
-              {/* Blocked users */}
-              <div className="sessions-section">
-                <p className="sessions-label">Blocked Users</p>
-                {blockedUsers === null ? (
-                  <div className="sessions-loading">Loading…</div>
-                ) : blockedUsers.length === 0 ? (
-                  <div className="sessions-loading">No blocked users</div>
-                ) : (
-                  blockedUsers.map(u => (
-                    <div key={u._id} className="session-row">
-                      <div className="session-info" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span className="session-device">{u.displayName || u.username}</span>
-                        <span className="session-meta">@{u.username}</span>
-                      </div>
-                      <button
-                        className="session-revoke-btn"
-                        onClick={() => handleUnblock(u._id)}
-                        disabled={unblocking === String(u._id)}
-                      >
-                        {unblocking === String(u._id) ? '…' : 'Unblock'}
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="security-banner">
-                <div className="security-icon">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+              {/* Collapsible encryption details */}
+              <button
+                className="enc-disclosure"
+                onClick={() => setShowEncryptionDetails(v => !v)}
+                aria-expanded={showEncryptionDetails}
+              >
+                <div className="enc-disclosure-left">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <rect x="3" y="11" width="18" height="11" rx="2" stroke="#3dd68c" strokeWidth="1.5"/>
                     <path d="M7 11V7a5 5 0 0110 0v4" stroke="#3dd68c" strokeWidth="1.5" strokeLinecap="round"/>
                     <circle cx="12" cy="16.5" r="1.5" fill="#3dd68c"/>
                   </svg>
+                  <span>End-to-end encrypted</span>
                 </div>
-                <h3>End-to-End Encrypted</h3>
-                <p>Messages are encrypted on your device before sending. The server only ever stores ciphertext — nobody but you can read them.</p>
-              </div>
+                <svg
+                  width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  style={{ transform: showEncryptionDetails ? 'rotate(180deg)' : 'none', transition: 'transform 200ms', color: 'var(--text-3)' }}
+                >
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
 
-              <div className="security-grid">
-                {[
-                  { label: 'Key Exchange', value: 'RSA-OAEP 2048-bit', icon: '🔐' },
-                  { label: 'Message Cipher', value: 'AES-256-GCM', icon: '🔒' },
-                  { label: 'Key Protection', value: 'PBKDF2 · 100k iterations', icon: '🛡️' },
-                  { label: 'Key Backup', value: 'Encrypted on server', icon: '☁️' },
-                ].map(({ label, value, icon }, index, arr) => (
-                  <div key={label} className="security-row" style={index === arr.length - 1 ? { borderBottom: 'none' } : {}}>
-                    <div className="security-row-left">
-                      <span className="security-row-icon">{icon}</span>
-                      <span className="security-row-label">{label}</span>
+              {showEncryptionDetails && (
+                <>
+                  <div className="security-grid">
+                    {[
+                      { label: 'Key Exchange', value: 'RSA-OAEP 2048-bit', icon: '🔐' },
+                      { label: 'Message Cipher', value: 'AES-256-GCM', icon: '🔒' },
+                      { label: 'Key Protection', value: 'PBKDF2 · 100k iterations', icon: '🛡️' },
+                      { label: 'Key Backup', value: 'Encrypted on server', icon: '☁️' },
+                    ].map(({ label, value, icon }, index, arr) => (
+                      <div key={label} className="security-row" style={index === arr.length - 1 ? { borderBottom: 'none' } : {}}>
+                        <div className="security-row-left">
+                          <span className="security-row-icon">{icon}</span>
+                          <span className="security-row-label">{label}</span>
+                        </div>
+                        <span className="security-row-value">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {user?.publicKey && (
+                    <div className="pubkey-box">
+                      <div className="pubkey-header">
+                        <span className="pubkey-label">Your Public Key</span>
+                        <span className="pubkey-note">Shared with contacts to encrypt messages to you</span>
+                      </div>
+                      <div className="pubkey-value">{user.publicKey.slice(0, 64)}…</div>
                     </div>
-                    <span className="security-row-value">{value}</span>
-                  </div>
-                ))}
-              </div>
+                  )}
 
-              {user?.publicKey && (
-                <div className="pubkey-box">
-                  <div className="pubkey-header">
-                    <span className="pubkey-label">Your Public Key</span>
-                    <span className="pubkey-note">Shared with contacts to encrypt messages to you</span>
-                  </div>
-                  <div className="pubkey-value">{user.publicKey.slice(0, 64)}…</div>
-                </div>
-              )}
-
-              <div className="security-info-row">
-                <div className="security-info-card">
-                  <span className="sic-icon">🔑</span>
-                  <p>Your private key is encrypted with your password. Even the server cannot read your messages.</p>
-                </div>
-                <div className="security-info-card">
-                  <span className="sic-icon">📱</span>
-                  <p>Log in from any device with your password to restore your keys automatically.</p>
-                </div>
-              </div>
-
-              {serverRetention?.messageRetentionDays > 0 && (
-                <div className="sessions-section">
-                  <p className="sessions-label">Server Policy</p>
-                  <div className="session-row">
-                    <div className="session-info">
-                      <span className="session-device">Message Retention</span>
-                      <span className="session-meta">Messages older than {serverRetention.messageRetentionDays} day{serverRetention.messageRetentionDays !== 1 ? 's' : ''} are automatically deleted by this server</span>
+                  {serverRetention?.messageRetentionDays > 0 && (
+                    <div className="sessions-section">
+                      <p className="sessions-label">Server Policy</p>
+                      <div className="session-row">
+                        <div className="session-info">
+                          <span className="session-device">Message Retention</span>
+                          <span className="session-meta">Messages older than {serverRetention.messageRetentionDays} day{serverRetention.messageRetentionDays !== 1 ? 's' : ''} are automatically deleted by this server</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+                </>
               )}
 
               <div className="danger-zone">
@@ -1411,6 +1419,17 @@ export default function ProfileModal({ onClose }) {
         }
         .session-revoke-btn:hover { background: var(--red-dim); }
         .session-revoke-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .enc-disclosure {
+          display: flex; align-items: center; justify-content: space-between;
+          width: 100%; padding: 12px 14px;
+          background: rgba(61,214,140,0.06); border: 1px solid rgba(61,214,140,0.2);
+          border-radius: var(--radius); cursor: pointer; transition: background 150ms;
+        }
+        .enc-disclosure:hover { background: rgba(61,214,140,0.1); }
+        .enc-disclosure-left {
+          display: flex; align-items: center; gap: 8px;
+          font-size: 13px; font-weight: 500; color: #3dd68c;
+        }
         .logout-btn {
           display: flex; align-items: center; gap: 8px;
           color: var(--red); font-size: 14px; font-weight: 500;
