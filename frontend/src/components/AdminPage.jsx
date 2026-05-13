@@ -709,6 +709,9 @@ export default function AdminPage({ onBack }) {
                   <option value="invite.revoke">Invite revoked</option>
                   <option value="settings.registration_toggle">Registration</option>
                   <option value="settings.email_update">Email settings</option>
+                  <option value="settings.message_retention">Message retention</option>
+                  <option value="settings.auditlog_retention">Audit log retention</option>
+                  <option value="purge.messages">Purged messages</option>
                 </select>
                 <select className="ap-filter-select" value={String(auditLimit)} onChange={e => { setAuditLimit(Number(e.target.value)); setAuditPage(1); }}>
                   <option value="20">20 / page</option>
