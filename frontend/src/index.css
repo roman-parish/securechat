@@ -104,33 +104,11 @@ body {
 }
 
 /* body.ios-pwa is set by JS (navigator.standalone || matchMedia standalone).
-   These rules guarantee the bottom safe area is always applied on iOS PWA,
-   even when env() misbehaves. Using padding-bottom on fixed/sticky bottom
-   bars ensures their background visually fills behind the home indicator. */
+   --bsa is set to 34px as a fallback; JS overrides it with the measured
+   env(safe-area-inset-bottom) value if it resolves to a positive number. */
 body.ios-pwa {
-  --bsa: 34px; /* JS will override with measured env() value if it resolves */
+  --bsa: 34px;
 }
-
-/* On iOS PWA, position:fixed elements with bottom:0 stop at the CSS viewport
-   boundary, not the physical screen edge. Extend them by --bsa so their
-   background visually fills the home indicator zone. The per-component
-   padding-bottom keeps content (icons/text) above the home indicator. */
-body.ios-pwa .ap {
-  bottom: -34px; /* hardcoded for diagnosis — was calc(-1 * var(--bsa)) */
-}
-
-/* #root sits above the home indicator zone. Extend it so the chat input
-   bar and sidebar backgrounds fill to the physical screen edge. */
-body.ios-pwa #root {
-  height: calc(100dvh + 34px); /* hardcoded for diagnosis */
-}
-
-/* ── SAFE AREA DEBUG — remove after diagnosis ── */
-html { outline: 4px solid red; }
-body { outline: 4px solid blue; }
-#root { outline: 4px solid green; }
-body.ios-pwa .ap { outline: 4px solid orange; }
-body.ios-pwa { background: rgba(255,0,255,0.2) !important; }
 
 #root {
   display: flex;
