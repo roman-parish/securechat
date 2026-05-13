@@ -125,6 +125,13 @@ body.ios-pwa #root {
   height: calc(100dvh + var(--bsa));
 }
 
+/* ── SAFE AREA DEBUG — remove after diagnosis ── */
+html { outline: 4px solid red; }
+body { outline: 4px solid blue; }
+#root { outline: 4px solid green; }
+body.ios-pwa .ap { outline: 4px solid orange; }
+body.ios-pwa { background: rgba(255,0,255,0.2) !important; }
+
 #root {
   display: flex;
   flex-direction: column;
