@@ -71,17 +71,24 @@ if (document.readyState === 'complete') {
   if (metaTC) metaTC.setAttribute('content', theme === 'light' ? '#f5f5fa' : '#0f0f13');
 
   // 2. Measure env(safe-area-inset-bottom). On some iOS PWA versions env()
-  //    returns 0 even when the home indicator is present; fall back to 34px.
-  const el = document.createElement('div');
-  el.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none';
-  document.body.appendChild(el);
-  const bsa = parseFloat(getComputedStyle(el).paddingBottom) || 0;
-  document.body.removeChild(el);
-  if (bsa > 0) {
-    html.style.setProperty('--bsa', bsa + 'px');
-  } else if (window.navigator.standalone === true) {
-    html.style.setProperty('--bsa', '34px');
+  //    returns 0 when scripts run (before layout), so we measure immediately
+  //    AND re-measure after the page loads as a correction pass.
+  function applyBsa() {
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none';
+    document.body.appendChild(el);
+    const bsa = parseFloat(getComputedStyle(el).paddingBottom) || 0;
+    document.body.removeChild(el);
+    if (bsa > 0) {
+      html.style.setProperty('--bsa', bsa + 'px');
+    } else if (window.navigator.standalone === true) {
+      html.style.setProperty('--bsa', '34px');
+    }
   }
+
+  applyBsa();
+  // Re-run after layout so iOS has had a chance to resolve env()
+  window.addEventListener('load', applyBsa, { once: true });
 }());
 
 createRoot(document.getElementById('root')).render(

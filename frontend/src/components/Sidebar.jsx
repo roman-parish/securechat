@@ -225,7 +225,7 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
         .search-box input::placeholder { color: var(--text-3); }
         .conv-list {
           flex: 1; overflow-y: auto; padding: 8px;
-          padding-bottom: 8px;
+          padding-bottom: max(8px, var(--bsa), env(safe-area-inset-bottom, 0px));
         }
         .archived-toggle {
           display: flex; align-items: center; gap: 7px;
