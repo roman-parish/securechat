@@ -103,12 +103,7 @@ body {
   --bsa: env(safe-area-inset-bottom, 0px);
 }
 
-/* body.ios-pwa is set by JS (navigator.standalone || matchMedia standalone).
-   --bsa is set to 34px as a fallback; JS overrides it with the measured
-   env(safe-area-inset-bottom) value if it resolves to a positive number. */
-body.ios-pwa {
-  --bsa: 34px;
-}
+/* body.ios-pwa is set by JS (navigator.standalone || matchMedia standalone). */
 
 
 #root {

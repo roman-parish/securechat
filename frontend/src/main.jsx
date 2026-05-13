@@ -90,10 +90,10 @@ if (document.readyState === 'complete') {
     document.body.appendChild(el);
     const bsa = parseFloat(getComputedStyle(el).paddingBottom) || 0;
     document.body.removeChild(el);
+    // Only set --bsa when env() resolves to a real value (viewport-fit=cover).
+    // If env()=0, iOS is managing the safe area itself — no padding needed.
     if (bsa > 0) {
       html.style.setProperty('--bsa', bsa + 'px');
-    } else if (isIosPwa) {
-      html.style.setProperty('--bsa', '34px');
     }
   }
 
