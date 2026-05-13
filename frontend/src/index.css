@@ -116,13 +116,13 @@ body.ios-pwa {
    background visually fills the home indicator zone. The per-component
    padding-bottom keeps content (icons/text) above the home indicator. */
 body.ios-pwa .ap {
-  bottom: calc(-1 * var(--bsa));
+  bottom: -34px; /* hardcoded for diagnosis — was calc(-1 * var(--bsa)) */
 }
 
 /* #root sits above the home indicator zone. Extend it so the chat input
    bar and sidebar backgrounds fill to the physical screen edge. */
 body.ios-pwa #root {
-  height: calc(100dvh + var(--bsa));
+  height: calc(100dvh + 34px); /* hardcoded for diagnosis */
 }
 
 /* ── SAFE AREA DEBUG — remove after diagnosis ── */

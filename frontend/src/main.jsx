@@ -95,6 +95,25 @@ if (document.readyState === 'complete') {
 
   applyBsa();
   window.addEventListener('load', applyBsa, { once: true });
+
+  // DEBUG: show computed --bsa value on screen
+  if (isIosPwa) {
+    const dbg = document.createElement('div');
+    dbg.id = 'bsa-debug';
+    dbg.style.cssText = 'position:fixed;top:120px;left:10px;z-index:9999;background:yellow;color:black;font-size:13px;font-weight:bold;padding:4px 8px;border-radius:4px;pointer-events:none';
+    document.body.appendChild(dbg);
+    function updateDebug() {
+      const bsaVal = getComputedStyle(document.documentElement).getPropertyValue('--bsa');
+      const envEl = document.createElement('div');
+      envEl.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none';
+      document.body.appendChild(envEl);
+      const envVal = parseFloat(getComputedStyle(envEl).paddingBottom) || 0;
+      document.body.removeChild(envEl);
+      dbg.textContent = '--bsa:' + bsaVal.trim() + ' env:' + envVal + 'px';
+    }
+    updateDebug();
+    window.addEventListener('load', updateDebug, { once: true });
+  }
 }());
 
 createRoot(document.getElementById('root')).render(
