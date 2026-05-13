@@ -16,7 +16,12 @@ export function ThemeProvider({ children }) {
   });
 
   useEffect(() => {
+    const bg = theme === 'light' ? '#f5f5fa' : '#0f0f13';
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.style.background = bg;
+    document.body.style.background = bg;
+    const metaTC = document.querySelector('meta[name="theme-color"]');
+    if (metaTC) metaTC.setAttribute('content', bg);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
