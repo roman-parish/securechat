@@ -114,7 +114,6 @@ body.ios-pwa {
 html { outline: 4px solid red; }
 body { outline: 4px solid blue; }
 #root { outline: 4px solid green; }
-body.ios-pwa { background: rgba(255,0,255,0.2) !important; }
 
 #root {
   display: flex;

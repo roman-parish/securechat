@@ -109,7 +109,8 @@ if (document.readyState === 'complete') {
     function updateDebug() {
       const bsaVal = getComputedStyle(document.documentElement).getPropertyValue('--bsa').trim();
       const htmlBg = document.documentElement.style.background || '(css)';
-      dbg.textContent = 'theme:' + theme + ' --bsa:' + bsaVal + ' html.bg:' + htmlBg;
+      const bodyBg = getComputedStyle(document.body).backgroundColor;
+      dbg.textContent = 'bsa:' + bsaVal + ' html:' + htmlBg + ' body:' + bodyBg;
     }
     updateDebug();
     window.addEventListener('load', updateDebug, { once: true });
