@@ -76,27 +76,6 @@ if (document.readyState === 'complete') {
 
 }());
 
-// DEBUG: show safe-area and viewport metrics in PWA mode
-(function () {
-  const isPwa = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-  if (!isPwa) return;
-  const el = document.createElement('div');
-  el.id = 'sa-debug';
-  el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99999;background:rgba(255,0,0,0.85);color:#fff;font:12px/1.5 monospace;padding:6px 10px;pointer-events:none;';
-  document.body.appendChild(el);
-
-  const probe = document.createElement('div');
-  probe.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;height:env(safe-area-inset-bottom,0px);pointer-events:none;opacity:0;';
-  document.body.appendChild(probe);
-
-  function update() {
-    const saHeight = probe.getBoundingClientRect().height;
-    el.textContent = `innerH:${window.innerHeight} vvH:${window.visualViewport?.height ?? '?'} SA-bottom:${saHeight}px rootH:${document.getElementById('root')?.getBoundingClientRect().height ?? '?'}`;
-  }
-  update();
-  window.visualViewport?.addEventListener('resize', update);
-  window.addEventListener('resize', update);
-}());
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
