@@ -28,11 +28,14 @@ const upload = multer({
   storage: attachmentStorage,
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    // Only accept encrypted blobs — anything else is a client error
-    if (file.mimetype === 'application/octet-stream') {
-      cb(null, true);
-    } else {
+    // Content is E2E-encrypted before upload so the MIME type is informational
+    // only. Block obviously wrong types but don't reject browser variations of
+    // octet-stream (e.g. "application/octet-stream; charset=utf-8").
+    const blocked = ['text/html', 'text/javascript', 'application/javascript', 'image/svg+xml'];
+    if (blocked.includes(file.mimetype.split(';')[0].trim())) {
       cb(new Error('File type not allowed'));
+    } else {
+      cb(null, true);
     }
   },
 });
