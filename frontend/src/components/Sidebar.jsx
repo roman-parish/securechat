@@ -18,9 +18,40 @@ import { format } from 'date-fns';
 
 export default function Sidebar({ onSelectConversation, activeConversationId: activeConvIdProp, onRemoveActive, onOpenAdmin }) {
   const { user, logout } = useAuth();
-  const { conversations, archivedConversations, activeConversationId, onlineUsers, unreadCounts, loading, removeConversation, leaveGroup, archiveConversation, unarchiveConversation, blockUser, typingMap, invitations, removeInvitation } = useChat();
+  const { conversations, archivedConversations, activeConversationId, onlineUsers, unreadCounts, loading, loadConversations, removeConversation, leaveGroup, archiveConversation, unarchiveConversation, blockUser, typingMap, invitations, removeInvitation } = useChat();
   const { connected } = useSocket();
   const [search, setSearch] = useState('');
+
+  // Pull-to-refresh
+  const [pullY, setPullY] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const pullStart = useRef(null);
+  const listRef = useRef(null);
+  const PULL_THRESHOLD = 64;
+
+  const handlePullStart = (e) => {
+    if (listRef.current?.scrollTop === 0) {
+      pullStart.current = e.touches[0].clientY;
+    }
+  };
+  const handlePullMove = (e) => {
+    if (pullStart.current === null || refreshing) return;
+    const dy = e.touches[0].clientY - pullStart.current;
+    if (dy > 0) {
+      e.preventDefault();
+      setPullY(Math.min(dy, PULL_THRESHOLD + 20));
+    }
+  };
+  const handlePullEnd = async () => {
+    if (pullY >= PULL_THRESHOLD && !refreshing) {
+      setRefreshing(true);
+      setPullY(0);
+      try { await loadConversations(); } finally { setRefreshing(false); }
+    } else {
+      setPullY(0);
+    }
+    pullStart.current = null;
+  };
   const [showNewChat, setShowNewChat] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -131,7 +162,22 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
         />
       )}
 
-      <div className="conv-list">
+      <div
+        className="conv-list"
+        ref={listRef}
+        onTouchStart={handlePullStart}
+        onTouchMove={handlePullMove}
+        onTouchEnd={handlePullEnd}
+      >
+        {(pullY > 0 || refreshing) && (
+          <div className="ptr-indicator" style={{ height: refreshing ? 48 : pullY * 0.6 }}>
+            <div className={`ptr-spinner${refreshing ? ' spinning' : ''}`} style={!refreshing ? { transform: `rotate(${(pullY / PULL_THRESHOLD) * 360}deg)` } : undefined}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+          </div>
+        )}
         {loading
           ? Array.from({ length: 5 }).map((_, i) => <SkeletonItem key={i} />)
           : filtered.length === 0
@@ -227,6 +273,14 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
           flex: 1; overflow-y: auto; padding: 8px;
           padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
         }
+        .ptr-indicator {
+          display: flex; align-items: center; justify-content: center;
+          overflow: hidden; transition: height 0.2s ease;
+          color: var(--text-3);
+        }
+        .ptr-spinner { display: flex; align-items: center; justify-content: center; transition: transform 0.1s linear; }
+        .ptr-spinner.spinning { animation: ptr-spin 0.7s linear infinite; }
+        @keyframes ptr-spin { to { transform: rotate(360deg); } }
         .archived-toggle {
           display: flex; align-items: center; gap: 7px;
           width: 100%; padding: 8px 12px; margin-top: 4px;
