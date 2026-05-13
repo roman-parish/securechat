@@ -105,6 +105,12 @@ body {
 
 /* body.ios-pwa is set by JS (navigator.standalone || matchMedia standalone). */
 
+/* ── SAFE AREA DEBUG — remove after diagnosis ── */
+html { outline: 4px solid red; }
+body { outline: 4px solid blue; }
+#root { outline: 4px solid green; }
+body.ios-pwa { outline: 4px solid purple; }
+
 
 #root {
   display: flex;
