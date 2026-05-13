@@ -96,18 +96,19 @@ body {
 }
 
 /* --bsa: bottom safe area (home indicator height).
-   env() can silently return 0 on some iOS standalone versions even when
-   the home indicator is present. The JS measurement in main.jsx overrides
-   this via an inline style when it succeeds; the @media standalone rule
-   ensures a 34px floor when it doesn't. */
+   env() can silently return 0 on some iOS standalone versions. The JS in
+   main.jsx sets --bsa as an inline style (highest specificity) and adds
+   body.ios-pwa for reliable standalone detection. */
 :root {
   --bsa: env(safe-area-inset-bottom, 0px);
 }
-@media (display-mode: standalone) {
-  :root {
-    /* max() ensures we get at least 34px in standalone even if env() returns 0 */
-    --bsa: max(env(safe-area-inset-bottom, 34px), 34px);
-  }
+
+/* body.ios-pwa is set by JS (navigator.standalone || matchMedia standalone).
+   These rules guarantee the bottom safe area is always applied on iOS PWA,
+   even when env() misbehaves. Using padding-bottom on fixed/sticky bottom
+   bars ensures their background visually fills behind the home indicator. */
+body.ios-pwa {
+  --bsa: 34px; /* JS will override with measured env() value if it resolves */
 }
 
 #root {
