@@ -74,31 +74,6 @@ if (document.readyState === 'complete') {
   const metaTC = document.querySelector('meta[name="theme-color"]');
   if (metaTC) metaTC.setAttribute('content', theme === 'light' ? '#f5f5fa' : '#0f0f13');
 
-  // 2. Detect iOS PWA standalone mode. navigator.standalone is the most reliable
-  //    signal — @media (display-mode: standalone) is flaky on iOS Safari.
-  //    Adding body.ios-pwa lets CSS target it directly with env() + hard fallback.
-  const isIosPwa = window.navigator.standalone === true
-    || window.matchMedia('(display-mode: standalone)').matches;
-  if (isIosPwa) document.body.classList.add('ios-pwa');
-
-  // 3. Measure env(safe-area-inset-bottom). On some iOS versions env() returns 0
-  //    before layout resolves. We measure now AND after load as a correction pass.
-  //    --bsa is used by legacy components; ios-pwa class drives the new approach.
-  function applyBsa() {
-    const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none';
-    document.body.appendChild(el);
-    const bsa = parseFloat(getComputedStyle(el).paddingBottom) || 0;
-    document.body.removeChild(el);
-    // Only set --bsa when env() resolves to a real value (viewport-fit=cover).
-    // If env()=0, iOS is managing the safe area itself — no padding needed.
-    if (bsa > 0) {
-      html.style.setProperty('--bsa', bsa + 'px');
-    }
-  }
-
-  applyBsa();
-  window.addEventListener('load', applyBsa, { once: true });
 }());
 
 createRoot(document.getElementById('root')).render(

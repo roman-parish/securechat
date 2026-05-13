@@ -1336,7 +1336,7 @@ export default function ProfileModal({ onClose }) {
         .security-info-card p { font-size: 12px; color: var(--text-2); line-height: 1.6; margin: 0; }
         .modal-footer {
           padding: 12px 20px;
-          padding-bottom: max(12px, var(--bsa));
+          padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
           border-top: 1px solid var(--border);
           flex-shrink: 0; background: var(--bg-2);
           border-radius: 0 0 24px 24px;
