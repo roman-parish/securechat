@@ -24,9 +24,10 @@ const ACTION_LABELS = {
   'invite.revoke': 'Revoked invite',
   'settings.registration_toggle': 'Registration',
   'settings.email_update': 'Email settings',
-  'settings.message_retention': 'Message retention',
-  'settings.auditlog_retention': 'Audit log retention',
+  'settings.message_retention': 'Msg retention',
+  'settings.auditlog_retention': 'Log retention',
   'purge.messages': 'Purged messages',
+  'purge.audit-logs': 'Purged logs',
 };
 
 function formatBytes(bytes) {
@@ -1246,6 +1247,8 @@ export default function AdminPage({ onBack }) {
         .ap-badge.audit-user-unban,.ap-badge.audit-invite-create                          { background: var(--green-dim);       color: var(--green);  }
         .ap-badge.audit-user-password_reset,.ap-badge.audit-user-reset_2fa,.ap-badge.audit-user-verify_email { background: var(--accent-dim); color: var(--accent); }
         .ap-badge.audit-settings-registration_toggle,.ap-badge.audit-settings-email_update { background: var(--bg-3);           color: var(--text-2); }
+        .ap-badge.audit-settings-message_retention,.ap-badge.audit-settings-auditlog_retention { background: var(--bg-3);       color: var(--text-2); }
+        .ap-badge.audit-purge-messages,.ap-badge.audit-purge-audit-logs                   { background: var(--red-dim);         color: var(--red);    }
 
         /* Audit row */
         .ap-audit-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
