@@ -94,15 +94,12 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { background: #0f0f13; }
     body { background: #0f0f13; color: #e8e8f0; font-family: system-ui; }
-    /* Full viewport — dvh with -webkit-fill-available fallback for older iOS.
-       padding-bottom fills behind the home indicator so no gap shows. */
+    /* position:fixed;inset:0 always fills the full physical screen on iOS —
+       avoids the blank gap that 100dvh/-webkit-fill-available leave on iOS 26. */
     #root {
-      height: 100dvh;
-      height: -webkit-fill-available;
+      position: fixed;
+      inset: 0;
       overflow: hidden;
-      /* Bottom padding in the inline style handles the safe area so the
-         dark background fills all the way to the physical screen edge. */
-      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
   </style>
 </head>
