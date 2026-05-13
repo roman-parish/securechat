@@ -99,6 +99,21 @@ if (document.readyState === 'complete') {
 
   applyBsa();
   window.addEventListener('load', applyBsa, { once: true });
+
+  // DEBUG: show theme + computed --bsa on screen
+  if (isIosPwa) {
+    const dbg = document.createElement('div');
+    dbg.id = 'bsa-debug';
+    dbg.style.cssText = 'position:fixed;top:120px;left:10px;z-index:9999;background:yellow;color:black;font-size:13px;font-weight:bold;padding:4px 8px;border-radius:4px;pointer-events:none';
+    document.body.appendChild(dbg);
+    function updateDebug() {
+      const bsaVal = getComputedStyle(document.documentElement).getPropertyValue('--bsa').trim();
+      const htmlBg = document.documentElement.style.background || '(css)';
+      dbg.textContent = 'theme:' + theme + ' --bsa:' + bsaVal + ' html.bg:' + htmlBg;
+    }
+    updateDebug();
+    window.addEventListener('load', updateDebug, { once: true });
+  }
 }());
 
 createRoot(document.getElementById('root')).render(
