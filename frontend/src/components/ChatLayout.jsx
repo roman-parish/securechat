@@ -204,7 +204,7 @@ export default function ChatLayout({ onOpenAdmin }) {
         .chat-layout {
           display: flex;
           flex: 1;
-          height: 100%;
+          min-height: 0;
           overflow: hidden;
           background: var(--bg-1);
         }
@@ -218,6 +218,7 @@ export default function ChatLayout({ onOpenAdmin }) {
         .main-panel {
           flex: 1;
           min-width: 0;
+          min-height: 0;
           display: flex;
           flex-direction: column;
         }
