@@ -14,12 +14,13 @@ import { apiFetch } from '../utils/api.js';
 import Avatar from './Avatar.jsx';
 import NewChatModal from './NewChatModal.jsx';
 import ProfileModal from './ProfileModal.jsx';
-import { format } from 'date-fns';
+import { convTime, fullDateTime, smartRelative, useNow } from '../utils/time.js';
 
 export default function Sidebar({ onSelectConversation, activeConversationId: activeConvIdProp, onRemoveActive, onOpenAdmin }) {
   const { user, logout } = useAuth();
   const { conversations, archivedConversations, activeConversationId, onlineUsers, unreadCounts, loading, loadConversations, removeConversation, leaveGroup, archiveConversation, unarchiveConversation, blockUser, typingMap, invitations, removeInvitation } = useChat();
   const { connected } = useSocket();
+  const now = useNow();
   const [search, setSearch] = useState('');
 
   // Pull-to-refresh
@@ -300,16 +301,6 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
   );
 }
 
-function convTimestamp(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diffDays = Math.floor((now - d) / 86400000);
-  if (diffDays === 0) return format(d, 'h:mm a');
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return format(d, 'EEE');
-  return format(d, 'dd/MM/yy');
-}
 
 function convPreview(conv, currentUser, hasUnread) {
   const msg = conv.lastMessage;
@@ -337,7 +328,7 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
   const mutedEntry = conv.mutedBy?.find(m => String(m.userId) === String(user._id));
   const isMuted = !!(mutedEntry && (!mutedEntry.until || new Date(mutedEntry.until) > new Date()));
   const muteLabel = isMuted && mutedEntry?.until
-    ? `Muted until ${format(new Date(mutedEntry.until), 'MMM d, h:mm a')}`
+    ? `Muted until ${smartRelative(mutedEntry.until, now)}`
     : isMuted ? 'Muted' : null;
 
   // Close menu when clicking outside
@@ -392,7 +383,7 @@ function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClic
             </svg>
           )}
           {!showMoreBtn && (
-            <span className="conv-time">{convTimestamp(conv.lastActivity || conv.updatedAt)}</span>
+            <span className="conv-time" title={fullDateTime(conv.lastActivity || conv.updatedAt)}>{convTime(conv.lastActivity || conv.updatedAt, now)}</span>
           )}
         </div>
         <div className="conv-bottom">

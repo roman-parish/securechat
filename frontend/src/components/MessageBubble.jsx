@@ -8,6 +8,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
+import { fullDateTime } from '../utils/time.js';
 import { apiFetch } from '../utils/api.js';
 import { decryptFile } from '../utils/crypto.js';
 
@@ -438,7 +439,7 @@ export default function MessageBubble({ msg, plaintext, replyPlaintext, isOwn, i
               {plaintext && plaintext !== '📎' && plaintext !== '🎤' && <p className="msg-text">{renderText(plaintext, currentUsername)}</p>}
               <div className="msg-meta">
                 {msg.editedAt && <span className="edited-tag">edited</span>}
-                <span className="msg-time">{format(new Date(msg.createdAt), 'h:mm a')}</span>
+                <span className="msg-time" title={fullDateTime(msg.createdAt)}>{format(new Date(msg.createdAt), 'h:mm a')}</span>
                 {isOwn && (() => {
                   const isGroup = participantCount > 2;
                   const readCount = (msg.readBy?.length ?? 1) - 1; // exclude self

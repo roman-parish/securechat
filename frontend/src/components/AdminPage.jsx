@@ -11,7 +11,7 @@ import { apiFetch } from '../utils/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useChat } from '../contexts/ChatContext.jsx';
 import Avatar from './Avatar.jsx';
-import { formatDistanceToNow } from 'date-fns';
+import { smartRelative, fullDateTime, useNow } from '../utils/time.js';
 
 const ACTION_LABELS = {
   'user.ban': 'Suspended',
@@ -114,6 +114,7 @@ export default function AdminPage({ onBack }) {
   const { user } = useAuth();
   const { onlineUsers } = useChat();
 
+  const now = useNow();
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'audit'
 
   const [stats, setStats] = useState(null);
@@ -376,7 +377,7 @@ export default function AdminPage({ onBack }) {
           {activeTab === 'stats' && (
             <div className="ap-stats-header">
               <span className="ap-stats-updated">
-                {statsUpdated ? `Updated ${formatDistanceToNow(statsUpdated, { addSuffix: true })}` : ''}
+                {statsUpdated ? `Updated ${smartRelative(statsUpdated, now)}` : ''}
               </span>
               <button className="ap-pill-btn" style={{ fontSize: 13, padding: '6px 14px' }} onClick={loadStats}>Refresh</button>
             </div>
@@ -798,7 +799,7 @@ export default function AdminPage({ onBack }) {
                           {log.action === 'invite.create' && log.metadata?.email && <span className="ap-audit-target"> → {log.metadata.email}</span>}
                           {log.action === 'settings.registration_toggle' && <span className="ap-audit-target"> {log.metadata?.registrationOpen ? 'opened' : 'closed'}</span>}
                         </span>
-                        <span className="ap-audit-time">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}</span>
+                        <span className="ap-audit-time" title={fullDateTime(log.createdAt)}>{smartRelative(log.createdAt, now)}</span>
                       </span>
                     </div>
                   </div>
@@ -879,7 +880,7 @@ export default function AdminPage({ onBack }) {
             </div>
             <div className="ap-detail-row">
               <span className="ap-detail-label">Last seen</span>
-              <span className="ap-detail-value">{menuUser.lastSeen ? formatDistanceToNow(new Date(menuUser.lastSeen), { addSuffix: true }) : 'Never'}</span>
+              <span className="ap-detail-value" title={menuUser.lastSeen ? fullDateTime(menuUser.lastSeen) : ''}>{menuUser.lastSeen ? smartRelative(menuUser.lastSeen, now) : 'Never'}</span>
             </div>
             {menuUser.email && (
               <div className="ap-detail-row">
@@ -968,7 +969,7 @@ export default function AdminPage({ onBack }) {
                       {inv.email || 'No email — link only'}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                      Expires {formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}
+                      Expires {smartRelative(inv.expiresAt, now)}
                     </div>
                   </div>
                   <button className="ap-ghost-btn" onClick={() => handleRevokeInvite(inv._id)}>Revoke</button>

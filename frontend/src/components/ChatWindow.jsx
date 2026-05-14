@@ -14,14 +14,15 @@ import { decryptMessage, encryptFile, bufToB64, b64ToBuf } from '../utils/crypto
 import Avatar from './Avatar.jsx';
 import MessageBubble from './MessageBubble.jsx';
 import GroupInfoModal from './GroupInfoModal.jsx';
-import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
+import { fullDateTime, smartRelative } from '../utils/time.js';
 
 function formatLastSeen(lastSeen) {
   if (!lastSeen) return 'Offline';
   const d = new Date(lastSeen);
   if (isToday(d)) return `Last seen today at ${format(d, 'h:mm a')}`;
   if (isYesterday(d)) return `Last seen yesterday at ${format(d, 'h:mm a')}`;
-  return `Last seen ${formatDistanceToNow(d, { addSuffix: true })}`;
+  return `Last seen ${smartRelative(d)}`;
 }
 
 export default function ChatWindow({ conversationId, onBack }) {
@@ -720,7 +721,7 @@ export default function ChatWindow({ conversationId, onBack }) {
               : isOtherOnline
                 ? <span style={{ color: 'var(--green)' }}>● Online</span>
                 : onlineListLoaded
-                  ? <span style={{ color: 'var(--text-3)' }}>{formatLastSeen(otherUser?.lastSeen)}</span>
+                  ? <span style={{ color: 'var(--text-3)' }} title={fullDateTime(otherUser?.lastSeen)}>{formatLastSeen(otherUser?.lastSeen)}</span>
                   : 'E2E Encrypted'}
           </span>
         </div>
@@ -1186,7 +1187,7 @@ export default function ChatWindow({ conversationId, onBack }) {
               {isOtherOnline
                 ? <span className="online-pill">● Online</span>
                 : onlineListLoaded
-                  ? <span className="offline-pill">{formatLastSeen(otherUser?.lastSeen)}</span>
+                  ? <span className="offline-pill" title={fullDateTime(otherUser?.lastSeen)}>{formatLastSeen(otherUser?.lastSeen)}</span>
                   : <span className="encrypted-pill">🔒 E2E Encrypted</span>
               }
             </div>
