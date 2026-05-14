@@ -63,12 +63,10 @@ function emailBase({ preheader, body }) {
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:500px;">
 
-          <!-- Header — OG image style: dark background, centered lock + wordmark -->
+          <!-- Header — OG image as banner -->
           <tr>
-            <td align="center" bgcolor="#161620" style="background-color:#161620;border-radius:16px 16px 0 0;padding:40px 32px 36px;">
-              <img src="${CLIENT_URL}/icons/icon-192.png" width="56" height="56" alt="SecureChat" style="border:0;display:block;border-radius:14px;"/>
-              <div style="margin-top:12px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">SecureChat</div>
-              <div style="margin-top:6px;font-size:14px;color:#9b93fa;">End-to-end encrypted messaging</div>
+            <td style="border-radius:16px 16px 0 0;overflow:hidden;font-size:0;line-height:0;">
+              <img src="${CLIENT_URL}/og-image.png" width="500" alt="SecureChat — End-to-end encrypted messaging" style="border:0;display:block;width:100%;max-width:500px;border-radius:16px 16px 0 0;"/>
             </td>
           </tr>
 
