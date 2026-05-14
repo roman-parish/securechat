@@ -66,12 +66,7 @@ function emailBase({ preheader, body }) {
           <!-- Header — OG image style: dark background, centered lock + wordmark -->
           <tr>
             <td align="center" bgcolor="#161620" style="background-color:#161620;border-radius:16px 16px 0 0;padding:40px 32px 36px;">
-              <svg width="52" height="52" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="3" y="11" width="18" height="11" rx="3" fill="#7c6cf8" opacity="0.2"/>
-                <rect x="3" y="11" width="18" height="11" rx="3" stroke="#7c6cf8" stroke-width="1.5"/>
-                <path d="M7 11V7a5 5 0 0110 0v4" stroke="#7c6cf8" stroke-width="1.5" stroke-linecap="round"/>
-                <circle cx="12" cy="16.5" r="1.5" fill="#7c6cf8"/>
-              </svg>
+              <img src="${CLIENT_URL}/icons/icon-192.png" width="56" height="56" alt="SecureChat" style="border:0;display:block;border-radius:14px;"/>
               <div style="margin-top:12px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">SecureChat</div>
               <div style="margin-top:6px;font-size:14px;color:#9b93fa;">End-to-end encrypted messaging</div>
             </td>
