@@ -203,6 +203,7 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
                 onArchive={() => archiveConversation(conv._id)}
                 onBlock={async (userId) => { await blockUser(userId); removeConversation(conv._id); }}
                 onMuteToggle={handleMuteToggle}
+                now={now}
               />
             ))
         }
@@ -234,6 +235,7 @@ export default function Sidebar({ onSelectConversation, activeConversationId: ac
                 onUnarchive={() => unarchiveConversation(conv._id)}
                 onMuteToggle={handleMuteToggle}
                 isArchived
+                now={now}
               />
             ))}
           </>
@@ -319,7 +321,7 @@ function convPreview(conv, currentUser, hasUnread) {
   }
 }
 
-function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onLeave, onArchive, onUnarchive, onBlock, onMuteToggle, isArchived }) {
+function ConvItem({ conv, user, active, onlineUsers, unread, typingUsers, onClick, onRemove, onLeave, onArchive, onUnarchive, onBlock, onMuteToggle, isArchived, now }) {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
