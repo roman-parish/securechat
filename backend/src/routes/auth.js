@@ -24,6 +24,13 @@ import { randomBytes, createHash } from 'crypto';
 
 const router = Router();
 
+const formatCST = (date = new Date()) =>
+  date.toLocaleString('en-US', {
+    timeZone: 'America/Chicago',
+    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  });
+
 // Generate 10 recovery codes, return plaintext + store hashed versions
 function generateRecoveryCodes() {
   const plain = Array.from({ length: 10 }, () => {
@@ -236,7 +243,7 @@ router.post('/login', [
           displayName: user.displayName || user.username,
           ip: req.ip,
           userAgent: req.headers['user-agent'] || 'Unknown device',
-          time: new Date().toUTCString(),
+          time: formatCST(),
         }).catch(() => {});
       }).catch(() => {});
     }
@@ -475,7 +482,7 @@ router.post('/change-password', authenticate, async (req, res) => {
         if (allowed) sendPasswordChangedNotification({
           to: user.email,
           displayName: user.displayName || user.username,
-          time: new Date().toUTCString(),
+          time: formatCST(),
         }).catch(() => {});
       }).catch(() => {});
     }
@@ -548,7 +555,7 @@ router.post('/2fa/authenticate', async (req, res) => {
           displayName: user.displayName || user.username,
           ip: req.ip,
           userAgent: req.headers['user-agent'] || 'Unknown device',
-          time: new Date().toUTCString(),
+          time: formatCST(),
         }).catch(() => {});
       }).catch(() => {});
     }
@@ -693,7 +700,7 @@ router.post('/2fa/disable', authenticate, async (req, res) => {
         if (allowed) sendTwoFactorDisabledNotification({
           to: user.email,
           displayName: user.displayName || user.username,
-          time: new Date().toUTCString(),
+          time: formatCST(),
         });
       }).catch(() => {});
     }
@@ -758,7 +765,7 @@ router.post('/reset-password', async (req, res) => {
         if (allowed) sendPasswordChangedNotification({
           to: user.email,
           displayName: user.displayName || user.username,
-          time: new Date().toUTCString(),
+          time: formatCST(),
         }).catch(() => {});
       }).catch(() => {});
     }
