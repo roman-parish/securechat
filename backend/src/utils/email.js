@@ -66,7 +66,7 @@ function emailBase({ preheader, body }) {
           <!-- Header — dedicated email header image -->
           <tr>
             <td style="border-radius:16px 16px 0 0;overflow:hidden;font-size:0;line-height:0;">
-              <img src="${CLIENT_URL}/email-header.svg" width="500" height="167" alt="SecureChat — End-to-end encrypted messaging" style="border:0;display:block;width:100%;max-width:500px;border-radius:16px 16px 0 0;"/>
+              <img src="${CLIENT_URL}/email-header.png" width="500" height="167" alt="SecureChat — End-to-end encrypted messaging" style="border:0;display:block;width:100%;max-width:500px;border-radius:16px 16px 0 0;"/>
             </td>
           </tr>
 
