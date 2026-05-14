@@ -208,7 +208,7 @@ export async function sendAccountDeletedNotification({ to, displayName }) {
 
 export async function sendInviteEmail({ to, inviteUrl, displayName, expiresAt }) {
   const expiry = new Date(expiresAt).toLocaleDateString('en-US', {
-    timeZone: 'America/Chicago',
+    timeZone: process.env.APP_TIMEZONE || 'UTC',
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
   await send({
