@@ -117,7 +117,10 @@ export default function AdminPage({ onBack }) {
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'audit'
 
   const [stats, setStats] = useState(null);
+  const [statsUpdated, setStatsUpdated] = useState(null);
   const [msgChart, setMsgChart] = useState([]);
+  const [usersChart, setUsersChart] = useState([]);
+  const [chartTooltip, setChartTooltip] = useState(null); // { x, y, label, count }
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -167,7 +170,19 @@ export default function AdminPage({ onBack }) {
   const [auditTotal, setAuditTotal] = useState(0);
 
   /* ── Data loading ── */
-  const loadStats   = useCallback(async () => { try { setStats(await apiFetch('/admin/stats')); } catch {} }, []);
+  const loadStats = useCallback(async () => {
+    try {
+      const [s, mc, uc] = await Promise.all([
+        apiFetch('/admin/stats'),
+        apiFetch('/admin/stats/messages-chart'),
+        apiFetch('/admin/stats/users-chart'),
+      ]);
+      setStats(s);
+      setMsgChart(mc);
+      setUsersChart(uc);
+      setStatsUpdated(new Date());
+    } catch {}
+  }, []);
   const loadInvites = useCallback(async () => { try { setInvites((await apiFetch('/admin/invites')).invites); } catch {} }, []);
 
   const loadUsers = useCallback(async (q = '', page = 1, limit = 20, status = 'all', twoFa = 'all') => {
@@ -194,7 +209,6 @@ export default function AdminPage({ onBack }) {
 
   useEffect(() => {
     loadStats(); loadUsers(); loadInvites(); loadAudit();
-    apiFetch('/admin/stats/messages-chart').then(d => setMsgChart(d)).catch(() => {});
     apiFetch('/admin/settings').then(d => {
       setRegistrationOpen(d.registrationOpen);
       if (d.email) setEmailSettings(d.email);
@@ -360,6 +374,14 @@ export default function AdminPage({ onBack }) {
 
           {/* ════ STATS ════ */}
           {activeTab === 'stats' && (
+            <div className="ap-stats-header">
+              <span className="ap-stats-updated">
+                {statsUpdated ? `Updated ${formatDistanceToNow(statsUpdated, { addSuffix: true })}` : ''}
+              </span>
+              <button className="ap-pill-btn" style={{ fontSize: 13, padding: '6px 14px' }} onClick={loadStats}>Refresh</button>
+            </div>
+          )}
+          {activeTab === 'stats' && (
             stats ? (
               <div className="ap-stat-grid">
                 {[
@@ -387,6 +409,16 @@ export default function AdminPage({ onBack }) {
                     icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> },
                   { val: formatBytes(stats.storageBytes), fmt:'s', lbl:'Storage', col:'#f59e0b', dim:'rgba(245,158,11,0.13)',
                     icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg> },
+                  { val: stats.onlineNow ?? 0,   fmt:'n', lbl:'Online Now',   col:'#22c55e', dim:'rgba(34,197,94,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                  { val: stats.verifiedUsers ?? 0, fmt:'n', lbl:'Verified Emails', col:'#14b8a6', dim:'rgba(20,184,166,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M9 11l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M4 13l8 8 8-8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+                  { val: stats.newUsersToday ?? 0, fmt:'n', lbl:'New Today',    col:'#f59e0b', dim:'rgba(245,158,11,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="10" cy="8" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M4 20v-2a5 5 0 015-5h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M19 12v6M16 15h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                  { val: stats.pendingInvites ?? 0, fmt:'n', lbl:'Pending Invites', col:'#6c63ff', dim:'rgba(108,99,255,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+                  { val: stats.voiceMessages ?? 0, fmt:'n', lbl:'Voice Messages', col:'#ec4899', dim:'rgba(236,72,153,0.13)',
+                    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M19 10v2a7 7 0 01-14 0v-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M12 19v4M8 23h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
                 ].map(({ val, fmt, lbl, col, dim, icon }) => (
                   <div key={lbl} className="ap-stat-card" style={{'--sc':col,'--scd':dim}}>
                     <div className="ap-sc-top">
@@ -400,55 +432,80 @@ export default function AdminPage({ onBack }) {
             ) : <div className="ap-empty">Loading…</div>
           )}
 
-          {activeTab === 'stats' && msgChart.length === 7 && (() => {
+          {activeTab === 'stats' && (() => {
             const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const W = 300, H = 80, LABEL_H = 20, BAR_AREA = H - LABEL_H;
-            const maxCount = Math.max(1, ...msgChart.map(d => d.count));
-            const barW = Math.floor((W / 7) * 0.55);
-            const slotW = W / 7;
-            return (
-              <div className="ap-group">
-                <div className="ap-group-title">Messages — last 7 days</div>
-                <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', padding: '4px 12px 0', boxSizing: 'border-box' }}>
-                  {msgChart.map((pt, i) => {
-                    const barH = Math.max(2, (pt.count / maxCount) * (BAR_AREA - 14));
-                    const x = slotW * i + (slotW - barW) / 2;
-                    const y = BAR_AREA - barH;
-                    const dayAbbr = DAY_ABBR[new Date(pt.date + 'T12:00:00').getDay()];
-                    return (
-                      <g key={pt.date} className="ap-chart-bar-g">
-                        <rect
-                          x={x} y={y} width={barW} height={barH}
-                          rx="3"
-                          fill="#6c63ff"
-                          fillOpacity="0.2"
-                          className="ap-chart-bar"
-                        />
-                        {pt.count > 0 && (
+            const W = 300, H = 90, LABEL_H = 20, BAR_AREA = H - LABEL_H;
+
+            const renderChart = (data, color, title, tooltipKey) => {
+              if (data.length !== 7) return null;
+              const maxCount = Math.max(1, ...data.map(d => d.count));
+              const barW = Math.floor((W / 7) * 0.55);
+              const slotW = W / 7;
+              return (
+                <div className="ap-group" style={{ position: 'relative' }}>
+                  <div className="ap-group-title">{title}</div>
+                  <svg
+                    viewBox={`0 0 ${W} ${H}`}
+                    width="100%"
+                    style={{ display: 'block', padding: '4px 12px 0', boxSizing: 'border-box' }}
+                    onMouseLeave={() => setChartTooltip(null)}
+                  >
+                    {data.map((pt, i) => {
+                      const barH = Math.max(2, (pt.count / maxCount) * (BAR_AREA - 16));
+                      const x = slotW * i + (slotW - barW) / 2;
+                      const y = BAR_AREA - barH;
+                      const dayAbbr = DAY_ABBR[new Date(pt.date + 'T12:00:00').getDay()];
+                      const isHovered = chartTooltip?.key === tooltipKey && chartTooltip?.date === pt.date;
+                      return (
+                        <g
+                          key={pt.date}
+                          style={{ cursor: 'pointer' }}
+                          onMouseEnter={(e) => {
+                            const svg = e.currentTarget.closest('svg');
+                            const rect = svg.getBoundingClientRect();
+                            const cx = rect.left + (slotW * i + slotW / 2) * (rect.width / W);
+                            const cy = rect.top + y * (rect.height / H);
+                            setChartTooltip({ key: tooltipKey, date: pt.date, x: cx, y: cy, label: dayAbbr, count: pt.count });
+                          }}
+                          onMouseLeave={() => setChartTooltip(null)}
+                        >
+                          <rect
+                            x={x} y={y} width={barW} height={barH}
+                            rx="3"
+                            fill={color}
+                            fillOpacity={isHovered ? 1 : 0.2}
+                            style={{ transition: 'fill-opacity 0.1s' }}
+                          />
+                          {pt.count > 0 && (
+                            <text
+                              x={x + barW / 2} y={y - 3}
+                              textAnchor="middle" fontSize="7" fill={color} fillOpacity={isHovered ? 1 : 0.7}
+                            >{pt.count}</text>
+                          )}
                           <text
-                            x={x + barW / 2} y={y - 3}
-                            textAnchor="middle"
-                            fontSize="7"
-                            fill="#6c63ff"
-                            fillOpacity="0.7"
-                          >{pt.count}</text>
-                        )}
-                        <text
-                          x={slotW * i + slotW / 2} y={H - 4}
-                          textAnchor="middle"
-                          fontSize="7.5"
-                          fill="var(--text-3)"
-                        >{dayAbbr}</text>
-                      </g>
-                    );
-                  })}
-                </svg>
-                <style>{`
-                  .ap-chart-bar-g:hover .ap-chart-bar { fill-opacity: 1; }
-                `}</style>
-              </div>
+                            x={slotW * i + slotW / 2} y={H - 4}
+                            textAnchor="middle" fontSize="7.5" fill="var(--text-3)"
+                          >{dayAbbr}</text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+              );
+            };
+
+            return (
+              <>
+                {renderChart(msgChart, '#6c63ff', 'Messages — last 7 days', 'msg')}
+                {renderChart(usersChart, '#22c55e', 'New users — last 7 days', 'usr')}
+              </>
             );
           })()}
+          {chartTooltip && (
+            <div className="ap-chart-tip" style={{ left: chartTooltip.x, top: chartTooltip.y - 36 }}>
+              {chartTooltip.label}: <strong>{chartTooltip.count.toLocaleString()}</strong>
+            </div>
+          )}
 
           {/* ════ SETTINGS ════ */}
           {activeTab === 'settings' && (
@@ -713,6 +770,7 @@ export default function AdminPage({ onBack }) {
                   <option value="settings.message_retention">Message retention</option>
                   <option value="settings.auditlog_retention">Audit log retention</option>
                   <option value="purge.messages">Purged messages</option>
+                  <option value="purge.audit-logs">Purged logs</option>
                 </select>
                 <select className="ap-filter-select" value={String(auditLimit)} onChange={e => { setAuditLimit(Number(e.target.value)); setAuditPage(1); }}>
                   <option value="20">20 / page</option>
@@ -1078,6 +1136,24 @@ export default function AdminPage({ onBack }) {
         }
         .ap-tab.active { color: var(--accent); }
         .ap-tab span { line-height: 1; }
+
+        /* Stats header row */
+        .ap-stats-header {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 12px;
+        }
+        .ap-stats-updated { font-size: 12px; color: var(--text-3); }
+
+        /* Chart tooltip */
+        .ap-chart-tip {
+          position: fixed; z-index: 200;
+          background: var(--bg-0, #111); border: 1px solid var(--border);
+          border-radius: 8px; padding: 5px 10px;
+          font-size: 12px; color: var(--text-1);
+          pointer-events: none; white-space: nowrap;
+          transform: translateX(-50%);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
 
         /* Stats grid */
         .ap-stat-grid {

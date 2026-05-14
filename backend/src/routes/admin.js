@@ -40,7 +40,8 @@ router.use(authenticate, requireAdmin);
 router.get('/stats', async (req, res) => {
   try {
     const now = new Date();
-    const oneDayAgo  = new Date(now - 24 * 60 * 60 * 1000);
+    const fiveMinAgo   = new Date(now - 5 * 60 * 1000);
+    const oneDayAgo    = new Date(now - 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
     const [
@@ -55,6 +56,11 @@ router.get('/stats', async (req, res) => {
       twoFaUsers,
       totalAttachments,
       groupChats,
+      onlineNow,
+      verifiedUsers,
+      newUsersToday,
+      pendingInvites,
+      voiceMessages,
     ] = await Promise.all([
       User.countDocuments(),
       Message.countDocuments({ type: { $ne: 'deleted' } }),
@@ -70,6 +76,11 @@ router.get('/stats', async (req, res) => {
       User.countDocuments({ twoFactorEnabled: true }),
       Message.countDocuments({ 'attachment.url': { $exists: true } }),
       Conversation.countDocuments({ type: 'group' }),
+      User.countDocuments({ lastSeen: { $gte: fiveMinAgo } }),
+      User.countDocuments({ emailVerified: true }),
+      User.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+      Invite.countDocuments({ usedAt: null, expiresAt: { $gt: now } }),
+      Message.countDocuments({ 'attachment.mimetype': { $regex: /^audio\// } }),
     ]);
 
     const storageBytes = storageResult[0]?.total || 0;
@@ -87,6 +98,11 @@ router.get('/stats', async (req, res) => {
       totalAttachments,
       groupChats,
       directChats: Math.max(0, totalConversations - groupChats),
+      onlineNow,
+      verifiedUsers,
+      newUsersToday,
+      pendingInvites,
+      voiceMessages,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch stats' });
@@ -325,6 +341,36 @@ router.get('/stats/messages-chart', async (req, res) => {
     res.json(result);
   } catch {
     res.status(500).json({ error: 'Failed to fetch message chart' });
+  }
+});
+
+// GET /api/admin/stats/users-chart
+router.get('/stats/users-chart', async (req, res) => {
+  try {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    const rows = await User.aggregate([
+      { $match: { createdAt: { $gte: sevenDaysAgo } } },
+      { $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          count: { $sum: 1 },
+      }},
+      { $sort: { _id: 1 } },
+    ]);
+
+    const byDate = Object.fromEntries(rows.map(r => [r._id, r.count]));
+    const result = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      result.push({ date: key, count: byDate[key] || 0 });
+    }
+
+    res.json(result);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch users chart' });
   }
 });
 
