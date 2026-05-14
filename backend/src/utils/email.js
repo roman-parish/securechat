@@ -63,30 +63,21 @@ function emailBase({ preheader, body }) {
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:500px;">
 
-          <!-- Logo header — dark, matches app nav bar -->
+          <!-- Header — OG image style: dark gradient, centered lock + wordmark -->
           <tr>
-            <td align="center" style="background:#0f0f13;border-radius:16px 16px 0 0;padding:24px 32px;">
-              <table cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="padding-right:12px;vertical-align:middle;">
-                    <div style="width:40px;height:40px;background:rgba(108,99,255,0.18);border-radius:12px;display:inline-block;text-align:center;line-height:40px;">
-                      <img src="${CLIENT_URL}/icons/icon-96.png" width="26" height="26" alt="SecureChat" style="vertical-align:middle;border:0;display:inline-block;margin-top:7px;"/>
-                    </div>
-                  </td>
-                  <td style="vertical-align:middle;">
-                    <span style="color:#f0f0f8;font-size:22px;font-weight:700;letter-spacing:-0.02em;">SecureChat</span>
-                  </td>
-                </tr>
-              </table>
+            <td align="center" style="background:linear-gradient(135deg,#161620 0%,#1e1c35 100%);border-radius:16px 16px 0 0;padding:40px 32px 36px;">
+              <svg width="52" height="52" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="11" width="18" height="11" rx="3" fill="#7c6cf8" opacity="0.2"/>
+                <rect x="3" y="11" width="18" height="11" rx="3" stroke="#7c6cf8" stroke-width="1.5"/>
+                <path d="M7 11V7a5 5 0 0110 0v4" stroke="#7c6cf8" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="12" cy="16.5" r="1.5" fill="#7c6cf8"/>
+              </svg>
+              <div style="margin-top:12px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">SecureChat</div>
+              <div style="margin-top:6px;font-size:14px;color:#9b93fa;">End-to-end encrypted messaging</div>
             </td>
           </tr>
 
-          <!-- Accent divider -->
-          <tr>
-            <td style="background:#6c63ff;height:3px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-
-          <!-- Card body — light, like the login card -->
+          <!-- Card body — light/white -->
           <tr>
             <td style="background:#ffffff;padding:36px 36px 28px;border-radius:0 0 16px 16px;border:1px solid #e5e5ea;border-top:none;">
               ${body}
@@ -95,8 +86,8 @@ function emailBase({ preheader, body }) {
 
           <!-- Footer -->
           <tr>
-            <td align="center" style="padding:24px 0 8px;">
-              <p style="margin:0 0 6px;font-size:12px;color:#8e8e93;">
+            <td align="center" style="padding:20px 0 8px;">
+              <p style="margin:0 0 4px;font-size:12px;color:#8e8e93;">
                 SecureChat &mdash; End-to-end encrypted messaging
               </p>
               <p style="margin:0;font-size:12px;">
