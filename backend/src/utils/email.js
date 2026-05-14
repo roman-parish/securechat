@@ -51,21 +51,21 @@ function emailBase({ preheader, body }) {
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <title>SecureChat</title>
 </head>
-<body style="margin:0;padding:0;background:#0f0f13;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#f2f2f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <!--[if !mso]><!-->
-  <span style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#0f0f13;">
+  <span style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#f2f2f7;">
     ${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
   </span>
   <!--<![endif]-->
 
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0f0f13;padding:40px 16px;min-width:320px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f2f2f7;padding:40px 16px;min-width:320px;">
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:500px;">
 
-          <!-- Logo header -->
+          <!-- Logo header — dark, matches app nav bar -->
           <tr>
-            <td align="center" style="background:#161620;border-radius:16px 16px 0 0;padding:28px 32px 24px;border:1px solid #2a2a3a;border-bottom:none;">
+            <td align="center" style="background:#0f0f13;border-radius:16px 16px 0 0;padding:24px 32px;">
               <table cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="padding-right:12px;vertical-align:middle;">
@@ -86,9 +86,9 @@ function emailBase({ preheader, body }) {
             <td style="background:#6c63ff;height:3px;font-size:0;line-height:0;">&nbsp;</td>
           </tr>
 
-          <!-- Card body -->
+          <!-- Card body — light, like the login card -->
           <tr>
-            <td style="background:#161620;padding:36px 36px 28px;border-radius:0 0 16px 16px;border:1px solid #2a2a3a;border-top:none;">
+            <td style="background:#ffffff;padding:36px 36px 28px;border-radius:0 0 16px 16px;border:1px solid #e5e5ea;border-top:none;">
               ${body}
             </td>
           </tr>
@@ -96,10 +96,10 @@ function emailBase({ preheader, body }) {
           <!-- Footer -->
           <tr>
             <td align="center" style="padding:24px 0 8px;">
-              <p style="margin:0 0 6px;font-size:12px;color:#555568;">
+              <p style="margin:0 0 6px;font-size:12px;color:#8e8e93;">
                 SecureChat &mdash; End-to-end encrypted messaging
               </p>
-              <p style="margin:0;font-size:12px;color:#555568;">
+              <p style="margin:0;font-size:12px;">
                 <a href="${CLIENT_URL}" style="color:#6c63ff;text-decoration:none;">${CLIENT_URL}</a>
               </p>
             </td>
@@ -115,11 +115,11 @@ function emailBase({ preheader, body }) {
 
 /* Reusable pieces */
 function greeting(name) {
-  return `<p style="margin:0 0 16px;font-size:15px;color:#c8c8d8;">Hi ${name},</p>`;
+  return `<p style="margin:0 0 16px;font-size:15px;color:#1c1c1e;">Hi ${name},</p>`;
 }
 
 function paragraph(text) {
-  return `<p style="margin:0 0 14px;font-size:15px;color:#c8c8d8;line-height:1.6;">${text}</p>`;
+  return `<p style="margin:0 0 14px;font-size:15px;color:#3c3c43;line-height:1.6;">${text}</p>`;
 }
 
 function ctaButton(href, label) {
@@ -136,27 +136,27 @@ function ctaButton(href, label) {
 function infoTable(rows) {
   const cells = rows.map(([label, value]) => `
     <tr>
-      <td style="padding:8px 12px;font-size:13px;color:#8888a8;white-space:nowrap;vertical-align:top;">${label}</td>
-      <td style="padding:8px 12px;font-size:13px;color:#f0f0f8;word-break:break-word;">${value}</td>
+      <td style="padding:8px 12px;font-size:13px;color:#8e8e93;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:8px 12px;font-size:13px;color:#1c1c1e;word-break:break-word;">${value}</td>
     </tr>`).join('');
   return `
-  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#0f0f13;border-radius:10px;border:1px solid #2a2a3a;margin:20px 0;overflow:hidden;">
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f2f2f7;border-radius:10px;margin:20px 0;overflow:hidden;">
     ${cells}
   </table>`;
 }
 
-function alertBox(text, color = '#ff5757') {
-  const bg = color === '#ff5757' ? 'rgba(255,87,87,0.1)' : 'rgba(108,99,255,0.1)';
-  const border = color === '#ff5757' ? 'rgba(255,87,87,0.3)' : 'rgba(108,99,255,0.3)';
+function alertBox(text, color = '#ff3b30') {
+  const bg = color === '#ff3b30' ? '#fff1f0' : '#f0f4ff';
+  const border = color === '#ff3b30' ? '#ffc5c2' : '#c7d0ff';
   return `<p style="margin:16px 0;padding:12px 16px;background:${bg};border:1px solid ${border};border-radius:10px;font-size:13px;color:${color};line-height:1.5;">${text}</p>`;
 }
 
 function divider() {
-  return `<div style="height:1px;background:#2a2a3a;margin:24px 0;"></div>`;
+  return `<div style="height:1px;background:#e5e5ea;margin:24px 0;"></div>`;
 }
 
 function smallText(text) {
-  return `<p style="margin:0 0 10px;font-size:12px;color:#8888a8;line-height:1.5;">${text}</p>`;
+  return `<p style="margin:0 0 10px;font-size:12px;color:#8e8e93;line-height:1.5;">${text}</p>`;
 }
 
 /* ── Email senders ────────────────────────────────────────────────────────── */
@@ -168,7 +168,7 @@ export async function sendLoginNotification({ to, displayName, ip, userAgent, ti
     html: emailBase({
       preheader: `A new sign-in was detected on your account at ${time}.`,
       body: `
-        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#f0f0f8;">New sign-in detected</h2>
+        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#1c1c1e;">New sign-in detected</h2>
         ${greeting(displayName)}
         ${paragraph('A new sign-in to your SecureChat account was detected.')}
         ${infoTable([
@@ -192,7 +192,7 @@ export async function sendPasswordChangedNotification({ to, displayName, time })
     html: emailBase({
       preheader: 'Your SecureChat password was successfully changed.',
       body: `
-        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#f0f0f8;">Password changed</h2>
+        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#1c1c1e;">Password changed</h2>
         ${greeting(displayName)}
         ${paragraph(`Your SecureChat password was successfully changed on ${time}.`)}
         ${paragraph('All other active sessions have been signed out.')}
@@ -211,7 +211,7 @@ export async function sendAccountDeletedNotification({ to, displayName }) {
     html: emailBase({
       preheader: 'Your SecureChat account and all associated data have been permanently deleted.',
       body: `
-        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#f0f0f8;">Account deleted</h2>
+        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#1c1c1e;">Account deleted</h2>
         ${greeting(displayName)}
         ${paragraph('Your SecureChat account and all associated data have been permanently deleted.')}
         ${alertBox('If you did not request this deletion, contact your administrator immediately.')}
@@ -232,7 +232,7 @@ export async function sendInviteEmail({ to, inviteUrl, displayName, expiresAt })
     html: emailBase({
       preheader: "You've been invited to join SecureChat — end-to-end encrypted messaging.",
       body: `
-        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#f0f0f8;">You're invited!</h2>
+        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#1c1c1e;">You're invited!</h2>
         ${displayName ? greeting(displayName) : ''}
         ${paragraph("You've been invited to join <strong>SecureChat</strong> &mdash; private, end-to-end encrypted messaging.")}
         ${ctaButton(inviteUrl, 'Accept Invitation')}
@@ -251,7 +251,7 @@ export async function sendTwoFactorDisabledNotification({ to, displayName, time 
     html: emailBase({
       preheader: '2FA has been disabled on your SecureChat account.',
       body: `
-        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#f0f0f8;">2FA disabled</h2>
+        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#1c1c1e;">2FA disabled</h2>
         ${greeting(displayName)}
         ${paragraph(`Two-factor authentication was disabled on your SecureChat account on ${time}.`)}
         ${paragraph('Your account is now protected by password only.')}
@@ -270,7 +270,7 @@ export async function sendEmailVerification({ to, displayName, verifyUrl }) {
     html: emailBase({
       preheader: 'Confirm your email address to activate your SecureChat account.',
       body: `
-        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#f0f0f8;">Verify your email</h2>
+        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#1c1c1e;">Verify your email</h2>
         ${greeting(displayName)}
         ${paragraph('Thanks for signing up for SecureChat. Click the button below to verify your email address and activate your account.')}
         ${ctaButton(verifyUrl, 'Verify Email Address')}
@@ -289,7 +289,7 @@ export async function sendPasswordResetEmail({ to, displayName, resetUrl }) {
     html: emailBase({
       preheader: 'We received a request to reset your SecureChat password.',
       body: `
-        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#f0f0f8;">Reset your password</h2>
+        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#1c1c1e;">Reset your password</h2>
         ${greeting(displayName)}
         ${paragraph('We received a request to reset your SecureChat password. Click the button below to choose a new one.')}
         ${ctaButton(resetUrl, 'Reset Password')}
