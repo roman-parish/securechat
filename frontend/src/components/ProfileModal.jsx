@@ -1412,8 +1412,8 @@ export default function ProfileModal({ onClose }) {
           padding: 1px 7px; border-radius: 10px; width: fit-content;
         }
         .session-revoke-btn {
-          font-size: 12px; color: var(--red); padding: 4px 10px;
-          border: 1px solid rgba(255,87,87,0.3); border-radius: 8px;
+          font-size: 13px; font-weight: 500; color: var(--red); padding: 8px 14px;
+          border: 1px solid rgba(255,87,87,0.3); border-radius: var(--radius);
           background: transparent; cursor: pointer; flex-shrink: 0;
           transition: all 150ms;
         }
