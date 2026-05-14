@@ -63,9 +63,9 @@ function emailBase({ preheader, body }) {
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:500px;">
 
-          <!-- Header — OG image style: dark gradient, centered lock + wordmark -->
+          <!-- Header — OG image style: dark background, centered lock + wordmark -->
           <tr>
-            <td align="center" style="background:linear-gradient(135deg,#161620 0%,#1e1c35 100%);border-radius:16px 16px 0 0;padding:40px 32px 36px;">
+            <td align="center" bgcolor="#161620" style="background-color:#161620;border-radius:16px 16px 0 0;padding:40px 32px 36px;">
               <svg width="52" height="52" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="3" y="11" width="18" height="11" rx="3" fill="#7c6cf8" opacity="0.2"/>
                 <rect x="3" y="11" width="18" height="11" rx="3" stroke="#7c6cf8" stroke-width="1.5"/>
