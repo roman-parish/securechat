@@ -6,6 +6,7 @@
  * https://github.com/roman-parish/securechat
  */
 import { useState, useRef, useEffect } from 'react';
+import { smartRelative, fullDateTime } from '../utils/time.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { apiFetch, apiUpload, getSessionJti } from '../utils/api.js';
 import { subscribeToPush, unsubscribeFromPush, isPushSupported, isStandalone, isPrivateMode } from '../utils/push.js';
@@ -722,12 +723,13 @@ export default function ProfileModal({ onClose }) {
                       : /chrome/i.test(ua) ? 'Chrome'
                       : /safari/i.test(ua) ? 'Safari'
                       : 'Browser';
-                    const lastUsed = s.lastUsed ? new Date(s.lastUsed).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+                    const lastUsed = s.lastUsed ? smartRelative(s.lastUsed) : '—';
+                    const lastUsedTitle = s.lastUsed ? fullDateTime(s.lastUsed) : '';
                     return (
                       <div key={s.jti} className={`session-row ${isCurrent ? 'current' : ''}`}>
                         <div className="session-info">
                           <span className="session-device">{device} · {browser}</span>
-                          {s.ip && <span className="session-meta">{s.ip} · Last active {lastUsed}</span>}
+                          {s.ip && <span className="session-meta" title={lastUsedTitle}>{s.ip} · Last active {lastUsed}</span>}
                           {isCurrent && <span className="session-current-badge">This device</span>}
                         </div>
                         {!isCurrent && (

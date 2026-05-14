@@ -161,7 +161,7 @@ router.post('/:conversationId', authenticate, sendLimiter, async (req, res) => {
               ? `${sender.displayName || sender.username}: New message`
               : 'New message',
           conversationId: conversation._id.toString(),
-          url: '/',
+          url: `/?conv=${conversation._id}`,
         });
       }
     }

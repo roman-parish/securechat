@@ -39,7 +39,7 @@ async function registerSW() {
     console.error('[SW] Registration failed:', err);
   }
 
-  // Listen for messages from SW (notification clicks)
+  // Listen for messages from SW (notification clicks — app was open)
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data?.type === 'NOTIFICATION_CLICK') {
       window.dispatchEvent(new CustomEvent('sw:notification-click', {
@@ -50,6 +50,18 @@ async function registerSW() {
       }));
     }
   });
+}
+
+// Handle notification tap when app was closed — SW opens /?conv=ID
+// Dispatch the navigation event once the app is ready to handle it
+const _convFromUrl = new URLSearchParams(window.location.search).get('conv');
+if (_convFromUrl) {
+  window.history.replaceState({}, '', '/'); // clean up the URL immediately
+  window.addEventListener('sc:ready', () => {
+    window.dispatchEvent(new CustomEvent('sw:notification-click', {
+      detail: { conversationId: _convFromUrl },
+    }));
+  }, { once: true });
 }
 
 if (document.readyState === 'complete') {

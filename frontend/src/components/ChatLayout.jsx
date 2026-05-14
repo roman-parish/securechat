@@ -59,6 +59,10 @@ export default function ChatLayout({ onOpenAdmin }) {
       }
     };
     window.addEventListener('sw:notification-click', handler);
+
+    // Signal to main.jsx that the app is ready to handle notification-based navigation
+    window.dispatchEvent(new Event('sc:ready'));
+
     return () => window.removeEventListener('sw:notification-click', handler);
   }, []); // empty deps — ref keeps it fresh
 

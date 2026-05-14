@@ -11,6 +11,7 @@ import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import User from '../models/User.js';
 import logger from '../utils/logger.js';
+import { sendPushToUser } from '../utils/socket.js';
 
 const router = Router();
 
@@ -226,6 +227,20 @@ router.post('/:conversationId/participants', authenticate, async (req, res) => {
     if (newIds.length === 0) return res.status(400).json({ error: 'All users are already in this group' });
     conversation.participants.push(...newIds);
     await conversation.save();
+
+    // Notify newly added members
+    const adder = await User.findById(req.user.userId).select('displayName username');
+    const adderName = adder?.displayName || adder?.username || 'Someone';
+    for (const userId of newIds) {
+      sendPushToUser(userId, {
+        type: 'group_invite',
+        title: conversation.name,
+        body: `${adderName} added you to the group`,
+        conversationId: conversation._id.toString(),
+        url: `/?conv=${conversation._id}`,
+      }).catch(() => {});
+    }
+
     res.json(conversation);
   } catch {
     res.status(500).json({ error: 'Failed to add participants' });
