@@ -255,7 +255,7 @@ function NotFoundPage() {
     <div className="auth-page">
       <div className="auth-glow" />
       <div className="auth-card" style={{ textAlign: 'center', alignItems: 'center' }}>
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="11" width="18" height="11" rx="3" fill="var(--accent)" opacity="0.2"/>
           <rect x="3" y="11" width="18" height="11" rx="3" stroke="var(--accent)" strokeWidth="1.5"/>
           <path d="M7 11V7a5 5 0 0110 0v4" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
@@ -309,10 +309,11 @@ function SplashScreen() {
       flex: 1, background: 'var(--bg-1)',
     }}>
       <div style={{ textAlign: 'center' }}>
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto', display: 'block' }}>
-          <rect x="3" y="11" width="18" height="11" rx="2" stroke="var(--accent)" strokeWidth="1.5"/>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto', display: 'block' }}>
+          <rect x="3" y="11" width="18" height="11" rx="3" fill="var(--accent)" opacity="0.2"/>
+          <rect x="3" y="11" width="18" height="11" rx="3" stroke="var(--accent)" strokeWidth="1.5"/>
           <path d="M7 11V7a5 5 0 0110 0v4" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
-          <circle cx="12" cy="16" r="1.5" fill="var(--accent)"/>
+          <circle cx="12" cy="16.5" r="1.5" fill="var(--accent)"/>
         </svg>
         <p style={{ color: 'var(--text-2)', marginTop: 16, fontSize: 14 }}>Loading SecureChat…</p>
       </div>
