@@ -154,7 +154,8 @@ function KeyUnlockScreen() {
             margin: '0 auto 16px',
           }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="11" width="18" height="11" rx="2" stroke="var(--accent)" strokeWidth="1.5"/>
+              <rect x="3" y="11" width="18" height="11" rx="3" fill="var(--accent)" opacity="0.2"/>
+              <rect x="3" y="11" width="18" height="11" rx="3" stroke="var(--accent)" strokeWidth="1.5"/>
               <path d="M7 11V7a5 5 0 0110 0v4" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
               <circle cx="12" cy="16.5" r="1.5" fill="var(--accent)"/>
             </svg>
