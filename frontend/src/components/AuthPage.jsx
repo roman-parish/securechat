@@ -184,7 +184,7 @@ export default function AuthPage() {
             </button>
           </form>
         </div>
-        <style>{`.auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-0);padding:16px}.auth-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 70%);pointer-events:none}.auth-card{width:100%;max-width:380px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;display:flex;flex-direction:column;gap:24px}.auth-logo{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}.auth-logo h1{font-size:22px;font-weight:700;color:var(--text-0)}.auth-logo p{font-size:13px;color:var(--text-3)}.auth-form{display:flex;flex-direction:column;gap:12px}.auth-form input{width:100%;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-md);font-size:15px;color:var(--text-0);box-sizing:border-box}.auth-submit{width:100%;padding:11px;background:var(--accent);color:white;border-radius:var(--radius-md);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}.auth-submit:disabled{opacity:.6;cursor:default}.auth-error{background:var(--red-dim);border:1px solid var(--red);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--red)}`}</style>
+        <style>{`.auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-0);padding:16px}.auth-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 70%);pointer-events:none}.auth-card{width:100%;max-width:380px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;display:flex;flex-direction:column;gap:24px}.auth-logo{display:flex;flex-direction:column;align-items:center;text-align:center}.auth-logo h1{font-size:24px;font-weight:600;margin-top:12px;letter-spacing:-0.5px;color:var(--text-0)}.auth-logo p{font-size:13px;color:var(--accent-light);margin-top:4px}.auth-form{display:flex;flex-direction:column;gap:12px}.auth-form input{width:100%;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-md);font-size:15px;color:var(--text-0);box-sizing:border-box}.auth-submit{width:100%;padding:11px;background:var(--accent);color:white;border-radius:var(--radius-md);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}.auth-submit:disabled{opacity:.6;cursor:default}.auth-error{background:var(--red-dim);border:1px solid var(--red);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--red)}`}</style>
       </div>
     );
   }
@@ -382,7 +382,7 @@ export default function AuthPage() {
         }
         .auth-logo { text-align: center; margin-bottom: 32px; }
         .auth-logo h1 { font-size: 24px; font-weight: 600; margin-top: 12px; letter-spacing: -0.5px; }
-        .auth-logo p { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+        .auth-logo p { font-size: 13px; color: var(--accent-light); margin-top: 4px; }
         .auth-tabs {
           display: grid; grid-template-columns: 1fr 1fr;
           background: var(--bg-3); border-radius: var(--radius);

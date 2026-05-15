@@ -424,7 +424,7 @@ function ResetPasswordPage({ token }) {
         }
         .auth-logo { text-align: center; }
         .auth-logo h1 { font-size: 24px; font-weight: 600; margin-top: 12px; letter-spacing: -0.5px; }
-        .auth-logo p { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+        .auth-logo p { font-size: 13px; color: var(--accent-light); margin-top: 4px; }
         .auth-form { display: flex; flex-direction: column; gap: 16px; }
         .field { display: flex; flex-direction: column; gap: 6px; }
         .field label { font-size: 13px; color: var(--text-2); font-weight: 500; }
@@ -555,7 +555,7 @@ function VerifyEmailPage({ token }) {
         }
         .auth-logo { text-align: center; }
         .auth-logo h1 { font-size: 24px; font-weight: 600; margin-top: 12px; letter-spacing: -0.5px; }
-        .auth-logo p { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+        .auth-logo p { font-size: 13px; color: var(--accent-light); margin-top: 4px; }
         .auth-error {
           display: flex; align-items: center; gap: 8px;
           background: var(--red-dim); border: 1px solid rgba(255,87,87,0.2);
