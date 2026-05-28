@@ -202,13 +202,37 @@ router.post('/login', [
   try {
     const user = await User.findOne({
       $or: [{ username }, { email: username.toLowerCase() }],
-    }).select('+password +refreshTokens');
+    }).select('+password +refreshTokens +failedLoginAttempts +lockedUntil');
 
-    if (!user || !(await user.comparePassword(password))) {
+    // Check account lockout before comparing passwords — avoids bcrypt cost on locked accounts
+    if (user?.lockedUntil && user.lockedUntil > new Date()) {
+      const secondsLeft = Math.ceil((user.lockedUntil - Date.now()) / 1000);
+      return res.status(429)
+        .set('Retry-After', String(secondsLeft))
+        .json({ error: 'Account temporarily locked due to too many failed attempts. Try again later.' });
+    }
+
+    const passwordValid = user && await user.comparePassword(password);
+    if (!user || !passwordValid) {
+      // Increment failure counter; lock after 5 consecutive failures for 15 minutes
+      if (user) {
+        const attempts = (user.failedLoginAttempts || 0) + 1;
+        const update = { failedLoginAttempts: attempts };
+        if (attempts >= 5) {
+          update.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+          logger.warn({ userId: String(user._id), attempts }, 'Account locked after too many failed login attempts');
+        }
+        await User.findByIdAndUpdate(user._id, { $set: update });
+      }
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     if (user.banned) {
       return res.status(403).json({ error: 'Your account has been suspended. Contact an administrator.' });
+    }
+
+    // Successful login — reset lockout counters
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      await User.findByIdAndUpdate(user._id, { $set: { failedLoginAttempts: 0, lockedUntil: null } });
     }
 
     // If 2FA is enabled, check for trusted device cookie before prompting

@@ -67,6 +67,10 @@ const userSchema = new mongoose.Schema({
   hideLastSeen: { type: Boolean, default: false },
   hideReadReceipts: { type: Boolean, default: false },
   banned: { type: Boolean, default: false },
+
+  // Account lockout — tracks consecutive failed password attempts
+  failedLoginAttempts: { type: Number, default: 0, select: false },
+  lockedUntil: { type: Date, default: null, select: false },
   refreshTokens: {
     type: [{
       jti: String,

@@ -128,7 +128,7 @@ router.get('/users', async (req, res) => {
     if (twoFa === 'disabled') query.twoFactorEnabled = { $ne: true };
 
     const users = await User.find(query)
-      .select('username email displayName avatar lastSeen createdAt banned twoFactorEnabled emailVerified')
+      .select('username email displayName avatar lastSeen createdAt banned twoFactorEnabled emailVerified failedLoginAttempts lockedUntil')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -160,6 +160,19 @@ router.put('/users/:userId/ban', async (req, res) => {
     res.json({ banned: user.banned });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update ban status' });
+  }
+});
+
+// PUT /api/admin/users/:userId/unlock
+router.put('/users/:userId/unlock', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    await User.findByIdAndUpdate(user._id, { $set: { failedLoginAttempts: 0, lockedUntil: null } });
+    await audit(req, 'user.unlock', user);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to unlock account' });
   }
 });
 

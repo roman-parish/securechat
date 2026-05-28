@@ -16,6 +16,7 @@ import { smartRelative, fullDateTime, useNow } from '../utils/time.js';
 const ACTION_LABELS = {
   'user.ban': 'Suspended',
   'user.unban': 'Unsuspended',
+  'user.unlock': 'Unlocked',
   'user.delete': 'Deleted user',
   'user.password_reset': 'Reset password',
   'user.reset_2fa': 'Reset 2FA',
@@ -323,6 +324,15 @@ export default function AdminPage({ onBack }) {
       await apiFetch(`/admin/users/${reset2faUser._id}/reset-2fa`, { method: 'PUT' });
       showFlash(`2FA reset for ${reset2faUser.username}`);
       setReset2faUser(null);
+    } catch (e) { showFlash('Error: ' + e.message); }
+  };
+
+  const handleUnlock = async (u) => {
+    setMenuUser(null);
+    try {
+      await apiFetch(`/admin/users/${u._id}/unlock`, { method: 'PUT' });
+      setUsers(prev => prev.map(x => x._id === u._id ? { ...x, failedLoginAttempts: 0, lockedUntil: null } : x));
+      showFlash(`${u.username} unlocked`);
     } catch (e) { showFlash('Error: ' + e.message); }
   };
 
@@ -741,6 +751,7 @@ export default function AdminPage({ onBack }) {
                       </div>
                       <div className="ap-user-end">
                         {u.twoFactorEnabled && <span className="ap-badge purple">2FA</span>}
+                        {u.lockedUntil && new Date(u.lockedUntil) > new Date() && <span className="ap-badge orange">Locked</span>}
                         <span className={`ap-badge ${u.banned ? 'red' : 'green'}`}>{u.banned ? 'Suspended' : 'Active'}</span>
                       </div>
                     </div>
@@ -902,9 +913,27 @@ export default function AdminPage({ onBack }) {
               <span className="ap-detail-label">Status</span>
               <span className={`ap-detail-value ${menuUser.banned ? 'text-red' : 'text-green'}`}>{menuUser.banned ? 'Suspended' : 'Active'}</span>
             </div>
+            {menuUser.lockedUntil && new Date(menuUser.lockedUntil) > new Date() && (
+              <div className="ap-detail-row">
+                <span className="ap-detail-label">Locked</span>
+                <span className="ap-detail-value" style={{ color: 'var(--yellow)' }}>
+                  Until {new Date(menuUser.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {' '}({menuUser.failedLoginAttempts} failed attempts)
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="ap-actions-list">
+            {menuUser.lockedUntil && new Date(menuUser.lockedUntil) > new Date() && (
+              <button
+                className="ap-action-item green"
+                onClick={() => handleUnlock(menuUser)}
+              >
+                <span className="ap-action-icon"><IconCheck /></span>
+                <span className="ap-action-label">Unlock account</span>
+              </button>
+            )}
             <button
               className={`ap-action-item ${menuUser.banned ? 'green' : 'orange'}`}
               onClick={() => handleBan(menuUser)}
@@ -1320,12 +1349,14 @@ export default function AdminPage({ onBack }) {
         .ap-badge.green  { background: var(--green-dim);               color: var(--green);  }
         .ap-badge.red    { background: var(--red-dim);                  color: var(--red);    }
         .ap-badge.purple { background: rgba(108,99,255,0.15);           color: var(--accent); }
+        .ap-badge.orange { background: rgba(245,158,11,0.15);           color: #f59e0b;       }
         .ap-badge.audit-user-ban,.ap-badge.audit-user-delete,.ap-badge.audit-invite-revoke { background: var(--red-dim);         color: var(--red);    }
         .ap-badge.audit-user-unban,.ap-badge.audit-invite-create                          { background: var(--green-dim);       color: var(--green);  }
         .ap-badge.audit-user-password_reset,.ap-badge.audit-user-reset_2fa,.ap-badge.audit-user-verify_email { background: var(--accent-dim); color: var(--accent); }
         .ap-badge.audit-settings-registration_toggle,.ap-badge.audit-settings-email_update { background: var(--bg-3);           color: var(--text-2); }
         .ap-badge.audit-settings-message_retention,.ap-badge.audit-settings-auditlog_retention { background: var(--bg-3);       color: var(--text-2); }
         .ap-badge.audit-purge-messages,.ap-badge.audit-purge-audit-logs                   { background: var(--red-dim);         color: var(--red);    }
+        .ap-badge.audit-user-unlock                                                        { background: rgba(245,158,11,0.15);   color: #f59e0b;       }
 
         /* Audit row */
         .ap-audit-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
