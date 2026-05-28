@@ -16,6 +16,7 @@ import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import PushSubscription from '../models/PushSubscription.js';
 import { authenticate } from '../middleware/auth.js';
+import AuditLog from '../models/AuditLog.js';
 import logger from '../utils/logger.js';
 import { sendLoginNotification, sendPasswordChangedNotification, sendAccountDeletedNotification, sendPasswordResetEmail, sendTwoFactorDisabledNotification, sendEmailVerification, emailAllowed } from '../utils/email.js';
 import speakeasy from 'speakeasy';
@@ -221,6 +222,14 @@ router.post('/login', [
         if (attempts >= 5) {
           update.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
           logger.warn({ userId: String(user._id), attempts }, 'Account locked after too many failed login attempts');
+          AuditLog.create({
+            action: 'user.lock',
+            performedBy: null,
+            performedByUsername: 'system',
+            targetUser: user._id,
+            targetUsername: user.username,
+            metadata: { ip: req.ip, attempts },
+          }).catch(() => {});
         }
         await User.findByIdAndUpdate(user._id, { $set: update });
       }

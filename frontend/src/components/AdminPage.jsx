@@ -16,6 +16,7 @@ import { smartRelative, fullDateTime, useNow } from '../utils/time.js';
 const ACTION_LABELS = {
   'user.ban': 'Suspended',
   'user.unban': 'Unsuspended',
+  'user.lock': 'Locked',
   'user.unlock': 'Unlocked',
   'user.delete': 'Deleted user',
   'user.password_reset': 'Reset password',
@@ -773,6 +774,7 @@ export default function AdminPage({ onBack }) {
                   <option value="all">All actions</option>
                   <option value="user.ban">Suspended</option>
                   <option value="user.unban">Unsuspended</option>
+                  <option value="user.lock">Locked</option>
                   <option value="user.unlock">Unlocked</option>
                   <option value="user.delete">Deleted user</option>
                   <option value="user.password_reset">Password reset</option>
@@ -1359,7 +1361,8 @@ export default function AdminPage({ onBack }) {
         .ap-badge.audit-settings-registration_toggle,.ap-badge.audit-settings-email_update { background: var(--bg-3);           color: var(--text-2); }
         .ap-badge.audit-settings-message_retention,.ap-badge.audit-settings-auditlog_retention { background: var(--bg-3);       color: var(--text-2); }
         .ap-badge.audit-purge-messages,.ap-badge.audit-purge-audit-logs                   { background: var(--red-dim);         color: var(--red);    }
-        .ap-badge.audit-user-unlock                                                        { background: rgba(245,158,11,0.15);   color: #f59e0b;       }
+        .ap-badge.audit-user-lock                                                          { background: rgba(245,158,11,0.15);   color: #f59e0b;       }
+        .ap-badge.audit-user-unlock                                                        { background: var(--green-dim);        color: var(--green);  }
 
         /* Audit row */
         .ap-audit-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
