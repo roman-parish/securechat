@@ -773,6 +773,7 @@ export default function AdminPage({ onBack }) {
                   <option value="all">All actions</option>
                   <option value="user.ban">Suspended</option>
                   <option value="user.unban">Unsuspended</option>
+                  <option value="user.unlock">Unlocked</option>
                   <option value="user.delete">Deleted user</option>
                   <option value="user.password_reset">Password reset</option>
                   <option value="user.reset_2fa">2FA reset</option>
