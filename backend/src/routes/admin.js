@@ -61,6 +61,7 @@ router.get('/stats', async (req, res) => {
       newUsersToday,
       pendingInvites,
       voiceMessages,
+      lockedAccounts,
     ] = await Promise.all([
       User.countDocuments(),
       Message.countDocuments({ type: { $ne: 'deleted' } }),
@@ -81,6 +82,7 @@ router.get('/stats', async (req, res) => {
       User.countDocuments({ createdAt: { $gte: oneDayAgo } }),
       Invite.countDocuments({ usedAt: null, expiresAt: { $gt: now } }),
       Message.countDocuments({ 'attachment.mimetype': { $regex: /^audio\// } }),
+      User.countDocuments({ lockedUntil: { $gt: now } }),
     ]);
 
     const storageBytes = storageResult[0]?.total || 0;
@@ -103,6 +105,7 @@ router.get('/stats', async (req, res) => {
       newUsersToday,
       pendingInvites,
       voiceMessages,
+      lockedAccounts,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch stats' });

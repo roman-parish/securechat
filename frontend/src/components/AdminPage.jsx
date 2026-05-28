@@ -402,6 +402,8 @@ export default function AdminPage({ onBack }) {
                     icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
                   { val: stats.newUsersThisWeek, fmt:'n', lbl:'New / Week',   col:'#f59e0b', dim:'rgba(245,158,11,0.13)',
                     icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg> },
+                  { val: stats.lockedAccounts ?? 0, fmt:'n', lbl:'Locked',      col:'#f59e0b', dim:'rgba(245,158,11,0.13)',
+                  },
                   { val: stats.bannedUsers,      fmt:'n', lbl:'Suspended',    col:'#ef4444', dim:'rgba(239,68,68,0.13)',
                     icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
                   { val: stats.totalMessages,    fmt:'n', lbl:'Messages',     col:'#6c63ff', dim:'rgba(108,99,255,0.13)',
