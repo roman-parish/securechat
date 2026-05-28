@@ -9,7 +9,7 @@ import mongoose from 'mongoose';
 
 const auditLogSchema = new mongoose.Schema({
   action: { type: String, required: true },
-  performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   performedByUsername: { type: String, required: true },
   targetUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   targetUsername: { type: String, default: null },
