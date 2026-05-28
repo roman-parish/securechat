@@ -34,6 +34,8 @@ export function setupSocketIO(io) {
       const token = socket.handshake.auth.token;
       if (!token) return next(new Error('Authentication required'));
       const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+      const user = await User.findById(decoded.userId).select('banned').lean();
+      if (!user || user.banned) return next(new Error('Account suspended'));
       socket.userId = decoded.userId;
       socket.username = decoded.username;
       socket.displayName = decoded.displayName || decoded.username;

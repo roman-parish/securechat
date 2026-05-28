@@ -8,7 +8,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import path from 'path';
 import fs from 'fs';
 
@@ -21,7 +21,7 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || '/app/uploads';
 // application/octet-stream via /api/uploads/secure/:filename (auth-gated).
 const attachmentStorage = multer.diskStorage({
   destination: UPLOAD_DIR,
-  filename: (_req, _file, cb) => cb(null, uuidv4()),
+  filename: (_req, _file, cb) => cb(null, randomUUID()),
 });
 
 const upload = multer({
@@ -47,7 +47,7 @@ const avatarStorage = multer.diskStorage({
   destination: UPLOAD_DIR,
   filename: (_req, file, cb) => {
     const ext = SAFE_IMAGE_EXT[file.mimetype] ?? '.jpg';
-    cb(null, `${uuidv4()}${ext}`);
+    cb(null, `${randomUUID()}${ext}`);
   },
 });
 
